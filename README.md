@@ -1,6 +1,6 @@
 # UPPY for REDAXO
 
-This AddOn is in development. It delivers an multiupload for REDAXO yform back- and frontend. 
+This AddOn is in development. It delivers a multiupload dialogue for REDAXO yform back- and frontend. 
 
 The files can be uploaded to a pre-defined mediapool category. 
 
