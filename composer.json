@@ -1,0 +1,7 @@
+{
+    "name": "FriendsOfREDAXO/uppy",
+    "type": "redaxo-addon",
+    "extra": {
+        "installer-name": "uppy"
+    }
+}
