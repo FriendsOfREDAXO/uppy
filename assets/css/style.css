@@ -1,2 +1,7 @@
 .demo_addon {
 }
+
+.uppy-Dashboard-note a.uppy-Dashboard-poweredBy {
+    display: none !important;
+    visibility: hidden !important;
+}
