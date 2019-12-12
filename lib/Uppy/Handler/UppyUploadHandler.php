@@ -15,6 +15,7 @@ use rex_extension_point;
 use rex_path;
 use rex_request;
 use rex_response;
+use Uppy\Provider\UppyTokenProvider;
 use Whoops\Exception\ErrorException;
 
 class UppyUploadHandler
@@ -27,7 +28,7 @@ class UppyUploadHandler
      * @return mixed|string
      * @author Joachim Doerr
      */
-    public static function getFilename($filename)
+    private static function getFilename($filename)
     {
         $pathInfo = pathinfo($filename);
         if (file_exists($filename)) {
@@ -45,6 +46,8 @@ class UppyUploadHandler
      */
     public static function uploadFile()
     {
+        $file = '';
+
         if (!function_exists('rex_mediapool_saveMedia')) {
             if (rex_addon::exists('mediapool') && rex_addon::get('mediapool')->isAvailable()) {
                 require_once rex_addon::get('cke5')->getPath('../mediapool/functions/function_rex_mediapool.php');
@@ -58,9 +61,8 @@ class UppyUploadHandler
 
         try {
             $_file = $_FILES['rex_uppy_file'];
-            $token = rex_csrf_token::factory('uppy');
 
-            if (!$token->isValid()) {
+            if (!UppyTokenProvider::isTokenValid()) {
                 throw new \ErrorException('csrf_token_invalid', 401);
             }
             if (!isset($_file['name']) || is_null($_file)) {
@@ -147,6 +149,13 @@ class UppyUploadHandler
                 'error' => $e->getMessage(),
                 'url' => null,
             ];
+        }
+
+        // execute callback
+        if (!is_null($callback = rex_request::get('callback', 'string', null))) {
+            if (is_callable($callback, true)) {
+                $callback(array('file' => $file, 'status' => $statusCode, 'response' => $response));
+            }
         }
 
         rex_response::cleanOutputBuffers();
