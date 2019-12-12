@@ -1,5 +1,10 @@
 <?php
 
+use Uppy\Provider\UppyTokenProvider;
+
+$tokenValue = UppyTokenProvider::getToken();
+$tokenParam = UppyTokenProvider::getTokenParameterKey();
+
 $content = <<<EOT
 
 
@@ -9,6 +14,7 @@ $content = <<<EOT
 const uppy = Uppy.Core({
   debug: true,
   autoProceed: false,
+  locale: Uppy.locales.de_DE,
   restrictions: {
     // maxFileSize: 1000000,
     maxNumberOfFiles: 3,
@@ -30,23 +36,23 @@ const uppy = Uppy.Core({
   ],
   browserBackButtonClose: true
 })
-.use(Uppy.GoogleDrive, { target: Uppy.Dashboard, serverUrl: 'https://companion.uppy.io' })
-.use(Uppy.Dropbox, { target: Uppy.Dashboard, serverUrl: 'https://companion.uppy.io' })
-.use(Uppy.Instagram, { target: Uppy.Dashboard, serverUrl: 'https://companion.uppy.io' })
-.use(Uppy.Webcam, { target: Uppy.Dashboard })
+// .use(Uppy.GoogleDrive, { target: Uppy.Dashboard, serverUrl: 'https://companion.uppy.io' })
+// .use(Uppy.Dropbox, { target: Uppy.Dashboard, serverUrl: 'https://companion.uppy.io' })
+// .use(Uppy.Instagram, { target: Uppy.Dashboard, serverUrl: 'https://companion.uppy.io' })
+// .use(Uppy.Webcam, { target: Uppy.Dashboard })
 .use(Uppy.XHRUpload, { 
-    endpoint: 'index.php?uppy=1',
+    endpoint: 'index.php?uppy=1&$tokenParam=$tokenValue',
     formData: true,
     fieldName: 'rex_uppy_file'
 })
 
-uppy.addFile({
-  name: 'image.jpg', // file name
-  type: 'image/jpeg', // file type
-  // data: blob, // file blob
-  source: '/media/', // optional, determines the source of the file, for example, Instagram
-  isRemote: false // optional, set to true if actual file is not in the browser, but on some remote server, for example, when using companion in combination with Instagram
-})
+// uppy.addFile({
+//   name: 'bildschirmfoto_2019-12-09_um_19.08.41_1.png', // file name
+//   type: 'image/jpeg', // file type
+//   // data: blob, // file blob
+//   source: '/media/', // optional, determines the source of the file, for example, Instagram
+//   isRemote: false // optional, set to true if actual file is not in the browser, but on some remote server, for example, when using companion in combination with Instagram
+// })
 
 
 uppy.on('upload-success', (file, body) => {
@@ -70,6 +76,6 @@ EOT;
 
 
 $fragment = new rex_fragment();
-$fragment->setVar('title', $this->i18n('main_title'), false);
+$fragment->setVar('title', rex_i18n::msg('uppy_main_title') , false);
 $fragment->setVar('body', $content, false);
 echo $fragment->parse('core/page/section.php');
