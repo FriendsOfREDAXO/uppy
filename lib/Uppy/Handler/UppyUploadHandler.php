@@ -9,7 +9,6 @@ namespace Uppy\Handler;
 
 use rex;
 use rex_addon;
-use rex_csrf_token;
 use rex_extension;
 use rex_extension_point;
 use rex_path;
@@ -154,7 +153,7 @@ class UppyUploadHandler
         // execute callback
         if (!is_null($callback = rex_request::get('callback', 'string', null))) {
             if (is_callable($callback, true)) {
-                $callback(array('file' => $file, 'status' => $statusCode, 'response' => $response));
+                $callback(array('file' => $file, 'status' => $statusCode, 'response' => $response, 'token' => rex_request::get(UppyTokenProvider::getTokenParameterKey(), 'string', null)));
             }
         }
 
