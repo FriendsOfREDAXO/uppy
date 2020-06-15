@@ -12,8 +12,10 @@ if (rex::isBackend() && rex::getUser()) {
     }
 }
 
-// register yform template path
-rex_yform::addTemplatePath($this->getPath('ytemplates'));
+if (rex_addon::exists('yform') && rex_addon::get('yform')->isAvailable()) {
+    // register yform template path
+    rex_yform::addTemplatePath($this->getPath('ytemplates'));
+}
 
 if (rex_request::get('uppy', 'boolean', false) == 1) {
     \Uppy\Handler\UppyUploadHandler::uploadFile();
