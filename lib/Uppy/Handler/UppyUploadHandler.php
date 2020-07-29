@@ -113,7 +113,7 @@ class UppyUploadHandler
                 'dirname' => pathinfo($file, PATHINFO_DIRNAME),
                 'filename' => basename($file),
                 'pathinfo' => pathinfo($file),
-                'uploaded' => 1,
+                'uploaded' => true,
                 'error' => null,
                 'url' => $file,
             ];
@@ -141,11 +141,12 @@ class UppyUploadHandler
                 'dirname' => null,
                 'filename' => null,
                 'pathinfo' => null,
-                'uploaded' => [
+                'uploaded' => false,
+                'error' => [
                     'number' => $statusCode,
                     'message' => $errorMessage,
+                    'exception_message' => $e->getMessage()
                 ],
-                'error' => $e->getMessage(),
                 'url' => null,
             ];
         }
@@ -153,7 +154,7 @@ class UppyUploadHandler
         // execute callback
         if (!is_null($callback = rex_request::get('callback', 'string', null))) {
             if (is_callable($callback, true)) {
-                $callback(array('file' => $file, 'status' => $statusCode, 'response' => $response, 'token' => rex_request::get(UppyTokenProvider::getTokenParameterKey(), 'string', null)));
+                $response['callback_result'] = $callback(array('file' => $file, 'status' => $statusCode, 'response' => $response, 'token' => rex_request::get(UppyTokenProvider::getTokenParameterKey(), 'string', null), 'callback_param' => rex_request::get('callback_param', 'array', null)));
             }
         }
 
