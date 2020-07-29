@@ -5,10 +5,49 @@ use Uppy\Provider\UppyTokenProvider;
 $tokenValue = UppyTokenProvider::getToken();
 $tokenParam = UppyTokenProvider::getTokenParameterKey();
 
+$rex_file_category = rex_request('rex_file_category', 'int', -1);
+$PERMALL = rex::getUser()->getComplexPerm('media')->hasCategoryPerm(0);
+if (!$PERMALL && !rex::getUser()->getComplexPerm('media')->hasCategoryPerm($rex_file_category)) {
+    $rex_file_category = 0;
+}
+$cats_sel = new rex_media_category_select();
+$cats_sel->setStyle('class="form-control"');
+$cats_sel->setSize(1);
+$cats_sel->setName('rex_file_category');
+$cats_sel->setId('rex-mediapool-category');
+$cats_sel->addOption(rex_i18n::msg('pool_kats_no'), '0');
+$cats_sel->setSelected($rex_file_category);
+
 $content = <<<EOT
 
+            <form id="fileupload" method="POST" enctype="multipart/form-data">
+                <fieldset>
+                    <dl class="rex-form-group form-group">
+                        <dt>
+                            <label for="rex-mediapool-title">Titel</label>
+                        </dt>
+                        <dd>
+                            <input class="form-control" type="text" name="ftitle" value="" id="rex-mediapool-title">
+                        </dd>
+                    </dl>
+                    <dl class="rex-form-group form-group">
+                        <dt>
+                            <label for="rex-mediapool-category"><?php echo rex_i18n::msg('pool_file_category'); ?></label>
+                        </dt>
+                        <dd>
+                            {$cats_sel->get()}
+                        </dd>
+                    </dl>
+                    <dl class="rex-form-group form-group">
+                        <dt>
+                            <label for="rex-mediapool-category"><?php echo rex_i18n::msg('pool_file_category'); ?></label>
+                        </dt>
+                        <dd><div class="DashboardContainer"></div></dd>
+                    </dl>
+                </fieldset>
+            </form>
 
-<div class="DashboardContainer"></div>
+
 <script>
 
 const uppy = Uppy.Core({
@@ -30,6 +69,7 @@ const uppy = Uppy.Core({
   showProgressDetails: true,
   // note: 'Images and video only, 2–3 files, up to 1 MB',
   height: 470,
+  width: '100%',
   metaFields: [
     { id: 'name', name: 'Name', placeholder: 'file name' },
     { id: 'caption', name: 'Caption', placeholder: 'describe what the image is about' }
