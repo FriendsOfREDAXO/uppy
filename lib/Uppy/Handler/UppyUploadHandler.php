@@ -12,6 +12,7 @@ use rex_addon;
 use rex_extension;
 use rex_extension_point;
 use rex_path;
+use rex_url;
 use rex_request;
 use rex_response;
 use Uppy\Provider\UppyTokenProvider;
@@ -49,14 +50,14 @@ class UppyUploadHandler
 
         if (!function_exists('rex_mediapool_saveMedia')) {
             if (rex_addon::exists('mediapool') && rex_addon::get('mediapool')->isAvailable()) {
-                require_once rex_addon::get('cke5')->getPath('../mediapool/functions/function_rex_mediapool.php');
+                require_once rex_addon::get('uppy')->getPath('../mediapool/functions/function_rex_mediapool.php');
             }
         }
 
         // TODO load uppy profile
         // TODO use profile path
         // TODO use given path
-
+        // TODO deacivate token by uppy instance
 
         try {
             $_file = $_FILES['rex_uppy_file'];
@@ -101,7 +102,8 @@ class UppyUploadHandler
                     if ($return['ok'] == 1) {
                         rex_extension::registerPoint(new rex_extension_point('MEDIA_ADDED', '', $return));
                     }
-                    $file = rex_path::frontend(self::MEDIA_PATH . $return['filename']);
+
+                    $file = rex::getServer() . self::MEDIA_PATH . $return['filename'];
 
                 } else {
                     throw new \ErrorException('internal_server_error', 500);
@@ -154,7 +156,15 @@ class UppyUploadHandler
         // execute callback
         if (!is_null($callback = rex_request::get('callback', 'string', null))) {
             if (is_callable($callback, true)) {
-                $response['callback_result'] = $callback(array('file' => $file, 'status' => $statusCode, 'response' => $response, 'token' => rex_request::get(UppyTokenProvider::getTokenParameterKey(), 'string', null), 'callback_param' => rex_request::get('callback_param', 'array', null)));
+                $response['callback_result'] = $callback(
+                    [
+                        'file' => $file,
+                        'status' => $statusCode,
+                        'response' => $response,
+                        'token' => rex_request::get(UppyTokenProvider::getTokenParameterKey(), 'string', null),
+                        'callback_param' => rex_request::get('callback_param', 'array', null)
+                    ]
+                );
             }
         }
 
