@@ -79,7 +79,7 @@ const uppy = Uppy.Core({
 // .use(Uppy.GoogleDrive, { target: Uppy.Dashboard, serverUrl: 'https://companion.uppy.io' })
 // .use(Uppy.Dropbox, { target: Uppy.Dashboard, serverUrl: 'https://companion.uppy.io' })
 // .use(Uppy.Instagram, { target: Uppy.Dashboard, serverUrl: 'https://companion.uppy.io' })
-// .use(Uppy.Webcam, { target: Uppy.Dashboard })
+.use(Uppy.Webcam, { target: Uppy.Dashboard })
 .use(Uppy.XHRUpload, { 
     endpoint: 'index.php?uppy=1&$tokenParam=$tokenValue',
     formData: true,
