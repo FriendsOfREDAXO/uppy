@@ -5,8 +5,8 @@
 if (rex::isBackend() && rex::getUser()) {
     try {
         rex_view::addCssFile($this->getAssetsUrl('css/uppy.min.css'));
-        rex_view::addJsFile($this->getAssetsUrl('js/uppy.1.6.0.min.js'));
-        rex_view::addJsFile($this->getAssetsUrl('js/de_DE.1.5.0.min.js'));
+        rex_view::addJsFile($this->getAssetsUrl('vendor/uppy/uppy.min.js'));
+        rex_view::addJsFile($this->getAssetsUrl('vendor/uppy/locale/de_DE.min.js'));
     } catch (rex_exception $e) {
         rex_logger::logException($e);
     }
