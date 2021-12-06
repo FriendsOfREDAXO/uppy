@@ -3,7 +3,7 @@
 $content = '';
 $buttons = '';
 
-$csrfToken = rex_csrf_token::factory('demo_addon');
+$csrfToken = rex_csrf_token::factory('uppy');
 
 // Einstellungen speichern
 if (rex_post('formsubmit', 'string') == '1' && !$csrfToken->isValid()) {
