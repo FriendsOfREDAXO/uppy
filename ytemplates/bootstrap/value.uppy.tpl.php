@@ -12,9 +12,6 @@ if ($this->getElement('category') != '') {
     <?php if (!empty($this->getElement('label'))): ?><label for="<?= $this->getFieldName() ?>"><?= $this->getElement('label') ?></label><?php endif; ?>
     <input type="hidden" id="<?= $this->getFieldId() ?>" name="<?= $this->getFieldName() ?>" value="<?= $this->getValue() ?>"/>
 
-    <?php /*<div class="dropzone dropzone-upload panel-default panel" data-dz-id="<?= $this->getFieldId() ?>" data-dz-unique-key="<?= $uniqueKey ?>" id="dz-<?= $this->getFieldId() ?>"
-    data-dz-types="<?= $this->getElement('allowed_types') ?>" data-dz-max-files="<? $this->getElement('allowed_max_files') ?>" data-dz-file-size="<?= $this->getElement('size_single') ?>" data-dz-thumbnail-width="80" data-dz-thumbnail-height="80" data-dz-parallel-uploads="4" <?= $dataDzDict ?>> */?>
-
     <div class="uppy_container" id="uppy_<?= $this->getFieldId() ?>" data-field="<?= $this->getFieldId() ?>"></div>
     <script>
 
