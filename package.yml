@@ -18,7 +18,7 @@ page:
 requires:
     redaxo: '^5.7'
     php:
-        version: '^7.1'
+        version: '>=7.1,<9'
 
 installer_ignore:
     - node_modules
