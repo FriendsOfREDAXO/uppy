@@ -398,6 +398,16 @@ MIT License 2.0.0-beta1 (2024-12-18)
 ### Version 2.0.0-beta1 (2024-12-18)
 
 **Neue Features:**
+
+- ✅ Uppy 5.0 Integration mit lokalem Build
+- ✅ Chunk-Upload für große Dateien
+- ✅ Client-seitige Bildoptimierung
+- ✅ Webcam-Support
+- ✅ MetaInfo-Integration mit mehrsprachigen Feldern
+- ✅ Dark Theme Support
+- ✅ YForm-Integration
+- ✅ Backend- und Frontend-Unterstützung
+
 - ✅ **Image Editor Integration** - Bildbearbeitung mit Cropper.js
   - Aktivierung per Feld via `data-enable-image-editor="true"`
   - Feste Seitenverhältnisse: 1:1, 16:9, 4:3, 3:2, free
@@ -418,16 +428,6 @@ MIT License 2.0.0-beta1 (2024-12-18)
 - Cropper.js Integration
 - ESBuild lokaler Build
 
-### Version 1.0.0 (vorherige Releases)
-
-- ✅ Uppy 5.0 Integration mit lokalem Build
-- ✅ Chunk-Upload für große Dateien
-- ✅ Client-seitige Bildoptimierung
-- ✅ Webcam-Support
-- ✅ MetaInfo-Integration mit mehrsprachigen Feldern
-- ✅ Dark Theme Support
-- ✅ YForm-Integration
-- ✅ Backend- und Frontend-Unterstützung
 
 ## Credits
 
