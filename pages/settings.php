@@ -52,8 +52,8 @@ $formElements = [];
 // Allgemeine Einstellungen
 $n = [];
 $n['label'] = '<label for="uppy-allowed-types">' . $addon->i18n('uppy_allowed_types') . '</label>';
-$n['field'] = '<input class="form-control" type="text" id="uppy-allowed-types" name="config[allowed_types]" value="' . rex_escape(rex_config::get('uppy', 'allowed_types', 'image/*,.svg,.webp,video/*,application/pdf,.doc,.docx')) . '" />';
-$n['note'] = $addon->i18n('uppy_allowed_types_notice');
+$n['field'] = '<input class="form-control" type="text" id="uppy-allowed-types" name="config[allowed_types]" value="' . rex_escape(rex_config::get('uppy', 'allowed_types', 'image/jpeg,image/png,image/gif,image/webp,image/svg+xml,video/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx')) . '" />';
+$n['note'] = 'MIME-Types oder Dateiendungen mit Punkt, z.B. <code>image/*,video/*,.pdf</code> oder explizit <code>image/jpeg,image/png,image/webp,image/svg+xml</code>';
 $formElements[] = $n;
 
 $n = [];
