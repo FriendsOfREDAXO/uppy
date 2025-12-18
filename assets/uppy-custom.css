@@ -517,3 +517,80 @@ body.rex-theme-dark .uppy-uploaded-files-list h4 {
 .uppy-Dashboard-AddFiles {
     min-height: 350px !important;
 }
+
+/* Highlight completed uploads */
+.uppy-Dashboard-Item.is-complete .uppy-Dashboard-Item-previewInnerWrap,
+.uppy-Dashboard-Item.uppy-Dashboard-Item--complete .uppy-Dashboard-Item-previewInnerWrap {
+    border: 3px solid var(--uppy-success) !important;
+    box-shadow: 0 0 10px rgba(92, 184, 92, 0.5);
+}
+
+.uppy-Dashboard-Item.is-complete::after,
+.uppy-Dashboard-Item.uppy-Dashboard-Item--complete::after {
+    content: "✓";
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: var(--uppy-success);
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 24px;
+    font-weight: bold;
+    z-index: 1002; /* Higher than Uppy buttons */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    font-family: sans-serif;
+    font-size: 14px;
+    pointer-events: none;
+}
+
+/* Ensure the checkmark is visible in dark mode too */
+body.rex-theme-dark .uppy-Dashboard-Item.is-complete::after,
+body.rex-theme-dark .uppy-Dashboard-Item.uppy-Dashboard-Item--complete::after {
+    background: var(--uppy-success);
+    color: #fff;
+}
+
+/* Uploading Animation */
+@keyframes uppy-upload-pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(51, 122, 183, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(51, 122, 183, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(51, 122, 183, 0);
+    }
+}
+
+@keyframes uppy-upload-pulse-dark {
+    0% {
+        box-shadow: 0 0 0 0 rgba(74, 144, 226, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(74, 144, 226, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(74, 144, 226, 0);
+    }
+}
+
+.uppy-Dashboard-Item.is-inprogress .uppy-Dashboard-Item-previewInnerWrap,
+.uppy-Dashboard-Item.uppy-Dashboard-Item--inprogress .uppy-Dashboard-Item-previewInnerWrap {
+    animation: uppy-upload-pulse 2s infinite;
+    border: 2px solid var(--uppy-primary) !important;
+}
+
+body.rex-theme-dark .uppy-Dashboard-Item.is-inprogress .uppy-Dashboard-Item-previewInnerWrap,
+body.rex-theme-dark .uppy-Dashboard-Item.uppy-Dashboard-Item--inprogress .uppy-Dashboard-Item-previewInnerWrap {
+    animation: uppy-upload-pulse-dark 2s infinite;
+}
+
+/* Force Progress Bar Visibility */
+.uppy-Dashboard-Item-progress {
+    opacity: 1 !important;
+    display: block !important;
+}

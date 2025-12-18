@@ -14266,6 +14266,168 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
 
   // src/uppy-backend.js
   window.UPPY_BUNDLE_LOADED = true;
+  var ChunkUploader = class {
+    constructor(uppy, opts) {
+      this.uppy = uppy;
+      this.id = "ChunkUploader";
+      this.type = "uploader";
+      this.opts = Object.assign({
+        endpoint: "",
+        chunkSize: 5 * 1024 * 1024,
+        // 5MB default
+        categoryId: 0,
+        apiToken: ""
+      }, opts);
+      this.uploaders = /* @__PURE__ */ new Map();
+    }
+    install() {
+      this.uppy.addUploader(this.uploadFile.bind(this));
+    }
+    uninstall() {
+    }
+    async uploadFile(fileIDs) {
+      const promises = fileIDs.map((id) => this.uploadSingleFile(id));
+      return Promise.all(promises);
+    }
+    async uploadSingleFile(fileID) {
+      const file = this.uppy.getFile(fileID);
+      const chunkSize = this.opts.chunkSize;
+      const totalSize = file.data.size;
+      const totalChunks = Math.ceil(totalSize / chunkSize);
+      console.log(`ChunkUpload Start: ${file.name}, Size: ${totalSize}, Chunks: ${totalChunks}`);
+      try {
+        const fileId = await this.prepareUpload(file);
+        console.log(`Prepare erfolgreich, fileId: ${fileId}`);
+        this.uppy.emit("upload-progress", file, {
+          uploader: this,
+          bytesUploaded: 0,
+          bytesTotal: totalSize
+        });
+        for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+          const start = chunkIndex * chunkSize;
+          const end = Math.min(start + chunkSize, totalSize);
+          const chunk = file.data.slice(start, end);
+          console.log(`Uploading chunk ${chunkIndex + 1}/${totalChunks}`);
+          await this.uploadChunk(fileId, chunk, chunkIndex, totalChunks, file);
+          this.uppy.emit("upload-progress", file, {
+            uploader: this,
+            bytesUploaded: end,
+            bytesTotal: totalSize
+          });
+        }
+        console.log("Alle Chunks hochgeladen, starte Finalize...");
+        const result = await this.finalizeUpload(fileId, file, totalChunks);
+        console.log("Finalize erfolgreich:", result);
+        try {
+          this.uppy.emit("upload-success", file, result);
+        } catch (emitError) {
+          console.error("Fehler beim Emitten von upload-success:", emitError);
+        }
+        return result;
+      } catch (error) {
+        console.error("ChunkUpload Fehler:", error);
+        this.uppy.emit("upload-error", file, error);
+        throw error;
+      }
+    }
+    async prepareUpload(file) {
+      const fileId = "uppy_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
+      const formData = new FormData();
+      formData.append("fileId", fileId);
+      formData.append("fileName", file.name);
+      formData.append("fieldName", "file");
+      const url = `${window.location.origin}/redaxo/index.php?rex-api-call=uppy_uploader&func=prepare&api_token=${this.opts.apiToken}`;
+      const response = await fetch(url, {
+        method: "POST",
+        body: formData,
+        credentials: "same-origin"
+      });
+      if (!response.ok) {
+        const text = await response.text();
+        console.error("Prepare failed:", text);
+        throw new Error("Prepare failed: " + response.status);
+      }
+      const data = await response.json();
+      return data.fileId || fileId;
+    }
+    async uploadChunk(fileId, chunk, chunkIndex, totalChunks, file) {
+      return new Promise((resolve, reject) => {
+        const formData = new FormData();
+        formData.append("file", chunk, file.name);
+        formData.append("fileId", fileId);
+        formData.append("chunkIndex", chunkIndex);
+        formData.append("totalChunks", totalChunks);
+        formData.append("fieldName", "file");
+        const url = `${window.location.origin}/redaxo/index.php?rex-api-call=uppy_uploader&func=chunk&category_id=${this.opts.categoryId}&api_token=${this.opts.apiToken}`;
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", url, true);
+        xhr.withCredentials = true;
+        xhr.upload.onprogress = (e4) => {
+          if (e4.lengthComputable) {
+            const chunkSize = this.opts.chunkSize;
+            const start = chunkIndex * chunkSize;
+            const totalUploaded = start + e4.loaded;
+            this.uppy.emit("upload-progress", file, {
+              uploader: this,
+              bytesUploaded: totalUploaded,
+              bytesTotal: file.data.size
+            });
+          }
+        };
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const response = JSON.parse(xhr.responseText);
+              resolve(response);
+            } catch (err) {
+              console.error(`Chunk ${chunkIndex} JSON parse error:`, err);
+              reject(new Error(`Chunk ${chunkIndex} invalid response`));
+            }
+          } else {
+            console.error(`Chunk ${chunkIndex} upload failed:`, xhr.statusText);
+            reject(new Error(`Chunk ${chunkIndex} upload failed: ` + xhr.status));
+          }
+        };
+        xhr.onerror = () => {
+          console.error(`Chunk ${chunkIndex} network error`);
+          reject(new Error(`Chunk ${chunkIndex} network error`));
+        };
+        xhr.send(formData);
+      });
+    }
+    async finalizeUpload(fileId, file, totalChunks) {
+      const formData = new FormData();
+      formData.append("fileId", fileId);
+      formData.append("fileName", file.name);
+      formData.append("totalChunks", totalChunks);
+      formData.append("fieldName", "file");
+      const url = `${window.location.origin}/redaxo/index.php?rex-api-call=uppy_uploader&func=finalize&category_id=${this.opts.categoryId}&api_token=${this.opts.apiToken}`;
+      const response = await fetch(url, {
+        method: "POST",
+        body: formData,
+        credentials: "same-origin"
+      });
+      if (!response.ok) {
+        const text = await response.text();
+        console.error("Finalize failed:", text);
+        throw new Error("Finalize failed: " + response.status);
+      }
+      const data = await response.json();
+      const result = {
+        status: response.status,
+        body: {
+          success: data.success || true,
+          data: {
+            filename: data.data?.filename || data.filename,
+            title: data.data?.title || ""
+          }
+        },
+        uploadURL: ""
+        // Wichtig für Dashboard, auch wenn leer
+      };
+      return result;
+    }
+  };
   function initUppyWidgets() {
     const widgets = document.querySelectorAll('input[data-widget="uppy"]:not([data-uppy-initialized])');
     if (widgets.length === 0) {
@@ -14280,6 +14442,15 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
       return;
     }
     inputElement.dataset.uppyInitialized = "true";
+    let valueInput = inputElement;
+    if (inputElement.type === "file") {
+      valueInput = document.createElement("input");
+      valueInput.type = "hidden";
+      valueInput.name = inputElement.name;
+      valueInput.id = inputElement.id + "_value";
+      inputElement.removeAttribute("name");
+      inputElement.parentNode.insertBefore(valueInput, inputElement);
+    }
     inputElement.style.display = "none";
     const container = document.createElement("div");
     container.className = "uppy-wrapper";
@@ -14304,6 +14475,7 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
     config.fix_exif_orientation = uppyConfig.fix_exif_orientation !== false;
     config.enable_chunks = uppyConfig.enable_chunks !== false;
     config.chunk_size = (uppyConfig.chunk_size || 5) * 1024 * 1024;
+    console.log("DEBUG: Uppy Config", config);
     loadMetadataFields(config.apiToken).then(function(metaFields) {
       const uppy = new Uppy_default({
         id: "uppy-" + Math.random().toString(36).substr(2, 9),
@@ -14346,9 +14518,9 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
         setupMetadataModal(uppy, metaFields);
       }
       addCompressorPlugin(uppy, config);
-      initializeUppyPlugins(uppy, config, inputElement, metaFields);
+      initializeUppyPlugins(uppy, config, inputElement, metaFields, valueInput);
     }).catch(function(error) {
-      initializeUppyFallback(container, config, inputElement);
+      initializeUppyFallback(container, config, inputElement, valueInput);
     });
   }
   function registerImageEditor(uppy, config, globalConfig) {
@@ -14398,7 +14570,7 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
       console.error("Uppy Image Editor Fehler:", error);
     }
   }
-  function initializeUppyPlugins(uppy, config, inputElement, metaFields) {
+  function initializeUppyPlugins(uppy, config, inputElement, metaFields, valueInput) {
     const globalConfig = window.rex?.uppy_config || {};
     const enableWebcam = globalConfig.enable_webcam || false;
     if (enableWebcam) {
@@ -14422,35 +14594,60 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
       });
     }
     const currentCategoryId = parseInt(inputElement.dataset.categoryId) || 0;
-    const tokenParam = config.apiToken ? "&api_token=" + encodeURIComponent(config.apiToken) : "";
-    uppy.use(XHRUpload, {
-      endpoint: window.location.origin + "/redaxo/index.php?rex-api-call=uppy_uploader&func=upload" + tokenParam + "&category_id=" + currentCategoryId,
-      formData: true,
-      fieldName: "file",
-      allowedMetaFields: true,
-      headers: {
-        "X-Requested-With": "XMLHttpRequest"
-      },
-      limit: 5,
-      getResponseData: function(responseText, response) {
-        try {
-          return JSON.parse(responseText);
-        } catch (e4) {
-          return { success: false, message: "Invalid response" };
+    const tokenParam = config.apiToken ? encodeURIComponent(config.apiToken) : "";
+    if (config.enable_chunks) {
+      const chunkUploader = new ChunkUploader(uppy, {
+        endpoint: window.location.origin + "/redaxo/index.php?rex-api-call=uppy_uploader",
+        chunkSize: config.chunk_size,
+        categoryId: currentCategoryId,
+        apiToken: tokenParam
+      });
+      chunkUploader.install();
+    } else {
+      uppy.use(XHRUpload, {
+        endpoint: window.location.origin + "/redaxo/index.php?rex-api-call=uppy_uploader&func=upload&api_token=" + tokenParam + "&category_id=" + currentCategoryId,
+        formData: true,
+        fieldName: "file",
+        allowedMetaFields: true,
+        headers: {
+          "X-Requested-With": "XMLHttpRequest"
+        },
+        limit: 5,
+        getResponseData: function(responseText, response) {
+          try {
+            return JSON.parse(responseText);
+          } catch (e4) {
+            return { success: false, message: "Invalid response" };
+          }
+        },
+        getResponseError: function(responseText) {
+          try {
+            const response = JSON.parse(responseText);
+            return response.error || response.message || "Upload failed";
+          } catch (e4) {
+            return responseText;
+          }
         }
-      },
-      getResponseError: function(responseText) {
-        try {
-          const response = JSON.parse(responseText);
-          return response.error || response.message || "Upload failed";
-        } catch (e4) {
-          return responseText;
-        }
-      }
+      });
+    }
+    uppy.on("file-added", (file) => {
+      console.log("DEBUG: File added", {
+        name: file.name,
+        type: file.type,
+        extension: file.extension,
+        meta: file.meta,
+        data: file.data
+      });
     });
-    setupEventHandlers(uppy, config, inputElement, metaFields);
+    uppy.on("upload-request", (file) => {
+      console.log("DEBUG: Upload request", {
+        name: file.name,
+        type: file.type
+      });
+    });
+    setupEventHandlers(uppy, config, inputElement, metaFields, valueInput);
   }
-  function initializeUppyFallback(container, config, inputElement) {
+  function initializeUppyFallback(container, config, inputElement, valueInput) {
     const uppy = new Uppy_default({
       id: "uppy-" + Math.random().toString(36).substr(2, 9),
       autoProceed: false,
@@ -14472,9 +14669,10 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
       note: getTranslation(config.locale, "note")
     });
     addCompressorPlugin(uppy, config);
-    initializeUppyPlugins(uppy, config, inputElement);
+    initializeUppyPlugins(uppy, config, inputElement, void 0, valueInput);
   }
-  function setupEventHandlers(uppy, config, inputElement, metaFields) {
+  function setupEventHandlers(uppy, config, inputElement, metaFields, valueInput) {
+    const targetInput = valueInput || inputElement;
     uppy.on("upload-success", function(file, response) {
       if (response.body && response.body.success && response.body.data) {
         const filename = response.body.data.filename;
@@ -14491,12 +14689,12 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
             showMetadataModal(uppy, file, metaFields);
           }, 500);
         }
-        if (inputElement) {
-          const currentValue = inputElement.value;
+        if (targetInput) {
+          const currentValue = targetInput.value;
           const files = currentValue ? currentValue.split(",") : [];
           if (!files.includes(filename)) {
             files.push(filename);
-            inputElement.value = files.join(",");
+            targetInput.value = files.join(",");
           }
         }
         if (typeof jQuery !== "undefined") {
@@ -14622,7 +14820,7 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
       return;
     }
     uppy.on("file-added", function(file) {
-      if (!file.type || !file.type.startsWith("image/")) {
+      if (!file.type || !file.type.startsWith("image/") || file.type === "image/svg+xml") {
         return;
       }
       resizeImage(file, config).then(function(resizedBlob) {

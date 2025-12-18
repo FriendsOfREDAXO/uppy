@@ -12,6 +12,218 @@ import German from '@uppy/locales/lib/de_DE';
 window.UPPY_BUNDLE_LOADED = true;
 
 /**
+ * Custom Chunk Uploader für große Dateien
+ * Orientiert an filepond's chunk-upload Implementierung
+ */
+class ChunkUploader {
+    constructor(uppy, opts) {
+        this.uppy = uppy;
+        this.id = 'ChunkUploader'; // ID für Uppy
+        this.type = 'uploader';    // Typ für Uppy
+        this.opts = Object.assign({
+            endpoint: '',
+            chunkSize: 5 * 1024 * 1024, // 5MB default
+            categoryId: 0,
+            apiToken: ''
+        }, opts);
+        
+        this.uploaders = new Map();
+    }
+
+    install() {
+        this.uppy.addUploader(this.uploadFile.bind(this));
+    }
+
+    uninstall() {
+        // Cleanup
+    }
+
+    async uploadFile(fileIDs) {
+        const promises = fileIDs.map(id => this.uploadSingleFile(id));
+        return Promise.all(promises);
+    }
+
+    async uploadSingleFile(fileID) {
+        const file = this.uppy.getFile(fileID);
+        const chunkSize = this.opts.chunkSize;
+        const totalSize = file.data.size;
+        const totalChunks = Math.ceil(totalSize / chunkSize);
+        
+        console.log(`ChunkUpload Start: ${file.name}, Size: ${totalSize}, Chunks: ${totalChunks}`);
+        
+        try {
+            // Prepare: Get fileId from server
+            const fileId = await this.prepareUpload(file);
+            console.log(`Prepare erfolgreich, fileId: ${fileId}`);
+            
+            this.uppy.emit('upload-progress', file, {
+                uploader: this,
+                bytesUploaded: 0,
+                bytesTotal: totalSize
+            });
+
+            // Upload chunks sequentially
+            for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+                const start = chunkIndex * chunkSize;
+                const end = Math.min(start + chunkSize, totalSize);
+                const chunk = file.data.slice(start, end);
+                
+                console.log(`Uploading chunk ${chunkIndex + 1}/${totalChunks}`);
+                await this.uploadChunk(fileId, chunk, chunkIndex, totalChunks, file);
+                
+                // Progress update (wird auch im uploadChunk gemacht, aber hier zur Sicherheit nochmal für 100% des Chunks)
+                this.uppy.emit('upload-progress', file, {
+                    uploader: this,
+                    bytesUploaded: end,
+                    bytesTotal: totalSize
+                });
+            }
+
+            console.log('Alle Chunks hochgeladen, starte Finalize...');
+            // Finalize: Merge chunks and add to mediapool
+            const result = await this.finalizeUpload(fileId, file, totalChunks);
+            
+            console.log('Finalize erfolgreich:', result);
+            
+            try {
+                this.uppy.emit('upload-success', file, result);
+            } catch (emitError) {
+                console.error('Fehler beim Emitten von upload-success:', emitError);
+                // Wir werfen den Fehler nicht weiter, da der Upload eigentlich erfolgreich war
+            }
+            
+            return result;
+        } catch (error) {
+            console.error('ChunkUpload Fehler:', error);
+            this.uppy.emit('upload-error', file, error);
+            throw error;
+        }
+    }
+
+    async prepareUpload(file) {
+        const fileId = 'uppy_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        const formData = new FormData();
+        formData.append('fileId', fileId);
+        formData.append('fileName', file.name);
+        formData.append('fieldName', 'file');
+        
+        const url = `${window.location.origin}/redaxo/index.php?rex-api-call=uppy_uploader&func=prepare&api_token=${this.opts.apiToken}`;
+        
+        const response = await fetch(url, {
+            method: 'POST',
+            body: formData,
+            credentials: 'same-origin'
+        });
+        
+        if (!response.ok) {
+            const text = await response.text();
+            console.error('Prepare failed:', text);
+            throw new Error('Prepare failed: ' + response.status);
+        }
+        
+        const data = await response.json();
+        return data.fileId || fileId;
+    }
+
+    async uploadChunk(fileId, chunk, chunkIndex, totalChunks, file) {
+        return new Promise((resolve, reject) => {
+            const formData = new FormData();
+            formData.append('file', chunk, file.name);
+            formData.append('fileId', fileId);
+            formData.append('chunkIndex', chunkIndex);
+            formData.append('totalChunks', totalChunks);
+            formData.append('fieldName', 'file');
+            
+            const url = `${window.location.origin}/redaxo/index.php?rex-api-call=uppy_uploader&func=chunk&category_id=${this.opts.categoryId}&api_token=${this.opts.apiToken}`;
+            
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', url, true);
+            xhr.withCredentials = true;
+            
+            // Upload Progress für diesen Chunk
+            xhr.upload.onprogress = (e) => {
+                if (e.lengthComputable) {
+                    const chunkSize = this.opts.chunkSize;
+                    const start = chunkIndex * chunkSize;
+                    const totalUploaded = start + e.loaded;
+                    
+                    // console.log(`Progress: ${totalUploaded} / ${file.data.size}`);
+
+                    // Progress an Uppy melden
+                    this.uppy.emit('upload-progress', file, {
+                        uploader: this,
+                        bytesUploaded: totalUploaded,
+                        bytesTotal: file.data.size
+                    });
+                }
+            };
+            
+            xhr.onload = () => {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        resolve(response);
+                    } catch (err) {
+                        console.error(`Chunk ${chunkIndex} JSON parse error:`, err);
+                        reject(new Error(`Chunk ${chunkIndex} invalid response`));
+                    }
+                } else {
+                    console.error(`Chunk ${chunkIndex} upload failed:`, xhr.statusText);
+                    reject(new Error(`Chunk ${chunkIndex} upload failed: ` + xhr.status));
+                }
+            };
+            
+            xhr.onerror = () => {
+                console.error(`Chunk ${chunkIndex} network error`);
+                reject(new Error(`Chunk ${chunkIndex} network error`));
+            };
+            
+            xhr.send(formData);
+        });
+    }
+
+    async finalizeUpload(fileId, file, totalChunks) {
+        const formData = new FormData();
+        formData.append('fileId', fileId);
+        formData.append('fileName', file.name);
+        formData.append('totalChunks', totalChunks);
+        formData.append('fieldName', 'file');
+        
+        const url = `${window.location.origin}/redaxo/index.php?rex-api-call=uppy_uploader&func=finalize&category_id=${this.opts.categoryId}&api_token=${this.opts.apiToken}`;
+        
+        const response = await fetch(url, {
+            method: 'POST',
+            body: formData,
+            credentials: 'same-origin'
+        });
+        
+        if (!response.ok) {
+            const text = await response.text();
+            console.error('Finalize failed:', text);
+            throw new Error('Finalize failed: ' + response.status);
+        }
+        
+        const data = await response.json();
+        
+        // Uppy erwartet ein Response-Objekt mit status und body
+        // body muss die gleiche Struktur wie XHR-Upload haben
+        const result = {
+            status: response.status,
+            body: {
+                success: data.success || true,
+                data: {
+                    filename: data.data?.filename || data.filename,
+                    title: data.data?.title || ''
+                }
+            },
+            uploadURL: '' // Wichtig für Dashboard, auch wenn leer
+        };
+        
+        return result;
+    }
+}
+
+/**
  * Initialisiert alle Uppy-Widgets auf der Seite
  */
 function initUppyWidgets() {
@@ -36,7 +248,25 @@ function initializeUppyWidget(inputElement) {
     
     inputElement.dataset.uppyInitialized = 'true';
     
-    // Input-Element verstecken
+    // Input-Element verstecken und Typ anpassen falls nötig
+    // Wenn es ein File-Input ist, müssen wir ein separates Hidden-Input für den Wert erstellen,
+    // da File-Inputs aus Sicherheitsgründen nicht per JS gesetzt werden können (InvalidStateError).
+    let valueInput = inputElement;
+    
+    if (inputElement.type === 'file') {
+        // Neues Hidden Input erstellen
+        valueInput = document.createElement('input');
+        valueInput.type = 'hidden';
+        valueInput.name = inputElement.name;
+        valueInput.id = inputElement.id + '_value'; // ID anpassen um Konflikte zu vermeiden
+        
+        // Name vom Original entfernen, damit es nicht submitted wird
+        inputElement.removeAttribute('name');
+        
+        // Hidden Input einfügen
+        inputElement.parentNode.insertBefore(valueInput, inputElement);
+    }
+    
     inputElement.style.display = 'none';
     
     // Container für Uppy Dashboard erstellen
@@ -65,6 +295,8 @@ function initializeUppyWidget(inputElement) {
     config.fix_exif_orientation = uppyConfig.fix_exif_orientation !== false;
     config.enable_chunks = uppyConfig.enable_chunks !== false;
     config.chunk_size = (uppyConfig.chunk_size || 5) * 1024 * 1024; // MB in Bytes
+    
+    console.log('DEBUG: Uppy Config', config);
     
     // Metadaten-Felder laden
     loadMetadataFields(config.apiToken).then(function(metaFields) {
@@ -128,11 +360,11 @@ function initializeUppyWidget(inputElement) {
         // Compressor Plugin für Resize und EXIF-Korrektur
         addCompressorPlugin(uppy, config);
         
-        initializeUppyPlugins(uppy, config, inputElement, metaFields);
+        initializeUppyPlugins(uppy, config, inputElement, metaFields, valueInput);
     }).catch(function(error) {
 
         // Fallback: Uppy ohne Metadaten-Felder initialisieren
-        initializeUppyFallback(container, config, inputElement);
+        initializeUppyFallback(container, config, inputElement, valueInput);
     });
 }
 
@@ -191,7 +423,7 @@ function registerImageEditor(uppy, config, globalConfig) {
 /**
  * Initialisiert Uppy-Plugins und Event-Handler
  */
-function initializeUppyPlugins(uppy, config, inputElement, metaFields) {
+function initializeUppyPlugins(uppy, config, inputElement, metaFields, valueInput) {
     // Webcam Plugin nur laden wenn aktiviert
     const globalConfig = window.rex?.uppy_config || {};
     const enableWebcam = globalConfig.enable_webcam || false;
@@ -217,45 +449,75 @@ function initializeUppyPlugins(uppy, config, inputElement, metaFields) {
         });
     }
     
-    // Upload Plugin: XHR Upload (Chunking deaktiviert)
+    // Upload Plugin: Chunked oder Standard
     const currentCategoryId = parseInt(inputElement.dataset.categoryId) || 0;
-    const tokenParam = config.apiToken ? '&api_token=' + encodeURIComponent(config.apiToken) : '';
+    const tokenParam = config.apiToken ? encodeURIComponent(config.apiToken) : '';
     
-    uppy.use(XHRUpload, {
-        endpoint: window.location.origin + '/redaxo/index.php?rex-api-call=uppy_uploader&func=upload' + tokenParam + '&category_id=' + currentCategoryId,
-        formData: true,
-        fieldName: 'file',
-        allowedMetaFields: true,
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest'
-        },
-        limit: 5,
-        
-        getResponseData: function(responseText, response) {
-            try {
-                return JSON.parse(responseText);
-            } catch (e) {
-                return { success: false, message: 'Invalid response' };
+    if (config.enable_chunks) {
+        // Custom Chunk Uploader für große Dateien
+        const chunkUploader = new ChunkUploader(uppy, {
+            endpoint: window.location.origin + '/redaxo/index.php?rex-api-call=uppy_uploader',
+            chunkSize: config.chunk_size,
+            categoryId: currentCategoryId,
+            apiToken: tokenParam
+        });
+        chunkUploader.install();
+    } else {
+        // Standard XHR Upload
+        uppy.use(XHRUpload, {
+            endpoint: window.location.origin + '/redaxo/index.php?rex-api-call=uppy_uploader&func=upload&api_token=' + tokenParam + '&category_id=' + currentCategoryId,
+            formData: true,
+            fieldName: 'file',
+            allowedMetaFields: true,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            limit: 5,
+            
+            getResponseData: function(responseText, response) {
+                try {
+                    return JSON.parse(responseText);
+                } catch (e) {
+                    return { success: false, message: 'Invalid response' };
+                }
+            },
+            getResponseError: function(responseText) {
+                try {
+                    const response = JSON.parse(responseText);
+                    return response.error || response.message || 'Upload failed';
+                } catch (e) {
+                    return responseText;
+                }
             }
-        },
-        getResponseError: function(responseText) {
-            try {
-                const response = JSON.parse(responseText);
-                return response.error || response.message || 'Upload failed';
-            } catch (e) {
-                return responseText;
-            }
-        }
+        });
+    }
+    
+    // DEBUG: Log file additions to check MIME type
+    uppy.on('file-added', (file) => {
+        console.log('DEBUG: File added', {
+            name: file.name,
+            type: file.type,
+            extension: file.extension,
+            meta: file.meta,
+            data: file.data
+        });
     });
     
+    uppy.on('upload-request', (file) => {
+         console.log('DEBUG: Upload request', {
+            name: file.name,
+            type: file.type
+         });
+    });
+
     // Event-Handler
-    setupEventHandlers(uppy, config, inputElement, metaFields);
+    setupEventHandlers(uppy, config, inputElement, metaFields, valueInput);
 }
 
 /**
  * Fallback-Initialisierung ohne Metadaten
  */
-function initializeUppyFallback(container, config, inputElement) {
+function initializeUppyFallback(container, config, inputElement, valueInput) {
     const uppy = new Uppy({
         id: 'uppy-' + Math.random().toString(36).substr(2, 9),
         autoProceed: false,
@@ -279,13 +541,16 @@ function initializeUppyFallback(container, config, inputElement) {
     });
     
     addCompressorPlugin(uppy, config);
-    initializeUppyPlugins(uppy, config, inputElement);
+    initializeUppyPlugins(uppy, config, inputElement, undefined, valueInput);
 }
 
 /**
  * Event-Handler einrichten
  */
-function setupEventHandlers(uppy, config, inputElement, metaFields) {
+function setupEventHandlers(uppy, config, inputElement, metaFields, valueInput) {
+    // Wenn valueInput nicht übergeben wurde, fallback auf inputElement
+    const targetInput = valueInput || inputElement;
+
     // Upload erfolgreich
     uppy.on('upload-success', function(file, response) {
         
@@ -312,12 +577,12 @@ function setupEventHandlers(uppy, config, inputElement, metaFields) {
             }
             
             // Hidden Input aktualisieren
-            if (inputElement) {
-                const currentValue = inputElement.value;
+            if (targetInput) {
+                const currentValue = targetInput.value;
                 const files = currentValue ? currentValue.split(',') : [];
                 if (!files.includes(filename)) {
                     files.push(filename);
-                    inputElement.value = files.join(',');
+                    targetInput.value = files.join(',');
                 }
             }
             
@@ -562,7 +827,8 @@ function addCompressorPlugin(uppy, config) {
     }
     
     uppy.on('file-added', function(file) {
-        if (!file.type || !file.type.startsWith('image/')) {
+        // SVGs nicht resizen, da Canvas sie rasterisiert (zu PNG konvertiert)
+        if (!file.type || !file.type.startsWith('image/') || file.type === 'image/svg+xml') {
             return;
         }
         

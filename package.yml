@@ -29,7 +29,7 @@ page:
             itemClass: 'pull-right' 
         }
 default_config:
-    allowed_types: 'image/*,video/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx'
+    allowed_types: 'image/jpeg,image/png,image/gif,image/webp,image/svg+xml,application/pdf,video/mp4,video/mpeg,video/quicktime,audio/mpeg,audio/wav'
     max_filesize: 200
     max_files: 30
     category_id: 0

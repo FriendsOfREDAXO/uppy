@@ -36,14 +36,19 @@ use Exception;
 class UppyUploadHandler extends rex_api_function
 {
     protected $published = true;
+    protected $chunksDir = '';
     protected $metadataDir = '';
 
     public function __construct()
     {
         $baseDir = rex_path::addonData('uppy', 'upload');
+        $this->chunksDir = $baseDir . '/chunks';
         $this->metadataDir = $baseDir . '/metadata';
         
-        // Metadata-Verzeichnis erstellen, falls nicht vorhanden
+        // Verzeichnisse erstellen, falls nicht vorhanden
+        if (!is_dir($this->chunksDir)) {
+            rex_dir::create($this->chunksDir);
+        }
         if (!is_dir($this->metadataDir)) {
             rex_dir::create($this->metadataDir);
         }
@@ -82,6 +87,14 @@ class UppyUploadHandler extends rex_api_function
                     $result = $this->handleUpload($categoryId);
                     $this->sendResponse($result);
 
+                case 'chunk':
+                    $result = $this->handleChunkUpload($categoryId);
+                    $this->sendResponse($result);
+
+                case 'finalize':
+                    $result = $this->handleFinalizeUpload($categoryId);
+                    $this->sendResponse($result);
+
                 case 'delete':
                     $result = $this->handleDelete();
                     $this->sendResponse($result);
@@ -89,9 +102,14 @@ class UppyUploadHandler extends rex_api_function
                 default:
                     throw new rex_api_exception('Invalid function: ' . $func);
             }
+        } catch (rex_api_exception $e) {
+            // API Exceptions sind "erwartete" Fehler (z.B. Validierung) -> 400 Bad Request
+            rex_logger::factory()->log('warning', 'Uppy API Exception: ' . $e->getMessage());
+            $this->sendResponse(['error' => $e->getMessage()], rex_response::HTTP_BAD_REQUEST);
         } catch (Exception $e) {
+            // Unerwartete Fehler -> 500 Internal Server Error
             rex_logger::logException($e);
-            $this->sendResponse(['error' => $e->getMessage()], rex_response::HTTP_FORBIDDEN);
+            $this->sendResponse(['error' => $e->getMessage()], rex_response::HTTP_INTERNAL_ERROR);
         }
     }
 
@@ -154,7 +172,10 @@ class UppyUploadHandler extends rex_api_function
      */
     protected function handleUpload(int $categoryId): array
     {
+        rex_logger::factory()->log('debug', 'handleUpload called. FILES: ' . print_r($_FILES, true));
+
         if (!isset($_FILES['file'])) {
+            rex_logger::factory()->log('error', 'No file uploaded in handleUpload');
             throw new rex_api_exception('No file uploaded');
         }
 
@@ -196,6 +217,191 @@ class UppyUploadHandler extends rex_api_function
                 'filename' => $filename
             ]
         ];
+    }
+
+    /**
+     * Chunk-Upload Handler
+     * Orientiert an filepond's chunk-upload
+     */
+    protected function handleChunkUpload(int $categoryId): array
+    {
+        if (!isset($_FILES['file'])) {
+            throw new rex_api_exception('No chunk uploaded');
+        }
+
+        $file = $_FILES['file'];
+        $fileId = rex_request('fileId', 'string', '');
+        $chunkIndex = rex_request('chunkIndex', 'int', 0);
+        $totalChunks = rex_request('totalChunks', 'int', 1);
+
+        if (empty($fileId)) {
+            throw new rex_api_exception('Missing fileId');
+        }
+
+        // Chunk-Verzeichnis für diese Datei
+        $fileChunkDir = $this->chunksDir . '/' . $fileId;
+        if (!is_dir($fileChunkDir)) {
+            rex_dir::create($fileChunkDir);
+        }
+
+        // Lock-Mechanismus
+        $lockFile = $fileChunkDir . '/.lock';
+        $lock = fopen($lockFile, 'w+');
+
+        if (!flock($lock, LOCK_EX)) {
+            fclose($lock);
+            throw new rex_api_exception('Could not acquire lock');
+        }
+
+        try {
+            // Chunk speichern
+            $chunkPath = $fileChunkDir . '/' . $chunkIndex;
+            if (!move_uploaded_file($file['tmp_name'], $chunkPath)) {
+                throw new rex_api_exception("Failed to save chunk $chunkIndex");
+            }
+
+            // Prüfen ob alle Chunks da sind
+            clearstatcache();
+            $uploadedChunks = 0;
+            foreach (scandir($fileChunkDir) as $f) {
+                if ($f !== '.' && $f !== '..' && $f !== '.lock' && is_file($fileChunkDir . '/' . $f)) {
+                    $uploadedChunks++;
+                }
+            }
+            
+            flock($lock, LOCK_UN);
+            fclose($lock);
+            @unlink($lockFile);
+
+            return [
+                'status' => 'chunk-success',
+                'chunkIndex' => $chunkIndex,
+                'totalChunks' => $totalChunks,
+                'uploadedChunks' => $uploadedChunks
+            ];
+
+        } catch (Exception $e) {
+            if (isset($lock) && is_resource($lock)) {
+                flock($lock, LOCK_UN);
+                fclose($lock);
+                @unlink($lockFile);
+            }
+            throw $e;
+        }
+    }
+
+    /**
+     * Finalisierung des Chunk-Uploads
+     * Fügt Chunks zusammen und fügt Datei zum Mediapool hinzu
+     */
+    protected function handleFinalizeUpload(int $categoryId): array
+    {
+        $fileId = rex_request('fileId', 'string', '');
+        $fileName = rex_request('fileName', 'string', '');
+        $totalChunks = rex_request('totalChunks', 'int', 0);
+
+        if (empty($fileId) || empty($fileName)) {
+            throw new rex_api_exception('Missing fileId or fileName');
+        }
+
+        $fileChunkDir = $this->chunksDir . '/' . $fileId;
+        
+        if (!is_dir($fileChunkDir)) {
+            throw new rex_api_exception('Chunk directory not found');
+        }
+
+        // Chunks zusammenführen
+        $tmpFile = rex_path::addonData('uppy', 'upload/') . $fileId;
+        $out = fopen($tmpFile, 'wb');
+        
+        if (!$out) {
+            throw new rex_api_exception('Could not create output file');
+        }
+
+        // Dateisystem-Cache leeren
+        clearstatcache();
+
+        // Prüfen ob alle Chunks vorhanden sind
+        $actualChunks = 0;
+        $chunkFiles = [];
+        foreach (scandir($fileChunkDir) as $f) {
+            if ($f !== '.' && $f !== '..' && $f !== '.lock' && is_file($fileChunkDir . '/' . $f)) {
+                $actualChunks++;
+                $chunkFiles[] = $f;
+            }
+        }
+
+        if ($actualChunks < $totalChunks) {
+            fclose($out);
+            $this->cleanupChunks($fileChunkDir);
+            throw new rex_api_exception("Expected $totalChunks chunks, but found only $actualChunks");
+        }
+
+        // Chunks sortieren und zusammenfügen
+        sort($chunkFiles, SORT_NUMERIC);
+        
+        for ($i = 0; $i < $totalChunks; $i++) {
+            $chunkPath = $fileChunkDir . '/' . $i;
+            if (!file_exists($chunkPath)) {
+                fclose($out);
+                $this->cleanupChunks($fileChunkDir);
+                throw new rex_api_exception("Chunk $i is missing");
+            }
+
+            $in = fopen($chunkPath, 'rb');
+            if (!$in) {
+                fclose($out);
+                $this->cleanupChunks($fileChunkDir);
+                throw new rex_api_exception("Could not open chunk $i");
+            }
+
+            stream_copy_to_stream($in, $out);
+            fclose($in);
+        }
+
+        fclose($out);
+
+        // Metadaten laden
+        $metadata = $this->loadMetadata($fileId);
+
+        // Datei zum Mediapool hinzufügen
+        $file = [
+            'name' => $fileName,
+            'tmp_name' => $tmpFile,
+            'type' => rex_file::mimeType($tmpFile),
+            'size' => filesize($tmpFile),
+            'error' => 0
+        ];
+
+        $filename = $this->processUploadedFile($file, $categoryId, $metadata);
+
+        // Aufräumen
+        $this->cleanupChunks($fileChunkDir);
+        $this->deleteMetadata($fileId);
+        rex_file::delete($tmpFile);
+
+        return [
+            'success' => true,
+            'data' => [
+                'filename' => $filename
+            ]
+        ];
+    }
+
+    /**
+     * Räumt Chunk-Verzeichnis auf
+     */
+    protected function cleanupChunks(string $directory): void
+    {
+        if (is_dir($directory)) {
+            $files = glob($directory . '/*');
+            foreach ($files as $file) {
+                if (is_file($file)) {
+                    @unlink($file);
+                }
+            }
+            @rmdir($directory);
+        }
     }
 
     /**
@@ -250,6 +456,10 @@ class UppyUploadHandler extends rex_api_function
 
         if (!is_array($return) || !isset($return['filename'])) {
             $error = is_array($return) && isset($return['message']) ? $return['message'] : 'Upload failed';
+            
+            // Log detailed error for debugging
+            rex_logger::logError('UPPY_UPLOAD_ERROR', 'Upload failed for file: ' . $file['name'] . '. Error: ' . $error);
+            
             throw new rex_api_exception($error);
         }
 
@@ -328,16 +538,6 @@ class UppyUploadHandler extends rex_api_function
 
         $metaFile = $this->metadataDir . '/' . $fileId . '.json';
         rex_file::delete($metaFile);
-    }
-
-    /**
-     * Räumt Chunk-Verzeichnis auf
-     */
-    protected function cleanupChunks(string $directory): void
-    {
-        if (is_dir($directory)) {
-            rex_dir::delete($directory, true);
-        }
     }
 
     /**

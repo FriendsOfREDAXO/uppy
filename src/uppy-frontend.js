@@ -197,7 +197,8 @@ function addCompressorPlugin(uppy, config) {
     }
     
     uppy.on('file-added', function(file) {
-        if (!file.type || !file.type.startsWith('image/')) {
+        // SVGs nicht resizen, da Canvas sie rasterisiert (zu PNG konvertiert)
+        if (!file.type || !file.type.startsWith('image/') || file.type === 'image/svg+xml') {
             return;
         }
         

@@ -52,8 +52,106 @@ $formElements = [];
 // Allgemeine Einstellungen
 $n = [];
 $n['label'] = '<label for="uppy-allowed-types">' . $addon->i18n('uppy_allowed_types') . '</label>';
-$n['field'] = '<input class="form-control" type="text" id="uppy-allowed-types" name="config[allowed_types]" value="' . rex_escape(rex_config::get('uppy', 'allowed_types', 'image/jpeg,image/png,image/gif,image/webp,image/svg+xml,video/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx')) . '" />';
-$n['note'] = 'MIME-Types oder Dateiendungen mit Punkt, z.B. <code>image/*,video/*,.pdf</code> oder explizit <code>image/jpeg,image/png,image/webp,image/svg+xml</code>';
+$n['field'] = '
+<div class="input-group">
+    <input class="form-control" type="text" id="uppy-allowed-types" name="config[allowed_types]" value="' . rex_escape(rex_config::get('uppy', 'allowed_types', 'image/jpeg,image/png,image/gif,image/webp,image/svg+xml,application/pdf,video/mp4,video/mpeg,video/quicktime,audio/mpeg,audio/wav')) . '" />
+    <span class="input-group-btn">
+        <button class="btn btn-default" type="button" id="uppy-select-types-btn" data-toggle="modal" data-target="#uppy-types-modal">
+            <i class="rex-icon rex-icon-add"></i> ' . $addon->i18n('uppy_select_types') . '
+        </button>
+    </span>
+</div>
+
+<!-- Modal für Dateitypen-Auswahl -->
+<div class="modal fade" id="uppy-types-modal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title">' . $addon->i18n('uppy_select_types') . '</h4>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5>Bilder</h5>
+                        <div class="checkbox"><label><input type="checkbox" class="uppy-type-cb" value="image/jpeg"> JPEG (image/jpeg)</label></div>
+                        <div class="checkbox"><label><input type="checkbox" class="uppy-type-cb" value="image/png"> PNG (image/png)</label></div>
+                        <div class="checkbox"><label><input type="checkbox" class="uppy-type-cb" value="image/gif"> GIF (image/gif)</label></div>
+                        <div class="checkbox"><label><input type="checkbox" class="uppy-type-cb" value="image/webp"> WebP (image/webp)</label></div>
+                        <div class="checkbox"><label><input type="checkbox" class="uppy-type-cb" value="image/svg+xml"> SVG (image/svg+xml)</label></div>
+                        <div class="checkbox"><label><input type="checkbox" class="uppy-type-cb" value="image/tiff"> TIFF (image/tiff)</label></div>
+                        <div class="checkbox"><label><input type="checkbox" class="uppy-type-cb" value="image/bmp"> BMP (image/bmp)</label></div>
+                        <div class="checkbox"><label><input type="checkbox" class="uppy-type-cb" value="image/heic"> HEIC (image/heic)</label></div>
+                        
+                        <h5>Dokumente</h5>
+                        <div class="checkbox"><label><input type="checkbox" class="uppy-type-cb" value="application/pdf"> PDF (application/pdf)</label></div>
+                        <div class="checkbox"><label><input type="checkbox" class="uppy-type-cb" value="text/plain"> Text (text/plain)</label></div>
+                        <div class="checkbox"><label><input type="checkbox" class="uppy-type-cb" value="application/rtf"> RTF (application/rtf)</label></div>
+                        <div class="checkbox"><label><input type="checkbox" class="uppy-type-cb" value="application/zip"> ZIP (application/zip)</label></div>
+                    </div>
+                    <div class="col-md-6">
+                        <h5>Video</h5>
+                        <div class="checkbox"><label><input type="checkbox" class="uppy-type-cb" value="video/mp4"> MP4 (video/mp4)</label></div>
+                        <div class="checkbox"><label><input type="checkbox" class="uppy-type-cb" value="video/mpeg"> MPEG (video/mpeg)</label></div>
+                        <div class="checkbox"><label><input type="checkbox" class="uppy-type-cb" value="video/quicktime"> QuickTime (video/quicktime)</label></div>
+                        <div class="checkbox"><label><input type="checkbox" class="uppy-type-cb" value="video/webm"> WebM (video/webm)</label></div>
+                        <div class="checkbox"><label><input type="checkbox" class="uppy-type-cb" value="video/ogg"> OGG (video/ogg)</label></div>
+                        
+                        <h5>Audio</h5>
+                        <div class="checkbox"><label><input type="checkbox" class="uppy-type-cb" value="audio/mpeg"> MP3 (audio/mpeg)</label></div>
+                        <div class="checkbox"><label><input type="checkbox" class="uppy-type-cb" value="audio/wav"> WAV (audio/wav)</label></div>
+                        <div class="checkbox"><label><input type="checkbox" class="uppy-type-cb" value="audio/ogg"> OGG (audio/ogg)</label></div>
+                        <div class="checkbox"><label><input type="checkbox" class="uppy-type-cb" value="audio/aac"> AAC (audio/aac)</label></div>
+                        <div class="checkbox"><label><input type="checkbox" class="uppy-type-cb" value="audio/midi"> MIDI (audio/midi)</label></div>
+                    </div>
+                </div>
+                <div class="row" style="margin-top: 15px; border-top: 1px solid #eee; padding-top: 10px;">
+                    <div class="col-md-12">
+                        <h5>Office (Modern)</h5>
+                        <div class="checkbox"><label><input type="checkbox" class="uppy-type-cb" value="application/vnd.openxmlformats-officedocument.wordprocessingml.document"> Word .docx</label></div>
+                        <div class="checkbox"><label><input type="checkbox" class="uppy-type-cb" value="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"> Excel .xlsx</label></div>
+                        <div class="checkbox"><label><input type="checkbox" class="uppy-type-cb" value="application/vnd.openxmlformats-officedocument.presentationml.presentation"> PowerPoint .pptx</label></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">' . $addon->i18n('uppy_cancel') . '</button>
+                <button type="button" class="btn btn-primary" id="uppy-apply-types">' . $addon->i18n('uppy_apply') . '</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script nonce="' . rex_response::getNonce() . '">
+(function($) {
+    // Modal öffnen und Checkboxen basierend auf Input setzen
+    $("#uppy-types-modal").on("show.bs.modal", function() {
+        var currentTypes = $("#uppy-allowed-types").val().split(",");
+        currentTypes = currentTypes.map(function(t) { return t.trim(); });
+        
+        $(".uppy-type-cb").prop("checked", false);
+        
+        $(".uppy-type-cb").each(function() {
+            if (currentTypes.indexOf($(this).val()) > -1) {
+                $(this).prop("checked", true);
+            }
+        });
+    });
+    
+    // Auswahl übernehmen
+    $("#uppy-apply-types").on("click", function() {
+        var selectedTypes = [];
+        $(".uppy-type-cb:checked").each(function() {
+            selectedTypes.push($(this).val());
+        });
+        
+        $("#uppy-allowed-types").val(selectedTypes.join(","));
+        $("#uppy-types-modal").modal("hide");
+    });
+})(jQuery);
+</script>
+';
+$n['note'] = 'MIME-Types (kommagetrennt), z.B. <code>image/jpeg,image/png,image/webp,image/svg+xml,application/pdf</code>';
 $formElements[] = $n;
 
 $n = [];

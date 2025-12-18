@@ -37,7 +37,9 @@ if (rex::isBackend() && rex::getUser()) {
             'fix_exif_orientation' => rex_config::get('uppy', 'fix_exif_orientation', true),
             'enable_webcam' => rex_config::get('uppy', 'enable_webcam', false),
             'enable_image_editor' => rex_config::get('uppy', 'enable_image_editor', false),
-            'crop_ratios' => rex_config::get('uppy', 'crop_ratios', '1:1,16:9,4:3,3:2,free')
+            'crop_ratios' => rex_config::get('uppy', 'crop_ratios', '1:1,16:9,4:3,3:2,free'),
+            'enable_chunks' => rex_config::get('uppy', 'enable_chunks', true),
+            'chunk_size' => rex_config::get('uppy', 'chunk_size', 5)
         ]);
         
         // JavaScript Bundle (lokal gebaut mit esbuild) - mit Timestamp für Cache-Busting

@@ -10512,7 +10512,7 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
       return;
     }
     uppy.on("file-added", function(file) {
-      if (!file.type || !file.type.startsWith("image/")) {
+      if (!file.type || !file.type.startsWith("image/") || file.type === "image/svg+xml") {
         return;
       }
       resizeImage(file, config).then(function(resizedBlob) {

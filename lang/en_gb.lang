@@ -26,6 +26,9 @@ uppy_api_token = API Token
 uppy_api_token_notice = Token for frontend uploads (auto-generated)
 uppy_save_success = Settings saved successfully
 uppy_save_error = Error saving settings
+uppy_select_types = Select File Types
+uppy_apply = Apply
+uppy_cancel = Cancel
 
 # Upload Page
 uppy_upload_title = Upload Files
