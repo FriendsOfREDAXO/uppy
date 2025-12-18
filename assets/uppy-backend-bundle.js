@@ -14306,6 +14306,8 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
     config.resize_quality = uppyConfig.resize_quality || 85;
     config.fix_exif_orientation = uppyConfig.fix_exif_orientation !== false;
     loadMetadataFields(config.apiToken).then(function(metaFields) {
+      console.log("Uppy: Geladene Metadaten-Felder:", metaFields.length);
+      console.log("Uppy: Kategorie-ID aus config:", config.categoryId);
       const uppy = new Uppy_default({
         id: "uppy-" + Math.random().toString(36).substr(2, 9),
         autoProceed: false,
@@ -14340,9 +14342,11 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
         // metaFields MÜSSEN angegeben werden, sonst gibt es keinen Edit-Button
         metaFields: metaFields.length > 0 ? metaFields : void 0
       });
+      console.log("Starte setupMetadataModal mit", metaFields?.length || 0, "Feldern");
       if (metaFields && metaFields.length > 0) {
         setupMetadataModal(uppy, metaFields);
       } else {
+        console.warn("Keine Metadaten-Felder vorhanden - setupMetadataModal wird NICHT aufgerufen");
       }
       addCompressorPlugin(uppy, config);
       initializeUppyPlugins(uppy, config, inputElement);
@@ -14587,13 +14591,17 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
     }
   }
   function loadMetadataFields(apiToken) {
+    console.log("loadMetadataFields aufgerufen mit Token:", apiToken ? "vorhanden" : "FEHLT!");
     return fetch(window.location.origin + "/redaxo/index.php?rex-api-call=uppy_metadata&action=get_fields&api_token=" + apiToken).then(function(response) {
+      console.log("Metadata API Response Status:", response.status);
       if (!response.ok) {
         throw new Error("HTTP " + response.status);
       }
       return response.json();
     }).then(function(data) {
+      console.log("Metadata API Response:", data);
       if (data.success && data.data) {
+        console.log("API data.data:", data.data.length, "Felder geladen");
         return data.data.map(function(field) {
           const mappedField = {
             id: field.id,
@@ -14608,6 +14616,10 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
           return mappedField;
         });
       }
+      console.warn("Metadata API: Keine Felder im Response");
+      return [];
+    }).catch(function(error) {
+      console.error("Fehler beim Laden der Metadaten-Felder:", error);
       return [];
     });
   }

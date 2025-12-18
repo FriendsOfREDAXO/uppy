@@ -72,6 +72,8 @@ function initializeUppyWidget(inputElement) {
     
     // Metadaten-Felder laden
     loadMetadataFields(config.apiToken).then(function(metaFields) {
+        console.log('Uppy: Geladene Metadaten-Felder:', metaFields.length);
+        console.log('Uppy: Kategorie-ID aus config:', config.categoryId);
 
         // Uppy-Instanz erstellen
         const uppy = new Uppy({
@@ -117,11 +119,11 @@ function initializeUppyWidget(inputElement) {
         });
         
         // Eigenes Modal für Metadaten nach Upload
-
+        console.log('Starte setupMetadataModal mit', metaFields?.length || 0, 'Feldern');
         if (metaFields && metaFields.length > 0) {
             setupMetadataModal(uppy, metaFields);
         } else {
-
+            console.warn('Keine Metadaten-Felder vorhanden - setupMetadataModal wird NICHT aufgerufen');
         }
         
         // Compressor Plugin für Resize und EXIF-Korrektur
@@ -511,16 +513,20 @@ function setupEventHandlersOriginal(uppy, config, inputElement) {
  * Lädt Metadaten-Felder vom Server
  */
 function loadMetadataFields(apiToken) {
+    console.log('loadMetadataFields aufgerufen mit Token:', apiToken ? 'vorhanden' : 'FEHLT!');
+    
     return fetch(window.location.origin + '/redaxo/index.php?rex-api-call=uppy_metadata&action=get_fields&api_token=' + apiToken)
         .then(function(response) {
+            console.log('Metadata API Response Status:', response.status);
             if (!response.ok) {
                 throw new Error('HTTP ' + response.status);
             }
             return response.json();
         })
         .then(function(data) {
+            console.log('Metadata API Response:', data);
             if (data.success && data.data) {
-
+                console.log('API data.data:', data.data.length, 'Felder geladen');
                 return data.data.map(function(field) {
                     const mappedField = {
                         id: field.id,
@@ -536,6 +542,11 @@ function loadMetadataFields(apiToken) {
                     return mappedField;
                 });
             }
+            console.warn('Metadata API: Keine Felder im Response');
+            return [];
+        })
+        .catch(function(error) {
+            console.error('Fehler beim Laden der Metadaten-Felder:', error);
             return [];
         });
 }
