@@ -7,13 +7,10 @@ yarn-debug.log*
 yarn-error.log*
 package-lock.json
 
-# Build artifacts (optional - wenn du die Bundles committen willst)
+# Build artifacts werden committed (notwendig für Installation ohne Build)
 # assets/*.min.js
 # assets/*.min.css
-
-# Plugins & Locales (werden gebaut)
-assets/plugins/
-assets/locales/
+# assets/locales/
 
 # Python scripts
 *.pyc
