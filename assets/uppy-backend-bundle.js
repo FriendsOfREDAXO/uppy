@@ -14331,7 +14331,7 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
         console.log("Registriere Image Editor VOR Dashboard...");
         registerImageEditor(uppy, config, globalConfig);
       }
-      uppy.use(Dashboard2, {
+      const dashboardOptions = {
         inline: true,
         target: container,
         width: "100%",
@@ -14342,7 +14342,12 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
         disablePageScrollWhenModalOpen: false,
         // metaFields MÜSSEN angegeben werden, sonst gibt es keinen Edit-Button
         metaFields: metaFields.length > 0 ? metaFields : void 0
-      });
+      };
+      if (enableImageEditor) {
+        dashboardOptions.fileManagerSelectionType = "files";
+        console.log("Dashboard mit Image Editor Support konfiguriert");
+      }
+      uppy.use(Dashboard2, dashboardOptions);
       console.log("Starte setupMetadataModal mit", metaFields?.length || 0, "Feldern");
       if (metaFields && metaFields.length > 0) {
         setupMetadataModal(uppy, metaFields);
@@ -14370,6 +14375,7 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
     try {
       uppy.use(ImageEditor, {
         id: "ImageEditor",
+        target: Dashboard2,
         quality: config.resize_quality / 100,
         // 85 -> 0.85
         cropperOptions: {

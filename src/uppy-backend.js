@@ -105,7 +105,7 @@ function initializeUppyWidget(inputElement) {
         }
         
         // Dashboard Plugin - MIT metaFields damit Edit-Button erscheint
-        uppy.use(Dashboard, {
+        const dashboardOptions = {
             inline: true,
             target: container,
             width: '100%',
@@ -116,7 +116,15 @@ function initializeUppyWidget(inputElement) {
             disablePageScrollWhenModalOpen: false,
             // metaFields MÜSSEN angegeben werden, sonst gibt es keinen Edit-Button
             metaFields: metaFields.length > 0 ? metaFields : undefined
-        });
+        };
+        
+        // Wenn Image Editor aktiv ist, fileManagerSelectionType aktivieren
+        if (enableImageEditor) {
+            dashboardOptions.fileManagerSelectionType = 'files';
+            console.log('Dashboard mit Image Editor Support konfiguriert');
+        }
+        
+        uppy.use(Dashboard, dashboardOptions);
         
         // Eigenes Modal für Metadaten nach Upload
         console.log('Starte setupMetadataModal mit', metaFields?.length || 0, 'Feldern');
@@ -159,6 +167,7 @@ function registerImageEditor(uppy, config, globalConfig) {
     try {
         uppy.use(ImageEditor, {
             id: 'ImageEditor',
+            target: Dashboard,
             quality: config.resize_quality / 100, // 85 -> 0.85
             cropperOptions: {
                 viewMode: 1,
