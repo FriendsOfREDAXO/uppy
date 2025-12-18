@@ -11278,6 +11278,14 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
             inputElement.value = files.join(",");
           }
         }
+        if (typeof jQuery !== "undefined") {
+          jQuery(document).trigger("uppyUploadSuccess", {
+            widgetId: inputElement?.id,
+            filename,
+            title,
+            file
+          });
+        }
         const openerField = inputElement?.dataset?.uppyOpenerField || window.rex?.uppyOpenerInputField;
         if (openerField && window.opener) {
         }

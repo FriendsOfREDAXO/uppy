@@ -246,6 +246,16 @@ function setupEventHandlers(uppy, config, inputElement) {
                 }
             }
             
+            // jQuery Event für YForm-Integration auslösen
+            if (typeof jQuery !== 'undefined') {
+                jQuery(document).trigger('uppyUploadSuccess', {
+                    widgetId: inputElement?.id,
+                    filename: filename,
+                    title: title,
+                    file: file
+                });
+            }
+            
             // Mediapool-Widget-Integration (REX_MEDIA / REX_MEDIALIST)
             const openerField = inputElement?.dataset?.uppyOpenerField || window.rex?.uppyOpenerInputField;
             if (openerField && window.opener) {

@@ -10,9 +10,10 @@ Ein modernes File-Upload-AddOn für REDAXO CMS, basierend auf [Uppy 5.0](https:/
 - ✅ **Webcam-Integration** für direkte Foto-Aufnahme
 - ✅ **Metadaten-Verwaltung** mit MetaInfo-Integration
 - ✅ **Mehrsprachige Metafelder** (metainfo_lang_fields Support)
+- ✅ **REDAXO Mediapool Widget-Kompatibilität** (REX_MEDIA, REX_MEDIALIST)
 - ✅ **Dark Theme** Support (auto + manuell)
 - ✅ Backend- und Frontend-Integration
-- ✅ YForm-Integration
+- ✅ YForm-Integration mit Multi-Upload
 - ✅ Optional: Ersetzt die Standard-Mediapool-Upload-Seite
 - ✅ Lokaler Build (keine CDN-Abhängigkeiten)
 
@@ -72,19 +73,38 @@ Uppy wird automatisch im Backend geladen. Verwende data-Attribute für Input-Fel
 ```html
 <input type="file" 
        data-widget="uppy" 
-       data-uppy-category="1"
-       data-uppy-max-files="10"
-       data-uppy-max-filesize="200"
-       data-uppy-allowed-types="image/*,application/pdf">
+       data-category-id="1"
+       data-max-files="10"
+       data-max-filesize="200"
+       data-allowed-types="image/*,application/pdf">
 ```
 
 **Verfügbare Data-Attribute:**
 
 - `data-widget="uppy"` - Aktiviert Uppy für das Input-Feld
-- `data-uppy-category="ID"` - Mediapool-Kategorie (optional)
-- `data-uppy-max-files="10"` - Maximale Anzahl Dateien (optional)
-- `data-uppy-max-filesize="200"` - Max. Größe in MB (optional)
-- `data-uppy-allowed-types="..."` - Erlaubte MIME-Types (optional)
+- `data-category-id="ID"` - Mediapool-Kategorie (optional)
+- `data-max-files="10"` - Maximale Anzahl Dateien (optional)
+- `data-max-filesize="200"` - Max. Größe in MB (optional)
+- `data-allowed-types="..."` - Erlaubte MIME-Types (optional)
+- `data-enable-webcam="true"` - Webcam aktivieren (optional)
+
+### Mediapool Widget-Integration
+
+Das AddOn ist vollständig kompatibel mit REDAXO's REX_MEDIA und REX_MEDIALIST Widgets:
+
+**REX_MEDIA (Einzeldatei):**
+```php
+REX_MEDIA[id="1" widget="1"]
+```
+
+**REX_MEDIALIST (Mehrere Dateien):**
+```php
+REX_MEDIALIST[id="1" widget="1"]
+```
+
+Bei Upload über den Mediapool-Button öffnet sich Uppy in einem Popup. Nach dem Upload erscheinen:
+- **REX_MEDIA**: "Übernehmen"-Button (schließt Popup)
+- **REX_MEDIALIST**: "Übernehmen"-Buttons + "Alle übernehmen" (Popup bleibt offen)
 
 ### Im Frontend
 
@@ -98,35 +118,52 @@ Im Frontend musst du die Assets manuell im Template einbinden:
 <link rel="stylesheet" href="<?= rex_url::addonAssets('uppy', 'uppy-webcam.min.css') ?>">
 <link rel="stylesheet" href="<?= rex_url::addonAssets('uppy', 'uppy-custom.css') ?>">
 ```
-
-**Vor `</body>`:**
-
-```html
-<script src="<?= rex_url::addonAssets('uppy', 'uppy-frontend-bundle.js') ?>"></script>
-```
-
-**HTML für Upload-Feld:**
-
-```html
-<input type="file" 
-       data-widget="uppy" 
-       data-uppy-category="1"
-       data-uppy-max-files="10"
-       data-uppy-allowed-types="image/*,application/pdf">
-```
-
-### YForm-Integration
-
-Das AddOn stellt ein YForm-Value-Feld bereit:
+mit vollständiger Multi-Upload-Unterstützung bereit:
 
 **Im Tablemanager:**
 
 ```
-uppy_uploader|datei|Datei hochladen|1|10|200|image/*,application/pdf
+uppy_uploader|datei|Datei hochladen|1|10|200|image/*,application/pdf|0
 ```
+
+**Parameter:**
+- `name` - Feldname
+- `label` - Beschriftung
+- `category_id` - Mediapool-Kategorie (0 = keine)
+- `max_files` - Max. Anzahl Dateien
+- `max_filesize` - Max. Größe in MB
+- `allowed_types` - Erlaubte Dateitypen
+- `enable_webcam` - Webcam aktivieren (1/0)
 
 **Im Code:**
 
+```php
+$yform->setValueField('uppy_uploader', [
+    'name' => 'datei',
+    'label' => 'Datei hochladen',
+    'category_id' => 1,         // Mediapool-Kategorie
+    'max_files' => 10,          // Max. Anzahl Dateien
+    'max_filesize' => 200,      // Max. Größe in MB
+    'allowed_types' => 'image/*,application/pdf',
+    'enable_webcam' => false    // Webcam aktivieren
+]);
+```
+
+**Features:**
+- Mehrfach-Upload (Werte kommagetrennt gespeichert)
+- Vorschau bereits hochgeladener Dateien mit Thumbnails
+- Einzelne Dateien entfernen mit Fade-Out-Animation
+- Automatische Wert-Aktualisierung bei Upload
+- Thumbnail-Anzeige in der Tabellen-Übersicht
+
+**Ausgabe im Frontend:**
+
+```php
+$files = $item->getValue('datei'); // Kommagetrennte Dateinamen
+$fileArray = array_filter(array_map('trim', explode(',', $files)));
+
+foreach ($fileArray as $filename) {
+    $media = rex_media::get($filename
 ```php
 $yform->setValueField('uppy_uploader', [
     'name' => 'datei',
@@ -296,16 +333,21 @@ endforeach;
 
 ## Lizenz
 
-MIT License - siehe [LICENSE](LICENSE)
+MIT License 2.0.0-beta1 (2024-12-18)
 
-Copyright (c) 2025 Friends Of REDAXO
-
-## Credits
-
-- Basiert auf [Uppy](https://uppy.io/) von Transloadit
-- Entwickelt von [Friends Of REDAXO](https://github.com/FriendsOfREDAXO)
-
-## Support
+- ✅ Uppy 5.0 Integration mit lokalem Build
+- ✅ Chunk-Upload für große Dateien
+- ✅ Client-seitige Bildoptimierung (Resize, EXIF-Korrektur)
+- ✅ Webcam-Support für Foto-Aufnahme
+- ✅ MetaInfo-Integration mit mehrsprachigen Feldern (metainfo_lang_fields)
+- ✅ **REDAXO Mediapool Widget-Kompatibilität** (REX_MEDIA, REX_MEDIALIST)
+- ✅ **"Alle übernehmen" Button für MEDIALIST**
+- ✅ Dark Theme Support (Auto-Detect)
+- ✅ **Verbesserte YForm-Integration** mit Multi-Upload
+- ✅ **Friends of REDAXO Namespace** (FriendsOfRedaxo\Uppy)
+- ✅ Backend- und Frontend-Unterstützung
+- ✅ Kategorie-Auswahl mit Berechtigungsprüfung
+- ✅ Lokaler Build ohne CDN-Abhängigkeiten
 
 - **Issues & Bugs**: https://github.com/FriendsOfREDAXO/uppy/issues
 - **Diskussionen**: https://github.com/FriendsOfREDAXO/uppy/discussions
