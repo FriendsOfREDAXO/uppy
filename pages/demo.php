@@ -61,7 +61,6 @@ $content .= '
                         name="avatar_demo" 
                         id="avatar_demo"
                         data-widget="uppy"
-                        data-api-token="' . rex_config::get('uppy', 'api_token', '') . '"
                         data-max-files="1"
                         data-max-filesize="10"
                         data-allowed-types="image/*"
@@ -79,7 +78,6 @@ $content .= '
                         name="header_demo" 
                         id="header_demo"
                         data-widget="uppy"
-                        data-api-token="' . rex_config::get('uppy', 'api_token', '') . '"
                         data-max-files="1"
                         data-max-filesize="20"
                         data-allowed-types="image/*"
@@ -97,7 +95,6 @@ $content .= '
                         name="multi_demo" 
                         id="multi_demo"
                         data-widget="uppy"
-                        data-api-token="' . rex_config::get('uppy', 'api_token', '') . '"
                         data-max-files="5"
                         data-max-filesize="15"
                         data-allowed-types="image/*"
@@ -123,10 +120,6 @@ $content .= '
                         <tr>
                             <th>Image Editor aktiviert:</th>
                             <td>' . (rex_config::get('uppy', 'enable_image_editor', false) ? '<span class="label label-success">Ja</span>' : '<span class="label label-default">Nein</span>') . '</td>
-                        </tr>
-                        <tr>
-                            <th>API Token gesetzt:</th>
-                            <td>' . (rex_config::get('uppy', 'api_token', '') !== '' ? '<span class="label label-success">Ja</span>' : '<span class="label label-danger">Nein - bitte in install.php generieren</span>') . '</td>
                         </tr>
                         <tr>
                             <th>Verfügbare Seitenverhältnisse:</th>

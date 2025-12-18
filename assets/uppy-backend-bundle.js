@@ -14292,6 +14292,7 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
     inputElement.parentNode.insertBefore(container, inputElement.nextSibling);
     const config = {
       apiToken: inputElement.dataset.apiToken || "",
+      // Im Backend optional (User ist bereits authentifiziert)
       maxFiles: parseInt(inputElement.dataset.maxFiles) || 10,
       maxFileSize: (parseInt(inputElement.dataset.maxFilesize) || 200) * 1024 * 1024,
       // MB in Bytes umrechnen
@@ -14433,7 +14434,8 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
     uppy.use(XHRUpload, {
       endpoint: function(file) {
         const currentCategoryId = parseInt(inputElement.dataset.categoryId) || 0;
-        return window.location.origin + "/redaxo/index.php?rex-api-call=uppy_uploader&func=upload&api_token=" + encodeURIComponent(config.apiToken) + "&category_id=" + currentCategoryId;
+        const tokenParam = config.apiToken ? "&api_token=" + encodeURIComponent(config.apiToken) : "";
+        return window.location.origin + "/redaxo/index.php?rex-api-call=uppy_uploader&func=upload" + tokenParam + "&category_id=" + currentCategoryId;
       },
       formData: true,
       fieldName: "file",
@@ -14591,8 +14593,9 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
     }
   }
   function loadMetadataFields(apiToken) {
-    console.log("loadMetadataFields aufgerufen mit Token:", apiToken ? "vorhanden" : "FEHLT!");
-    return fetch(window.location.origin + "/redaxo/index.php?rex-api-call=uppy_metadata&action=get_fields&api_token=" + apiToken).then(function(response) {
+    console.log("loadMetadataFields aufgerufen mit Token:", apiToken ? "vorhanden" : "nicht gesetzt (Backend-Auth)");
+    const url = apiToken ? window.location.origin + "/redaxo/index.php?rex-api-call=uppy_metadata&action=get_fields&api_token=" + apiToken : window.location.origin + "/redaxo/index.php?rex-api-call=uppy_metadata&action=get_fields";
+    return fetch(url).then(function(response) {
       console.log("Metadata API Response Status:", response.status);
       if (!response.ok) {
         throw new Error("HTTP " + response.status);

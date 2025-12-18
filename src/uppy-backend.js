@@ -54,7 +54,7 @@ function initializeUppyWidget(inputElement) {
     
     // Konfiguration aus data-Attributen oder Defaults
     const config = {
-        apiToken: inputElement.dataset.apiToken || '',
+        apiToken: inputElement.dataset.apiToken || '', // Im Backend optional (User ist bereits authentifiziert)
         maxFiles: parseInt(inputElement.dataset.maxFiles) || 10,
         maxFileSize: (parseInt(inputElement.dataset.maxFilesize) || 200) * 1024 * 1024, // MB in Bytes umrechnen
         allowedTypes: inputElement.dataset.allowedTypes ? inputElement.dataset.allowedTypes.split(',') : [],
@@ -231,7 +231,10 @@ function initializeUppyPlugins(uppy, config, inputElement) {
         endpoint: function(file) {
             // Category-ID dynamisch aus dem data-Attribut lesen (aktualisiert bei Select-Change)
             const currentCategoryId = parseInt(inputElement.dataset.categoryId) || 0;
-            return window.location.origin + '/redaxo/index.php?rex-api-call=uppy_uploader&func=upload&api_token=' + encodeURIComponent(config.apiToken) + '&category_id=' + currentCategoryId;
+            
+            // Im Backend ist Token optional
+            const tokenParam = config.apiToken ? '&api_token=' + encodeURIComponent(config.apiToken) : '';
+            return window.location.origin + '/redaxo/index.php?rex-api-call=uppy_uploader&func=upload' + tokenParam + '&category_id=' + currentCategoryId;
         },
         formData: true,
         fieldName: 'file',
@@ -513,9 +516,14 @@ function setupEventHandlersOriginal(uppy, config, inputElement) {
  * Lädt Metadaten-Felder vom Server
  */
 function loadMetadataFields(apiToken) {
-    console.log('loadMetadataFields aufgerufen mit Token:', apiToken ? 'vorhanden' : 'FEHLT!');
+    console.log('loadMetadataFields aufgerufen mit Token:', apiToken ? 'vorhanden' : 'nicht gesetzt (Backend-Auth)');
     
-    return fetch(window.location.origin + '/redaxo/index.php?rex-api-call=uppy_metadata&action=get_fields&api_token=' + apiToken)
+    // Im Backend ist Token optional, da User bereits authentifiziert ist
+    const url = apiToken 
+        ? window.location.origin + '/redaxo/index.php?rex-api-call=uppy_metadata&action=get_fields&api_token=' + apiToken
+        : window.location.origin + '/redaxo/index.php?rex-api-call=uppy_metadata&action=get_fields';
+    
+    return fetch(url)
         .then(function(response) {
             console.log('Metadata API Response Status:', response.status);
             if (!response.ok) {
