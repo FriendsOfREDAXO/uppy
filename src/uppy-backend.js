@@ -127,8 +127,11 @@ function initializeUppyWidget(inputElement) {
         uppy.use(Dashboard, dashboardOptions);
         
         // Eigenes Modal für Metadaten nach Upload
-        console.log('Starte setupMetadataModal mit', metaFields?.length || 0, 'Feldern');
-        if (metaFields && metaFields.length > 0) {
+        // ABER: Wenn Image Editor aktiv ist, kein Modal - User soll erst Bild bearbeiten
+        if (enableImageEditor) {
+            console.log('Image Editor aktiv - Metadata Modal DEAKTIVIERT (Bearbeitung vor Metadaten)');
+        } else if (metaFields && metaFields.length > 0) {
+            console.log('Starte setupMetadataModal mit', metaFields.length, 'Feldern');
             setupMetadataModal(uppy, metaFields);
         } else {
             console.warn('Keine Metadaten-Felder vorhanden - setupMetadataModal wird NICHT aufgerufen');
@@ -137,7 +140,7 @@ function initializeUppyWidget(inputElement) {
         // Compressor Plugin für Resize und EXIF-Korrektur
         addCompressorPlugin(uppy, config);
         
-        initializeUppyPlugins(uppy, config, inputElement);
+        initializeUppyPlugins(uppy, config, inputElement, metaFields);
     }).catch(function(error) {
 
         // Fallback: Uppy ohne Metadaten-Felder initialisieren
@@ -209,7 +212,7 @@ function registerImageEditor(uppy, config, globalConfig) {
 /**
  * Initialisiert Uppy-Plugins und Event-Handler
  */
-function initializeUppyPlugins(uppy, config, inputElement) {
+function initializeUppyPlugins(uppy, config, inputElement, metaFields) {
     // Webcam Plugin nur laden wenn aktiviert
     const globalConfig = window.rex?.uppy_config || {};
     const enableWebcam = globalConfig.enable_webcam || false;
@@ -269,7 +272,7 @@ function initializeUppyPlugins(uppy, config, inputElement) {
     });
     
     // Event-Handler
-    setupEventHandlers(uppy, config, inputElement);
+    setupEventHandlers(uppy, config, inputElement, metaFields);
 }
 
 /**
@@ -305,14 +308,16 @@ function initializeUppyFallback(container, config, inputElement) {
 /**
  * Event-Handler einrichten
  */
-function setupEventHandlers(uppy, config, inputElement) {
+function setupEventHandlers(uppy, config, inputElement, metaFields) {
     // Vor dem Upload: Metadaten sammeln
     uppy.on('file-editor:complete', function(file) {
-
+        console.log('Image Editor abgeschlossen für:', file.name);
     });
     
     // Upload erfolgreich
     uppy.on('upload-success', function(file, response) {
+        console.log('Upload erfolgreich:', file.name);
+        
         if (response.body && response.body.success && response.body.data) {
             const filename = response.body.data.filename;
             const title = response.body.data.title || '';
@@ -323,6 +328,18 @@ function setupEventHandlers(uppy, config, inputElement) {
                 savedFilename: filename,
                 savedTitle: title
             });
+            
+            // Wenn Image Editor aktiv ist UND Metadaten vorhanden sind: Modal öffnen
+            const globalConfig = window.rex?.uppy_config || {};
+            const enableImageEditor = globalConfig.enable_image_editor || false;
+            
+            if (enableImageEditor && metaFields && metaFields.length > 0) {
+                console.log('Öffne Metadata-Modal nach Upload (Image Editor ist aktiv)');
+                // Kurze Verzögerung damit Upload-Feedback sichtbar ist
+                setTimeout(function() {
+                    showMetadataModal(uppy, file, metaFields);
+                }, 500);
+            }
             
             // Hidden Input aktualisieren
             if (inputElement) {
@@ -705,6 +722,20 @@ function setupMutationObserver() {
  */
 function setupMetadataModal(uppy, metaFields) {
     console.log('setupMetadataModal aufgerufen mit', metaFields.length, 'Feldern');
+    
+    const globalConfig = window.rex?.uppy_config || {};
+    const enableImageEditor = globalConfig.enable_image_editor || false;
+    
+    if (enableImageEditor) {
+        console.log('Image Editor ist aktiv - Edit-Button wird NICHT überschrieben');
+        console.log('Metadaten-Modal öffnet sich automatisch nach Upload');
+        // Wenn Image Editor aktiv ist, Edit-Button nicht abfangen
+        // Metadata-Modal wird über upload-success Event geöffnet
+        return;
+    }
+
+    // Nur wenn KEIN Image Editor: Edit-Button für Metadata-Modal abfangen
+    console.log('Image Editor inaktiv - Edit-Button wird für Metadata-Modal verwendet');
 
     // MutationObserver für File-Items
     const observeFileItems = function() {

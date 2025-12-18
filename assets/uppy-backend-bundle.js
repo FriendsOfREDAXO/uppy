@@ -14348,14 +14348,16 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
         console.log("Dashboard mit Image Editor Support konfiguriert");
       }
       uppy.use(Dashboard2, dashboardOptions);
-      console.log("Starte setupMetadataModal mit", metaFields?.length || 0, "Feldern");
-      if (metaFields && metaFields.length > 0) {
+      if (enableImageEditor) {
+        console.log("Image Editor aktiv - Metadata Modal DEAKTIVIERT (Bearbeitung vor Metadaten)");
+      } else if (metaFields && metaFields.length > 0) {
+        console.log("Starte setupMetadataModal mit", metaFields.length, "Feldern");
         setupMetadataModal(uppy, metaFields);
       } else {
         console.warn("Keine Metadaten-Felder vorhanden - setupMetadataModal wird NICHT aufgerufen");
       }
       addCompressorPlugin(uppy, config);
-      initializeUppyPlugins(uppy, config, inputElement);
+      initializeUppyPlugins(uppy, config, inputElement, metaFields);
     }).catch(function(error) {
       initializeUppyFallback(container, config, inputElement);
     });
@@ -14414,7 +14416,7 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
       console.error("\u2717 Fehler beim Registrieren von Image Editor:", error);
     }
   }
-  function initializeUppyPlugins(uppy, config, inputElement) {
+  function initializeUppyPlugins(uppy, config, inputElement, metaFields) {
     const globalConfig = window.rex?.uppy_config || {};
     const enableWebcam = globalConfig.enable_webcam || false;
     if (enableWebcam) {
@@ -14466,7 +14468,7 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
         }
       }
     });
-    setupEventHandlers(uppy, config, inputElement);
+    setupEventHandlers(uppy, config, inputElement, metaFields);
   }
   function initializeUppyFallback(container, config, inputElement) {
     const uppy = new Uppy_default({
@@ -14492,10 +14494,12 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
     addCompressorPlugin(uppy, config);
     initializeUppyPlugins(uppy, config, inputElement);
   }
-  function setupEventHandlers(uppy, config, inputElement) {
+  function setupEventHandlers(uppy, config, inputElement, metaFields) {
     uppy.on("file-editor:complete", function(file) {
+      console.log("Image Editor abgeschlossen f\xFCr:", file.name);
     });
     uppy.on("upload-success", function(file, response) {
+      console.log("Upload erfolgreich:", file.name);
       if (response.body && response.body.success && response.body.data) {
         const filename = response.body.data.filename;
         const title = response.body.data.title || "";
@@ -14504,6 +14508,14 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
           savedFilename: filename,
           savedTitle: title
         });
+        const globalConfig = window.rex?.uppy_config || {};
+        const enableImageEditor = globalConfig.enable_image_editor || false;
+        if (enableImageEditor && metaFields && metaFields.length > 0) {
+          console.log("\xD6ffne Metadata-Modal nach Upload (Image Editor ist aktiv)");
+          setTimeout(function() {
+            showMetadataModal(uppy, file, metaFields);
+          }, 500);
+        }
         if (inputElement) {
           const currentValue = inputElement.value;
           const files = currentValue ? currentValue.split(",") : [];
@@ -14731,6 +14743,14 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
   }
   function setupMetadataModal(uppy, metaFields) {
     console.log("setupMetadataModal aufgerufen mit", metaFields.length, "Feldern");
+    const globalConfig = window.rex?.uppy_config || {};
+    const enableImageEditor = globalConfig.enable_image_editor || false;
+    if (enableImageEditor) {
+      console.log("Image Editor ist aktiv - Edit-Button wird NICHT \xFCberschrieben");
+      console.log("Metadaten-Modal \xF6ffnet sich automatisch nach Upload");
+      return;
+    }
+    console.log("Image Editor inaktiv - Edit-Button wird f\xFCr Metadata-Modal verwendet");
     const observeFileItems = function() {
       const filesContainer = document.querySelector(".uppy-Dashboard-filesInner");
       if (!filesContainer) {
