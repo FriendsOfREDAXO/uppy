@@ -54,15 +54,10 @@ Ein modernes File-Upload-AddOn für REDAXO CMS, basierend auf [Uppy 5.0](https:/
 
 Gehe zu **Uppy → Einstellungen** im Backend:
 
-- **Erlaubte Dateitypen**: MIME-Types (z.B. `image/*,application/pdf`)
-- **Maximale Dateigröße**: In MB (Standard: 200 MB)
+- **Erlaubte Dateitypen**: MIME-Types (z.B. `image/jpeg,image/png,image/gif,image/webp,image/svg+xml,application/pdf`)
+- **Maximale Dateigröße**: In MB (Standard: 200 MB, abhängig von PHP `upload_max_filesize`)
 - **Maximale Anzahl Dateien**: Pro Upload-Session
 - **Standard-Kategorie**: Mediapool-Kategorie für Uploads
-- **Chunk-Upload**: Aktivieren für große Dateien - **TUS Protocol** (empfohlen!)
-  - Umgeht PHP `upload_max_filesize` Limits
-  - Automatisches Resume bei Unterbrechungen
-  - Geringerer Memory-Verbrauch
-- **Chunk-Größe**: In MB (Standard: 5 MB) - nur aktiv wenn Chunk-Upload aktiviert
 - **Bildoptimierung**: Client-seitige Resize-Funktion
   - Maximale Breite/Höhe
   - JPEG-Qualität (1-100)
@@ -403,12 +398,6 @@ MIT License 2.0.0-beta1 (2024-12-18)
 ### Version 2.0.0-beta1 (2024-12-18)
 
 **Neue Features:**
-- ✅ **Echte Chunked Uploads mit TUS Protocol** (@uppy/tus)
-  - Umgeht PHP `upload_max_filesize` Limits komplett
-  - Automatisches Resume bei Unterbrechungen
-  - Konfigurierbare Chunk-Größe (Standard: 5MB)
-  - Retry-Mechanismus bei Fehlern
-  - Geringerer Server-Memory-Verbrauch
 - ✅ **Image Editor Integration** - Bildbearbeitung mit Cropper.js
   - Aktivierung per Feld via `data-enable-image-editor="true"`
   - Feste Seitenverhältnisse: 1:1, 16:9, 4:3, 3:2, free
@@ -417,19 +406,23 @@ MIT License 2.0.0-beta1 (2024-12-18)
 - ✅ **Demo-Seite** für Image Editor Features
 - ✅ **Dynamische UI-Höhen** - Dashboard passt sich Dateianzahl an
 - ✅ **Optimierte Preview-Bilder** - Max. 80px Höhe in FileCards
+- ✅ **Explizite MIME-Types** - Bessere Dateivalidierung (SVG, WebP supported)
 
 **Verbesserungen:**
 - ✅ Image Editor wird pro Feld konfiguriert (nicht global)
 - ✅ Dynamische Anzeige "Dateien hochladen (max. X)" aus `data-max-files`
 - ✅ Console-Logs reduziert (nur kritische Fehler)
 - ✅ Verbesserte Benutzerführung bei Bildbearbeitung
-- ✅ XHR Upload Fallback wenn Chunking deaktiviert
+- ✅ Whitespace-Trimming bei allowedTypes-Parsing
 
 **Technisch:**
-- Uppy 5.2.0 mit @uppy/tus@5.0.0 (Chunked Uploads)
+- Uppy 5.2.0 Core
 - @uppy/image-editor@4.1.0 mit Cropper.js
-- @uppy/xhr-upload@5.0.0 (Fallback)
+- @uppy/xhr-upload@5.0.0
 - ESBuild lokaler Build (keine CDN-Abhängigkeiten)
+
+**Geplante Features für 2.1.0:**
+- 🔄 Chunked Uploads für große Dateien (TUS Protocol oder Custom Implementation)
 
 
 ## Credits

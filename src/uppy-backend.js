@@ -6,7 +6,6 @@ import Uppy from '@uppy/core';
 import Dashboard from '@uppy/dashboard';
 import Webcam from '@uppy/webcam';
 import XHRUpload from '@uppy/xhr-upload';
-import Tus from '@uppy/tus';
 import ImageEditor from '@uppy/image-editor';
 import German from '@uppy/locales/lib/de_DE';
 
@@ -218,53 +217,36 @@ function initializeUppyPlugins(uppy, config, inputElement, metaFields) {
         });
     }
     
-    // Upload Plugin: TUS für Chunked Upload oder XHR für kleine Dateien
-    if (config.enable_chunks) {
-        // TUS Protocol für Chunked Uploads
-        uppy.use(Tus, {
-            endpoint: function() {
-                const currentCategoryId = parseInt(inputElement.dataset.categoryId) || 0;
-                const tokenParam = config.apiToken ? '&api_token=' + encodeURIComponent(config.apiToken) : '';
-                return window.location.origin + '/redaxo/index.php?rex-api-call=uppy_uploader&func=chunk' + tokenParam + '&category_id=' + currentCategoryId;
-            },
-            chunkSize: config.chunk_size,
-            retryDelays: [0, 1000, 3000, 5000],
-            withCredentials: true,
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
+    // Upload Plugin: XHR Upload (Chunking deaktiviert)
+    const currentCategoryId = parseInt(inputElement.dataset.categoryId) || 0;
+    const tokenParam = config.apiToken ? '&api_token=' + encodeURIComponent(config.apiToken) : '';
+    
+    uppy.use(XHRUpload, {
+        endpoint: window.location.origin + '/redaxo/index.php?rex-api-call=uppy_uploader&func=upload' + tokenParam + '&category_id=' + currentCategoryId,
+        formData: true,
+        fieldName: 'file',
+        allowedMetaFields: true,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        limit: 5,
+        
+        getResponseData: function(responseText, response) {
+            try {
+                return JSON.parse(responseText);
+            } catch (e) {
+                return { success: false, message: 'Invalid response' };
             }
-        });
-    } else {
-        // XHR Upload für Standard-Uploads
-        uppy.use(XHRUpload, {
-            endpoint: function(file) {
-                const currentCategoryId = parseInt(inputElement.dataset.categoryId) || 0;
-                const tokenParam = config.apiToken ? '&api_token=' + encodeURIComponent(config.apiToken) : '';
-                return window.location.origin + '/redaxo/index.php?rex-api-call=uppy_uploader&func=upload' + tokenParam + '&category_id=' + currentCategoryId;
-            },
-            formData: true,
-            fieldName: 'file',
-            allowedMetaFields: true,
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            },
-            getResponseData: function(responseText, response) {
-                try {
-                    return JSON.parse(responseText);
-                } catch (e) {
-                    return { success: false, message: 'Invalid response' };
-                }
-            },
-            getResponseError: function(responseText) {
-                try {
-                    const response = JSON.parse(responseText);
-                    return response.error || response.message || 'Upload failed';
-                } catch (e) {
-                    return responseText;
-                }
+        },
+        getResponseError: function(responseText) {
+            try {
+                const response = JSON.parse(responseText);
+                return response.error || response.message || 'Upload failed';
+            } catch (e) {
+                return responseText;
             }
-        });
-    }
+        }
+    });
     
     // Event-Handler
     setupEventHandlers(uppy, config, inputElement, metaFields);

@@ -36,19 +36,14 @@ use Exception;
 class UppyUploadHandler extends rex_api_function
 {
     protected $published = true;
-    protected $chunksDir = '';
     protected $metadataDir = '';
 
     public function __construct()
     {
         $baseDir = rex_path::addonData('uppy', 'upload');
-        $this->chunksDir = $baseDir . '/chunks';
         $this->metadataDir = $baseDir . '/metadata';
         
-        // Verzeichnisse erstellen, falls nicht vorhanden
-        if (!is_dir($this->chunksDir)) {
-            rex_dir::create($this->chunksDir);
-        }
+        // Metadata-Verzeichnis erstellen, falls nicht vorhanden
         if (!is_dir($this->metadataDir)) {
             rex_dir::create($this->metadataDir);
         }
@@ -85,14 +80,6 @@ class UppyUploadHandler extends rex_api_function
 
                 case 'upload':
                     $result = $this->handleUpload($categoryId);
-                    $this->sendResponse($result);
-
-                case 'chunk':
-                    $result = $this->handleChunkUpload($categoryId);
-                    $this->sendResponse($result);
-
-                case 'finalize':
-                    $result = $this->handleFinalizeUpload($categoryId);
                     $this->sendResponse($result);
 
                 case 'delete':
@@ -202,141 +189,6 @@ class UppyUploadHandler extends rex_api_function
 
         // Datei verarbeiten
         $filename = $this->processUploadedFile($file, $categoryId, $metadata);
-
-        return [
-            'success' => true,
-            'data' => [
-                'filename' => $filename
-            ]
-        ];
-    }
-
-    /**
-     * Chunk-Upload
-     */
-    protected function handleChunkUpload(int $categoryId): array
-    {
-        if (!isset($_FILES['file'])) {
-            throw new rex_api_exception('No chunk uploaded');
-        }
-
-        $file = $_FILES['file'];
-        $fileId = rex_request('fileId', 'string', '');
-        $chunkIndex = rex_request('chunkIndex', 'int', 0);
-        $totalChunks = rex_request('totalChunks', 'int', 1);
-
-        if (empty($fileId)) {
-            throw new rex_api_exception('Missing fileId');
-        }
-
-        // Chunk-Verzeichnis für diese Datei
-        $fileChunkDir = $this->chunksDir . '/' . $fileId;
-        if (!is_dir($fileChunkDir)) {
-            rex_dir::create($fileChunkDir);
-        }
-
-        // Lock-Mechanismus
-        $lockFile = $fileChunkDir . '/.lock';
-        $lock = fopen($lockFile, 'w+');
-
-        if (!flock($lock, LOCK_EX)) {
-            fclose($lock);
-            throw new rex_api_exception('Could not acquire lock');
-        }
-
-        try {
-            // Chunk speichern
-            $chunkPath = $fileChunkDir . '/' . $chunkIndex;
-            if (!move_uploaded_file($file['tmp_name'], $chunkPath)) {
-                throw new rex_api_exception("Failed to save chunk $chunkIndex");
-            }
-
-            // Prüfen ob alle Chunks da sind
-            $uploadedChunks = count(glob($fileChunkDir . '/[0-9]*'));
-            
-            flock($lock, LOCK_UN);
-            fclose($lock);
-
-            return [
-                'status' => 'chunk-success',
-                'chunkIndex' => $chunkIndex,
-                'totalChunks' => $totalChunks,
-                'uploadedChunks' => $uploadedChunks
-            ];
-
-        } catch (Exception $e) {
-            if (isset($lock) && is_resource($lock)) {
-                flock($lock, LOCK_UN);
-                fclose($lock);
-            }
-            throw $e;
-        }
-    }
-
-    /**
-     * Finalisierung des Chunk-Uploads
-     */
-    protected function handleFinalizeUpload(int $categoryId): array
-    {
-        $fileId = rex_request('fileId', 'string', '');
-        $fileName = rex_request('fileName', 'string', '');
-        $totalChunks = rex_request('totalChunks', 'int', 0);
-
-        if (empty($fileId) || empty($fileName)) {
-            throw new rex_api_exception('Missing fileId or fileName');
-        }
-
-        $fileChunkDir = $this->chunksDir . '/' . $fileId;
-        
-        if (!is_dir($fileChunkDir)) {
-            throw new rex_api_exception('Chunk directory not found');
-        }
-
-        // Chunks zusammenführen
-        $tmpFile = rex_path::addonData('uppy', 'upload/') . $fileId;
-        $out = fopen($tmpFile, 'wb');
-        
-        if (!$out) {
-            throw new rex_api_exception('Could not create output file');
-        }
-
-        for ($i = 0; $i < $totalChunks; $i++) {
-            $chunkPath = $fileChunkDir . '/' . $i;
-            if (!file_exists($chunkPath)) {
-                fclose($out);
-                throw new rex_api_exception("Chunk $i is missing");
-            }
-
-            $in = fopen($chunkPath, 'rb');
-            if (!$in) {
-                fclose($out);
-                throw new rex_api_exception("Could not open chunk $i");
-            }
-
-            stream_copy_to_stream($in, $out);
-            fclose($in);
-        }
-
-        fclose($out);
-
-        // Metadaten laden
-        $metadata = $this->loadMetadata($fileId);
-
-        // Datei zum Mediapool hinzufügen
-        $file = [
-            'name' => $fileName,
-            'tmp_name' => $tmpFile,
-            'type' => rex_file::mimeType($tmpFile),
-            'size' => filesize($tmpFile),
-            'error' => 0
-        ];
-
-        $filename = $this->processUploadedFile($file, $categoryId, $metadata);
-
-        // Aufräumen
-        $this->cleanupChunks($fileChunkDir);
-        $this->deleteMetadata($fileId);
-        rex_file::delete($tmpFile);
 
         return [
             'success' => true,
