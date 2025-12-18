@@ -118,10 +118,10 @@ function initializeUppyWidget(inputElement) {
             metaFields: metaFields.length > 0 ? metaFields : undefined
         };
         
-        // Wenn Image Editor aktiv ist, fileManagerSelectionType aktivieren
+        // Wenn Image Editor aktiv ist, automatisch öffnen bei Bild-Upload
         if (enableImageEditor) {
-            dashboardOptions.fileManagerSelectionType = 'files';
-            console.log('Dashboard mit Image Editor Support konfiguriert');
+            dashboardOptions.autoOpenFileEditor = true;
+            console.log('Dashboard: Image Editor wird automatisch bei Bild-Upload geöffnet');
         }
         
         uppy.use(Dashboard, dashboardOptions);

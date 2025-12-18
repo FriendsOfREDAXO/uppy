@@ -14344,8 +14344,8 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
         metaFields: metaFields.length > 0 ? metaFields : void 0
       };
       if (enableImageEditor) {
-        dashboardOptions.fileManagerSelectionType = "files";
-        console.log("Dashboard mit Image Editor Support konfiguriert");
+        dashboardOptions.autoOpenFileEditor = true;
+        console.log("Dashboard: Image Editor wird automatisch bei Bild-Upload ge\xF6ffnet");
       }
       uppy.use(Dashboard2, dashboardOptions);
       if (enableImageEditor) {
