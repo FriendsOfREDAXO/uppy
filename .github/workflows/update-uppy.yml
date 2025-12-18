@@ -1,0 +1,62 @@
+name: Update Uppy Dependencies
+
+on:
+  schedule:
+    - cron: '0 3 * * 1' # Jeden Montag um 3 Uhr morgens
+  workflow_dispatch: # Manuell ausführbar
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-uppy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Check for updates and install
+        id: update
+        run: |
+          # Installiere die neuesten Versionen der Uppy-Pakete
+          npm install \
+            @uppy/core@latest \
+            @uppy/dashboard@latest \
+            @uppy/image-editor@latest \
+            @uppy/locales@latest \
+            @uppy/webcam@latest \
+            @uppy/xhr-upload@latest
+
+      - name: Rebuild assets
+        run: npm run build
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: update uppy dependencies to latest version"
+          committer: GitHub <noreply@github.com>
+          author: GitHub <noreply@github.com>
+          signoff: false
+          branch: update-uppy-dependencies
+          delete-branch: true
+          title: "chore: Update Uppy dependencies"
+          body: |
+            Automated update of Uppy dependencies to their latest versions.
+            
+            This PR includes:
+            - Updated `package.json` and `package-lock.json`
+            - Rebuilt assets in `assets/` folder
+            
+            Please verify the changes and test the upload functionality.
+          labels: |
+            dependencies
+            automated
+          draft: false
