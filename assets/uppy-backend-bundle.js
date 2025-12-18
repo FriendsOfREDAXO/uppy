@@ -14265,11 +14265,6 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
   var de_DE_default = de_DE;
 
   // src/uppy-backend.js
-  console.log("=== UPPY BACKEND BUNDLE GELADEN ===");
-  console.log("Uppy:", typeof Uppy_default);
-  console.log("Dashboard:", typeof Dashboard2);
-  console.log("Webcam:", typeof Webcam);
-  console.log("ImageEditor:", typeof ImageEditor);
   window.UPPY_BUNDLE_LOADED = true;
   function initUppyWidgets() {
     const widgets = document.querySelectorAll('input[data-widget="uppy"]:not([data-uppy-initialized])');
@@ -14288,7 +14283,8 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
     inputElement.style.display = "none";
     const container = document.createElement("div");
     container.className = "uppy-wrapper";
-    container.style.minHeight = "400px";
+    container.style.minHeight = "350px";
+    container.style.marginBottom = "30px";
     inputElement.parentNode.insertBefore(container, inputElement.nextSibling);
     const config = {
       apiToken: inputElement.dataset.apiToken || "",
@@ -14307,8 +14303,6 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
     config.resize_quality = uppyConfig.resize_quality || 85;
     config.fix_exif_orientation = uppyConfig.fix_exif_orientation !== false;
     loadMetadataFields(config.apiToken).then(function(metaFields) {
-      console.log("Uppy: Geladene Metadaten-Felder:", metaFields.length);
-      console.log("Uppy: Kategorie-ID aus config:", config.categoryId);
       const uppy = new Uppy_default({
         id: "uppy-" + Math.random().toString(36).substr(2, 9),
         autoProceed: false,
@@ -14326,35 +14320,28 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
       window.uppyInstances.push(uppy);
       window.uppyDebug = uppy;
       const globalConfig = window.rex?.uppy_config || {};
-      const enableImageEditor = globalConfig.enable_image_editor || false;
+      const enableImageEditor = inputElement.dataset.enableImageEditor === "true";
       if (enableImageEditor) {
-        console.log("Registriere Image Editor VOR Dashboard...");
         registerImageEditor(uppy, config, globalConfig);
       }
       const dashboardOptions = {
         inline: true,
         target: container,
         width: "100%",
-        height: 350,
+        height: "auto",
         showProgressDetails: true,
         proudlyDisplayPoweredByUppy: false,
-        note: getTranslation(config.locale, "note"),
+        note: getTranslation(config.locale, "note", config.maxFiles),
         disablePageScrollWhenModalOpen: false,
         // metaFields MÜSSEN angegeben werden, sonst gibt es keinen Edit-Button
         metaFields: metaFields.length > 0 ? metaFields : void 0
       };
-      if (enableImageEditor) {
-        dashboardOptions.autoOpenFileEditor = true;
-        console.log("Dashboard: Image Editor wird automatisch bei Bild-Upload ge\xF6ffnet");
+      if (enableImageEditor && config.maxFiles === 1) {
+        dashboardOptions.autoOpen = "imageEditor";
       }
       uppy.use(Dashboard2, dashboardOptions);
-      if (enableImageEditor) {
-        console.log("Image Editor aktiv - Metadata Modal DEAKTIVIERT (Bearbeitung vor Metadaten)");
-      } else if (metaFields && metaFields.length > 0) {
-        console.log("Starte setupMetadataModal mit", metaFields.length, "Feldern");
+      if (!enableImageEditor && metaFields && metaFields.length > 0) {
         setupMetadataModal(uppy, metaFields);
-      } else {
-        console.warn("Keine Metadaten-Felder vorhanden - setupMetadataModal wird NICHT aufgerufen");
       }
       addCompressorPlugin(uppy, config);
       initializeUppyPlugins(uppy, config, inputElement, metaFields);
@@ -14364,20 +14351,14 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
   }
   function registerImageEditor(uppy, config, globalConfig) {
     const cropRatios = globalConfig.crop_ratios || "1:1,16:9,4:3,3:2,free";
-    console.log("Image Editor Config:", {
-      cropRatios,
-      typeof_ImageEditor: typeof ImageEditor
-    });
     const ratios = cropRatios.split(",").map((ratio) => {
       if (ratio === "free") return null;
       const parts = ratio.split(":").map(Number);
       return parts.length === 2 ? parts[0] / parts[1] : null;
     }).filter((r4) => r4 !== null);
-    console.log("Verf\xFCgbare Crop Ratios:", ratios);
     try {
       uppy.use(ImageEditor, {
         id: "ImageEditor",
-        target: Dashboard2,
         quality: config.resize_quality / 100,
         // 85 -> 0.85
         cropperOptions: {
@@ -14411,9 +14392,8 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
           }
         }
       });
-      console.log("\u2713 Image Editor Plugin erfolgreich registriert (VOR Dashboard)");
     } catch (error) {
-      console.error("\u2717 Fehler beim Registrieren von Image Editor:", error);
+      console.error("Uppy Image Editor Fehler:", error);
     }
   }
   function initializeUppyPlugins(uppy, config, inputElement, metaFields) {
@@ -14495,11 +14475,7 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
     initializeUppyPlugins(uppy, config, inputElement);
   }
   function setupEventHandlers(uppy, config, inputElement, metaFields) {
-    uppy.on("file-editor:complete", function(file) {
-      console.log("Image Editor abgeschlossen f\xFCr:", file.name);
-    });
     uppy.on("upload-success", function(file, response) {
-      console.log("Upload erfolgreich:", file.name);
       if (response.body && response.body.success && response.body.data) {
         const filename = response.body.data.filename;
         const title = response.body.data.title || "";
@@ -14511,7 +14487,6 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
         const globalConfig = window.rex?.uppy_config || {};
         const enableImageEditor = globalConfig.enable_image_editor || false;
         if (enableImageEditor && metaFields && metaFields.length > 0) {
-          console.log("\xD6ffne Metadata-Modal nach Upload (Image Editor ist aktiv)");
           setTimeout(function() {
             showMetadataModal(uppy, file, metaFields);
           }, 500);
@@ -14611,7 +14586,6 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
     }
   }
   function loadMetadataFields(apiToken) {
-    console.log("loadMetadataFields aufgerufen mit Token:", apiToken ? "vorhanden" : "nicht gesetzt (Backend-Auth)");
     const url = apiToken ? window.location.origin + "/redaxo/index.php?rex-api-call=uppy_metadata&action=get_fields&api_token=" + apiToken : window.location.origin + "/redaxo/index.php?rex-api-call=uppy_metadata&action=get_fields";
     return fetch(url).then(function(response) {
       console.log("Metadata API Response Status:", response.status);
@@ -14637,10 +14611,9 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
           return mappedField;
         });
       }
-      console.warn("Metadata API: Keine Felder im Response");
       return [];
     }).catch(function(error) {
-      console.error("Fehler beim Laden der Metadaten-Felder:", error);
+      console.error("Uppy Metadaten-Fehler:", error);
       return [];
     });
   }
@@ -14700,13 +14673,14 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
       reader.readAsDataURL(file.data);
     });
   }
-  function getTranslation(locale, key) {
+  function getTranslation(locale, key, maxFiles) {
+    maxFiles = maxFiles || 10;
     const translations = {
       "de-DE": {
-        "note": "Dateien hochladen (max. 10)"
+        "note": `Dateien hochladen (max. ${maxFiles})`
       },
       "en-US": {
-        "note": "Upload files (max. 10)"
+        "note": `Upload files (max. ${maxFiles})`
       }
     };
     return translations[locale]?.[key] || "";

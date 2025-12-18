@@ -1,10 +1,10 @@
 package: uppy
-version: '2.0.1-dev'
+version: '2.0.0-beta1'
 author: 'Friends Of REDAXO'
 supportpage: https://github.com/FriendsOfREDAXO/uppy
 requires:
     php: '>=8.1'
-    redaxo: '^5.17.1'
+    redaxo: '^5.19.1'
     packages:
         metainfo: '>=2.0.0'
 page:

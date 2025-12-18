@@ -9,13 +9,6 @@ import XHRUpload from '@uppy/xhr-upload';
 import ImageEditor from '@uppy/image-editor';
 import German from '@uppy/locales/lib/de_DE';
 
-// DEBUG: Sofort beim Laden ausgeben
-console.log('=== UPPY BACKEND BUNDLE GELADEN ===');
-console.log('Uppy:', typeof Uppy);
-console.log('Dashboard:', typeof Dashboard);
-console.log('Webcam:', typeof Webcam);
-console.log('ImageEditor:', typeof ImageEditor);
-
 window.UPPY_BUNDLE_LOADED = true;
 
 /**
@@ -49,7 +42,8 @@ function initializeUppyWidget(inputElement) {
     // Container für Uppy Dashboard erstellen
     const container = document.createElement('div');
     container.className = 'uppy-wrapper';
-    container.style.minHeight = '400px';
+    container.style.minHeight = '350px';
+    container.style.marginBottom = '30px';
     inputElement.parentNode.insertBefore(container, inputElement.nextSibling);
     
     // Konfiguration aus data-Attributen oder Defaults
@@ -72,8 +66,6 @@ function initializeUppyWidget(inputElement) {
     
     // Metadaten-Felder laden
     loadMetadataFields(config.apiToken).then(function(metaFields) {
-        console.log('Uppy: Geladene Metadaten-Felder:', metaFields.length);
-        console.log('Uppy: Kategorie-ID aus config:', config.categoryId);
 
         // Uppy-Instanz erstellen
         const uppy = new Uppy({
@@ -97,10 +89,10 @@ function initializeUppyWidget(inputElement) {
 
         // WICHTIG: Image Editor MUSS vor Dashboard registriert werden
         const globalConfig = window.rex?.uppy_config || {};
-        const enableImageEditor = globalConfig.enable_image_editor || false;
+        // Image Editor aus data-Attribut des Feldes lesen, nicht global
+        const enableImageEditor = inputElement.dataset.enableImageEditor === 'true';
         
         if (enableImageEditor) {
-            console.log('Registriere Image Editor VOR Dashboard...');
             registerImageEditor(uppy, config, globalConfig);
         }
         
@@ -109,32 +101,26 @@ function initializeUppyWidget(inputElement) {
             inline: true,
             target: container,
             width: '100%',
-            height: 350,
+            height: 'auto',
             showProgressDetails: true,
             proudlyDisplayPoweredByUppy: false,
-            note: getTranslation(config.locale, 'note'),
+            note: getTranslation(config.locale, 'note', config.maxFiles),
             disablePageScrollWhenModalOpen: false,
             // metaFields MÜSSEN angegeben werden, sonst gibt es keinen Edit-Button
             metaFields: metaFields.length > 0 ? metaFields : undefined
         };
         
-        // Wenn Image Editor aktiv ist, automatisch öffnen bei Bild-Upload
-        if (enableImageEditor) {
-            dashboardOptions.autoOpenFileEditor = true;
-            console.log('Dashboard: Image Editor wird automatisch bei Bild-Upload geöffnet');
+        // Wenn Image Editor aktiv ist, automatisch öffnen bei Bild-Upload (nur Einzel-Uploads)
+        if (enableImageEditor && config.maxFiles === 1) {
+            dashboardOptions.autoOpen = 'imageEditor';
         }
         
         uppy.use(Dashboard, dashboardOptions);
         
         // Eigenes Modal für Metadaten nach Upload
         // ABER: Wenn Image Editor aktiv ist, kein Modal - User soll erst Bild bearbeiten
-        if (enableImageEditor) {
-            console.log('Image Editor aktiv - Metadata Modal DEAKTIVIERT (Bearbeitung vor Metadaten)');
-        } else if (metaFields && metaFields.length > 0) {
-            console.log('Starte setupMetadataModal mit', metaFields.length, 'Feldern');
+        if (!enableImageEditor && metaFields && metaFields.length > 0) {
             setupMetadataModal(uppy, metaFields);
-        } else {
-            console.warn('Keine Metadaten-Felder vorhanden - setupMetadataModal wird NICHT aufgerufen');
         }
         
         // Compressor Plugin für Resize und EXIF-Korrektur
@@ -154,23 +140,15 @@ function initializeUppyWidget(inputElement) {
 function registerImageEditor(uppy, config, globalConfig) {
     const cropRatios = globalConfig.crop_ratios || '1:1,16:9,4:3,3:2,free';
     
-    console.log('Image Editor Config:', {
-        cropRatios,
-        typeof_ImageEditor: typeof ImageEditor
-    });
-    
     const ratios = cropRatios.split(',').map(ratio => {
         if (ratio === 'free') return null;
         const parts = ratio.split(':').map(Number);
         return parts.length === 2 ? parts[0] / parts[1] : null;
     }).filter(r => r !== null);
     
-    console.log('Verfügbare Crop Ratios:', ratios);
-    
     try {
         uppy.use(ImageEditor, {
             id: 'ImageEditor',
-            target: Dashboard,
             quality: config.resize_quality / 100, // 85 -> 0.85
             cropperOptions: {
                 viewMode: 1,
@@ -203,9 +181,8 @@ function registerImageEditor(uppy, config, globalConfig) {
                 }
             }
         });
-        console.log('✓ Image Editor Plugin erfolgreich registriert (VOR Dashboard)');
     } catch (error) {
-        console.error('✗ Fehler beim Registrieren von Image Editor:', error);
+        console.error('Uppy Image Editor Fehler:', error);
     }
 }
 
@@ -309,14 +286,8 @@ function initializeUppyFallback(container, config, inputElement) {
  * Event-Handler einrichten
  */
 function setupEventHandlers(uppy, config, inputElement, metaFields) {
-    // Vor dem Upload: Metadaten sammeln
-    uppy.on('file-editor:complete', function(file) {
-        console.log('Image Editor abgeschlossen für:', file.name);
-    });
-    
     // Upload erfolgreich
     uppy.on('upload-success', function(file, response) {
-        console.log('Upload erfolgreich:', file.name);
         
         if (response.body && response.body.success && response.body.data) {
             const filename = response.body.data.filename;
@@ -334,7 +305,6 @@ function setupEventHandlers(uppy, config, inputElement, metaFields) {
             const enableImageEditor = globalConfig.enable_image_editor || false;
             
             if (enableImageEditor && metaFields && metaFields.length > 0) {
-                console.log('Öffne Metadata-Modal nach Upload (Image Editor ist aktiv)');
                 // Kurze Verzögerung damit Upload-Feedback sichtbar ist
                 setTimeout(function() {
                     showMetadataModal(uppy, file, metaFields);
@@ -542,7 +512,6 @@ function setupEventHandlersOriginal(uppy, config, inputElement) {
  * Lädt Metadaten-Felder vom Server
  */
 function loadMetadataFields(apiToken) {
-    console.log('loadMetadataFields aufgerufen mit Token:', apiToken ? 'vorhanden' : 'nicht gesetzt (Backend-Auth)');
     
     // Im Backend ist Token optional, da User bereits authentifiziert ist
     const url = apiToken 
@@ -576,11 +545,10 @@ function loadMetadataFields(apiToken) {
                     return mappedField;
                 });
             }
-            console.warn('Metadata API: Keine Felder im Response');
             return [];
         })
         .catch(function(error) {
-            console.error('Fehler beim Laden der Metadaten-Felder:', error);
+            console.error('Uppy Metadaten-Fehler:', error);
             return [];
         });
 }
@@ -665,13 +633,15 @@ function resizeImage(file, config) {
 /**
  * Gibt Übersetzung zurück
  */
-function getTranslation(locale, key) {
+function getTranslation(locale, key, maxFiles) {
+    maxFiles = maxFiles || 10;
+    
     const translations = {
         'de-DE': {
-            'note': 'Dateien hochladen (max. 10)'
+            'note': `Dateien hochladen (max. ${maxFiles})`
         },
         'en-US': {
-            'note': 'Upload files (max. 10)'
+            'note': `Upload files (max. ${maxFiles})`
         }
     };
     

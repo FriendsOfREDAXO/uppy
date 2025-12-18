@@ -17,9 +17,7 @@ if (rex_post('config-submit', 'boolean')) {
         ['resize_height', 'int'],
         ['resize_quality', 'int'],
         ['fix_exif_orientation', 'bool'],
-        ['enable_webcam', 'bool'],
-        ['enable_image_editor', 'bool'],
-        ['crop_ratios', 'string']
+        ['enable_webcam', 'bool']
     ]);
     
     foreach ($config as $key => $value) {
@@ -127,20 +125,6 @@ $n = [];
 $n['label'] = '<label for="uppy-enable-webcam">Webcam aktivieren</label>';
 $n['field'] = '<input type="checkbox" id="uppy-enable-webcam" name="config[enable_webcam]" value="1" ' . (rex_config::get('uppy', 'enable_webcam', false) ? 'checked' : '') . ' />';
 $n['note'] = 'Ermöglicht die Aufnahme von Fotos über die Webcam direkt im Uploader';
-$formElements[] = $n;
-
-// Image Editor aktivieren
-$n = [];
-$n['label'] = '<label for="uppy-enable-image-editor">Image Editor aktivieren</label>';
-$n['field'] = '<input type="checkbox" id="uppy-enable-image-editor" name="config[enable_image_editor]" value="1" ' . (rex_config::get('uppy', 'enable_image_editor', false) ? 'checked' : '') . ' />';
-$n['note'] = 'Ermöglicht Bildbearbeitung (Zuschneiden, Drehen, Spiegeln) direkt im Uploader. Siehe <a href="index.php?page=uppy/demo">Demo-Seite</a>';
-$formElements[] = $n;
-
-// Crop Ratios
-$n = [];
-$n['label'] = '<label for="uppy-crop-ratios">Verfügbare Seitenverhältnisse</label>';
-$n['field'] = '<input class="form-control" type="text" id="uppy-crop-ratios" name="config[crop_ratios]" value="' . rex_escape(rex_config::get('uppy', 'crop_ratios', '1:1,16:9,4:3,3:2,free')) . '" />';
-$n['note'] = 'Kommagetrennte Liste der Seitenverhältnisse für den Image Editor (z.B. 1:1,16:9,4:3,3:2,free)';
 $formElements[] = $n;
 
 // Mediapool ersetzen

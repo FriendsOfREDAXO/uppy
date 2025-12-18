@@ -6,7 +6,6 @@
 
 $package = rex_addon::get('uppy');
 
-echo rex_view::title($package->i18n('uppy_demo_title'));
 
 $content = '
 <div class="row">
@@ -29,28 +28,15 @@ $content = '
                 </ul>
 ';
 
-// Image Editor Status-Meldung
-if (!rex_config::get('uppy', 'enable_image_editor', false)) {
-    $content .= '
-                <div class="alert alert-warning">
-                    <h4><i class="rex-icon fa-exclamation-triangle"></i> Image Editor ist deaktiviert!</h4>
-                    <p>Um die Bildbearbeitung zu nutzen, aktivieren Sie bitte:</p>
-                    <ol>
-                        <li>Gehen Sie zu <a href="index.php?page=uppy/settings" class="alert-link"><strong>Einstellungen</strong></a></li>
-                        <li>Aktivieren Sie die Checkbox <strong>"Image Editor aktivieren"</strong></li>
-                        <li>Klicken Sie auf <strong>"Speichern"</strong></li>
-                        <li>Laden Sie diese Seite neu</li>
-                    </ol>
+// Hinweis zur Bildbearbeitung
+$content .= '
+                <div class="alert alert-info">
+                    <i class="rex-icon fa-info-circle"></i> 
+                    <strong>Bildbearbeitung per Feld:</strong> 
+                    Die folgenden Upload-Felder haben <code>data-enable-image-editor="true"</code> gesetzt.
+                    Bei Einzel-Uploads öffnet sich der Editor automatisch, bei Multi-Uploads über den Edit-Button.
                 </div>
 ';
-} else {
-    $content .= '
-                <div class="alert alert-success">
-                    <i class="rex-icon fa-check"></i> <strong>Image Editor ist aktiviert!</strong> 
-                    Sie können jetzt Bilder hochladen und bearbeiten.
-                </div>
-';
-}
 
 $content .= '
                 <h4>Beispiel 1: Avatar Upload (1:1)</h4>
@@ -65,6 +51,7 @@ $content .= '
                         data-max-filesize="10"
                         data-allowed-types="image/*"
                         data-category-id="0"
+                        data-enable-image-editor="true"
                     />
                 </div>
                 
@@ -82,6 +69,7 @@ $content .= '
                         data-max-filesize="20"
                         data-allowed-types="image/*"
                         data-category-id="0"
+                        data-enable-image-editor="true"
                     />
                 </div>
                 
@@ -99,6 +87,7 @@ $content .= '
                         data-max-filesize="15"
                         data-allowed-types="image/*"
                         data-category-id="0"
+                        data-enable-image-editor="true"
                     />
                 </div>
                 
@@ -118,12 +107,12 @@ $content .= '
                 <table class="table table-striped">
                     <tbody>
                         <tr>
-                            <th>Image Editor aktiviert:</th>
-                            <td>' . (rex_config::get('uppy', 'enable_image_editor', false) ? '<span class="label label-success">Ja</span>' : '<span class="label label-default">Nein</span>') . '</td>
+                            <th>Image Editor:</th>
+                            <td><span class="label label-info">Per Feld aktiviert</span> (data-enable-image-editor="true")</td>
                         </tr>
                         <tr>
-                            <th>Verfügbare Seitenverhältnisse:</th>
-                            <td><code>' . rex_config::get('uppy', 'crop_ratios', '1:1,16:9,4:3,3:2,free') . '</code></td>
+                            <th>Seitenverhältnisse:</th>
+                            <td><code>1:1, 16:9, 4:3, 3:2, free</code></td>
                         </tr>
                         <tr>
                             <th>Webcam aktiviert:</th>
@@ -167,28 +156,11 @@ echo $content;
 
 ?>
 <script>
-// Debug: Konfiguration prüfen
+// Minimaler Debug: Prüfe ob Uppy geladen wurde
 jQuery(document).ready(function() {
-    console.log('=== DEMO-SEITE DEBUG ===');
-    console.log('rex.uppy_config:', window.rex?.uppy_config);
-    console.log('enable_image_editor:', window.rex?.uppy_config?.enable_image_editor);
-    console.log('crop_ratios:', window.rex?.uppy_config?.crop_ratios);
-    console.log('UPPY_BUNDLE_LOADED:', window.UPPY_BUNDLE_LOADED);
-    
-    // Nach 2 Sekunden prüfen ob Uppy-Instanzen existieren
-    setTimeout(function() {
-        console.log('=== UPPY INSTANZEN CHECK ===');
-        console.log('Anzahl Instanzen:', window.uppyInstances?.length || 0);
-        if (window.uppyInstances && window.uppyInstances.length > 0) {
-            window.uppyInstances.forEach(function(uppy, index) {
-                console.log('Instanz ' + index + ':', uppy.getID());
-                console.log('  - State:', uppy.getState());
-                // Prüfe ob ImageEditor Plugin geladen ist
-                var plugins = uppy.getState().plugins || {};
-                console.log('  - Geladene Plugins:', Object.keys(plugins));
-            });
-        }
-    }, 2000);
+    if (!window.UPPY_BUNDLE_LOADED) {
+        console.error('Uppy Bundle wurde nicht geladen!');
+    }
 });
 </script>
 <?php

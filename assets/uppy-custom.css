@@ -500,3 +500,20 @@ body.rex-theme-dark .uppy-uploaded-files-list h4 {
         color: var(--uppy-success-text);
     }
 }
+
+/* Limit Preview Image Height in FileCard */
+.uppy-Dashboard-FileCard-preview {
+    max-height: 80px !important;
+    height: auto !important;
+}
+
+.uppy-Dashboard-FileCard-preview img {
+    max-height: 80px !important;
+    height: auto !important;
+    object-fit: contain;
+}
+
+/* Minimum height for AddFiles area */
+.uppy-Dashboard-AddFiles {
+    min-height: 350px !important;
+}
