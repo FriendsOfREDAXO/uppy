@@ -14364,6 +14364,7 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
     console.log("Verf\xFCgbare Crop Ratios:", ratios);
     try {
       uppy.use(ImageEditor, {
+        id: "ImageEditor",
         quality: config.resize_quality / 100,
         // 85 -> 0.85
         cropperOptions: {
@@ -14708,12 +14709,15 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
     });
   }
   function setupMetadataModal(uppy, metaFields) {
+    console.log("setupMetadataModal aufgerufen mit", metaFields.length, "Feldern");
     const observeFileItems = function() {
       const filesContainer = document.querySelector(".uppy-Dashboard-filesInner");
       if (!filesContainer) {
+        console.log("Warte auf Dashboard Container...");
         setTimeout(observeFileItems, 100);
         return;
       }
+      console.log("Dashboard Container gefunden, starte Observer");
       const processFileItem = function(fileItem) {
         const fileId = fileItem.id;
         let editBtn = null;
@@ -14724,23 +14728,31 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
           }
         });
         if (!editBtn) {
+          console.log("Kein Edit-Button gefunden f\xFCr:", fileId);
           return;
         }
         if (editBtn.hasAttribute("data-uppy-custom-handler")) {
+          console.log("Handler bereits registriert f\xFCr:", fileId);
           return;
         }
+        console.log("Registriere Click-Handler f\xFCr:", fileId);
         editBtn.setAttribute("data-uppy-custom-handler", "true");
         editBtn.addEventListener("click", function(e4) {
+          console.log("Edit-Button geklickt f\xFCr:", fileId);
           e4.preventDefault();
           e4.stopPropagation();
           const files = uppy.getFiles();
           const file = files.find((f5) => fileItem.id.includes(f5.id));
           if (file) {
+            console.log("\xD6ffne Metadata Modal f\xFCr:", file.name);
             showMetadataModal(uppy, file, metaFields);
+          } else {
+            console.error("Datei nicht gefunden in Uppy:", fileId);
           }
         }, true);
       };
       const existingItems = filesContainer.querySelectorAll(".uppy-Dashboard-Item");
+      console.log("Verarbeite", existingItems.length, "existierende Items");
       existingItems.forEach(processFileItem);
       const observer = new MutationObserver(function(mutations) {
         mutations.forEach(function(mutation) {
@@ -14755,6 +14767,7 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
         childList: true,
         subtree: true
       });
+      console.log("MutationObserver gestartet");
     };
     setTimeout(observeFileItems, 200);
   }

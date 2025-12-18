@@ -156,6 +156,7 @@ function registerImageEditor(uppy, config, globalConfig) {
     
     try {
         uppy.use(ImageEditor, {
+            id: 'ImageEditor',
             quality: config.resize_quality / 100, // 85 -> 0.85
             cropperOptions: {
                 viewMode: 1,
@@ -675,15 +676,18 @@ function setupMutationObserver() {
  * Eigenes Modal für Metadaten nach Upload
  */
 function setupMetadataModal(uppy, metaFields) {
+    console.log('setupMetadataModal aufgerufen mit', metaFields.length, 'Feldern');
 
     // MutationObserver für File-Items
     const observeFileItems = function() {
         const filesContainer = document.querySelector('.uppy-Dashboard-filesInner');
         if (!filesContainer) {
-
+            console.log('Warte auf Dashboard Container...');
             setTimeout(observeFileItems, 100);
             return;
         }
+        
+        console.log('Dashboard Container gefunden, starte Observer');
 
         const processFileItem = function(fileItem) {
             const fileId = fileItem.id;
@@ -698,19 +702,24 @@ function setupMetadataModal(uppy, metaFields) {
             });
             
             if (!editBtn) {
+                console.log('Kein Edit-Button gefunden für:', fileId);
                 return;
             }
             
             // Prüfen ob Handler bereits registriert
             if (editBtn.hasAttribute('data-uppy-custom-handler')) {
+                console.log('Handler bereits registriert für:', fileId);
                 return;
             }
 
+            console.log('Registriere Click-Handler für:', fileId);
+            
             // Markiere als verarbeitet
             editBtn.setAttribute('data-uppy-custom-handler', 'true');
             
             // Click-Event abfangen und unser Modal öffnen
             editBtn.addEventListener('click', function(e) {
+                console.log('Edit-Button geklickt für:', fileId);
                 e.preventDefault();
                 e.stopPropagation();
                 
@@ -719,15 +728,17 @@ function setupMetadataModal(uppy, metaFields) {
                 const file = files.find(f => fileItem.id.includes(f.id));
                 
                 if (file) {
-
+                    console.log('Öffne Metadata Modal für:', file.name);
                     showMetadataModal(uppy, file, metaFields);
+                } else {
+                    console.error('Datei nicht gefunden in Uppy:', fileId);
                 }
             }, true);
         };
         
         // Bereits vorhandene File-Items verarbeiten
         const existingItems = filesContainer.querySelectorAll('.uppy-Dashboard-Item');
-
+        console.log('Verarbeite', existingItems.length, 'existierende Items');
         existingItems.forEach(processFileItem);
         
         // Observer für neue Items
@@ -748,7 +759,8 @@ function setupMetadataModal(uppy, metaFields) {
             childList: true,
             subtree: true
         });
-
+        
+        console.log('MutationObserver gestartet');
     };
     
     // Start nach kurzer Verzögerung
