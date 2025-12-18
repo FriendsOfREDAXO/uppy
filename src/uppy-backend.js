@@ -52,7 +52,7 @@ function initializeUppyWidget(inputElement) {
         apiToken: inputElement.dataset.apiToken || '', // Im Backend optional (User ist bereits authentifiziert)
         maxFiles: parseInt(inputElement.dataset.maxFiles) || 10,
         maxFileSize: (parseInt(inputElement.dataset.maxFilesize) || 200) * 1024 * 1024, // MB in Bytes umrechnen
-        allowedTypes: inputElement.dataset.allowedTypes ? inputElement.dataset.allowedTypes.split(',') : [],
+        allowedTypes: inputElement.dataset.allowedTypes ? inputElement.dataset.allowedTypes.split(',').map(t => t.trim()) : [],
         categoryId: parseInt(inputElement.dataset.categoryId) || 0,
         locale: inputElement.dataset.locale || 'de-DE'
     };
