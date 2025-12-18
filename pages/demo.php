@@ -27,8 +27,11 @@ $content = '
                     <li><strong>3:2</strong> - Übliches DSLR-Format</li>
                     <li><strong>Free</strong> - Freies Zuschneiden ohne Beschränkung</li>
                 </ul>
-                
-                <?php if (!rex_config::get('uppy', 'enable_image_editor', false)): ?>
+';
+
+// Image Editor Status-Meldung
+if (!rex_config::get('uppy', 'enable_image_editor', false)) {
+    $content .= '
                 <div class="alert alert-warning">
                     <h4><i class="rex-icon fa-exclamation-triangle"></i> Image Editor ist deaktiviert!</h4>
                     <p>Um die Bildbearbeitung zu nutzen, aktivieren Sie bitte:</p>
@@ -39,13 +42,17 @@ $content = '
                         <li>Laden Sie diese Seite neu</li>
                     </ol>
                 </div>
-                <?php else: ?>
+';
+} else {
+    $content .= '
                 <div class="alert alert-success">
                     <i class="rex-icon fa-check"></i> <strong>Image Editor ist aktiviert!</strong> 
                     Sie können jetzt Bilder hochladen und bearbeiten.
                 </div>
-                <?php endif; ?>
-                
+';
+}
+
+$content .= '
                 <h4>Beispiel 1: Avatar Upload (1:1)</h4>
                 <p>Perfekt für Benutzerprofile - erzwingt quadratisches Format:</p>
                 <div class="form-group">
