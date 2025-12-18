@@ -1,0 +1,7 @@
+# Uppy AddOn
+
+node_modules/
+assets/*.min.js
+assets/*.min.css
+assets/plugins/
+assets/locales/

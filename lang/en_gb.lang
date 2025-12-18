@@ -1,0 +1,52 @@
+uppy_title = Uppy Uploader
+uppy_upload = Upload
+uppy_settings = Settings
+
+# Settings
+uppy_settings_title = Uppy Settings
+uppy_settings_general = General Settings
+uppy_allowed_types = Allowed File Types
+uppy_allowed_types_notice = Comma-separated list (e.g. image/*,application/pdf,.doc,.docx)
+uppy_max_filesize = Maximum File Size (MB)
+uppy_max_files = Maximum Number of Files
+uppy_category_id = Default Category
+uppy_enable_chunks = Enable Chunk Upload
+uppy_chunk_size = Chunk Size (MB)
+uppy_replace_mediapool = Replace Mediapool Upload
+uppy_replace_mediapool_notice = Replaces the default upload page in the mediapool
+uppy_enable_resize = Resize images on upload
+uppy_enable_resize_notice = Images are optimized client-side before upload
+uppy_resize_width = Maximum Width (px)
+uppy_resize_height = Maximum Height (px)
+uppy_resize_quality = Image Quality (%)
+uppy_resize_quality_notice = 1-100, recommended: 85
+uppy_fix_exif_orientation = Fix EXIF Orientation
+uppy_fix_exif_orientation_notice = Automatically corrects image orientation
+uppy_api_token = API Token
+uppy_api_token_notice = Token for frontend uploads (auto-generated)
+uppy_save_success = Settings saved successfully
+uppy_save_error = Error saving settings
+
+# Upload Page
+uppy_upload_title = Upload Files
+uppy_upload_intro = Upload files to the media pool
+uppy_select_category = Select Category
+uppy_upload_success = {0} file(s) uploaded successfully
+uppy_upload_error = Upload error
+
+# Metadata
+uppy_metadata_title = Title
+uppy_metadata_alt = Alt Text
+uppy_metadata_copyright = Copyright
+uppy_metadata_description = Description
+
+# Errors
+uppy_error_no_file = No file selected
+uppy_error_file_too_large = File is too large
+uppy_error_invalid_type = Invalid file type
+uppy_error_upload_failed = Upload failed
+uppy_error_unauthorized = Unauthorized
+
+# YForm
+uppy_yform_label = Upload File
+uppy_yform_notice = Maximum file size: {0} MB

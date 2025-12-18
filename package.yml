@@ -1,0 +1,44 @@
+package: uppy
+version: '2.0.0-beta1'
+author: 'Friends Of REDAXO'
+supportpage: https://github.com/FriendsOfREDAXO/uppy
+requires:
+    php: '>=8.1'
+    redaxo: '^5.17.1'
+    packages:
+        metainfo: '>=2.0.0'
+page:
+    title: 'translate:uppy_title'
+    perm: uppy[upload]
+    subpages:
+        upload: { 
+            title: 'translate:uppy_upload',
+            perm: uppy[upload]
+        }
+        settings: { 
+            title: 'translate:uppy_settings',
+            perm: admin
+        }
+        help: { 
+            title: 'translate:help', 
+            subPath: README.md, 
+            itemClass: 'pull-right' 
+        }
+default_config:
+    allowed_types: 'image/*,video/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx'
+    max_filesize: 200
+    max_files: 30
+    category_id: 0
+    lang: 'de_de'
+    enable_chunks: true
+    chunk_size: 5
+    replace_mediapool: false
+    metadata_fields: 'title,med_alt,med_copyright'
+    api_token: ''
+    enable_resize: true
+    resize_width: 2000
+    resize_height: 2000
+    resize_quality: 85
+    fix_exif_orientation: true
+    enable_webcam: false
+    required_metadata_fields: ''

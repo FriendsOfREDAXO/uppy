@@ -1,0 +1,52 @@
+uppy_title = Uppy
+uppy_upload = Upload
+uppy_settings = Einstellungen
+
+# Settings
+uppy_settings_title = Uppy Einstellungen
+uppy_settings_general = Allgemeine Einstellungen
+uppy_allowed_types = Erlaubte Dateitypen
+uppy_allowed_types_notice = Kommagetrennte Liste (z.B. image/*,application/pdf,.doc,.docx)
+uppy_max_filesize = Maximale Dateigröße (MB)
+uppy_max_files = Maximale Anzahl Dateien
+uppy_category_id = Standard-Kategorie
+uppy_enable_chunks = Chunk-Upload aktivieren
+uppy_chunk_size = Chunk-Größe (MB)
+uppy_replace_mediapool = Mediapool-Upload ersetzen
+uppy_replace_mediapool_notice = Ersetzt die Standard-Upload-Seite im Mediapool
+uppy_enable_resize = Bilder beim Upload verkleinern
+uppy_enable_resize_notice = Bilder werden clientseitig vor dem Upload optimiert
+uppy_resize_width = Maximale Breite (px)
+uppy_resize_height = Maximale Höhe (px)
+uppy_resize_quality = Bildqualität (%)
+uppy_resize_quality_notice = 1-100, empfohlen: 85
+uppy_fix_exif_orientation = EXIF-Orientierung korrigieren
+uppy_fix_exif_orientation_notice = Korrigiert automatisch die Bildausrichtung
+uppy_api_token = API-Token
+uppy_api_token_notice = Token für Frontend-Uploads (automatisch generiert)
+uppy_save_success = Einstellungen erfolgreich gespeichert
+uppy_save_error = Fehler beim Speichern der Einstellungen
+
+# Upload Page
+uppy_upload_title = Dateien hochladen
+uppy_upload_intro = Laden Sie Dateien in den Mediapool hoch
+uppy_select_category = Kategorie auswählen
+uppy_upload_success = {0} Datei(en) erfolgreich hochgeladen
+uppy_upload_error = Fehler beim Hochladen
+
+# Metadata
+uppy_metadata_title = Titel
+uppy_metadata_alt = Alt-Text
+uppy_metadata_copyright = Copyright
+uppy_metadata_description = Beschreibung
+
+# Errors
+uppy_error_no_file = Keine Datei ausgewählt
+uppy_error_file_too_large = Datei ist zu groß
+uppy_error_invalid_type = Ungültiger Dateityp
+uppy_error_upload_failed = Upload fehlgeschlagen
+uppy_error_unauthorized = Keine Berechtigung
+
+# YForm
+uppy_yform_label = Datei hochladen
+uppy_yform_notice = Maximale Dateigröße: {0} MB

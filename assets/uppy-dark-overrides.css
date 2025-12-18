@@ -1,0 +1,570 @@
+/**
+ * Uppy Dark Mode Overrides für REDAXO
+ * Diese Datei überschreibt die Standard Uppy CSS für besseres Dark Theme Verhalten
+ */
+
+/* Dark Theme Overrides */
+body.rex-theme-dark {
+    /* Dashboard Container */
+    .uppy-Dashboard-inner {
+        background-color: #2c3136 !important;
+        border-color: #404448 !important;
+    }
+    
+    /* Dashboard Outer Wrapper */
+    .uppy-Dashboard {
+        background-color: #2c3136;
+    }
+    
+    /* Dashboard Content */
+    .uppy-DashboardContent-bar {
+        background-color: #35393d !important;
+        border-bottom-color: #404448 !important;
+    }
+    
+    .uppy-DashboardContent-title {
+        color: #f2f2f2 !important;
+    }
+    
+    /* AddFiles Area */
+    .uppy-Dashboard-AddFiles {
+        background-color: #2c3136 !important;
+        border-color: #404448 !important;
+    }
+    
+    .uppy-Dashboard-AddFiles-list {
+        background-color: #2c3136 !important;
+    }
+    
+    .uppy-Dashboard-AddFiles-title {
+        color: #f2f2f2 !important;
+    }
+    
+    .uppy-Dashboard-AddFiles-info {
+        color: #bbb !important;
+    }
+    
+    /* Drop Target */
+    .uppy-Dashboard-AddFilesPanel {
+        background-color: #35393d !important;
+    }
+    
+    /* Files List */
+    .uppy-Dashboard-filesContainer {
+        background-color: #2c3136 !important;
+    }
+    
+    /* File Items */
+    .uppy-Dashboard-Item {
+        background-color: #35393d;
+        border-color: #404448;
+    }
+    
+    .uppy-Dashboard-Item-preview {
+        background-color: #2c3136;
+    }
+    
+    .uppy-Dashboard-Item-name {
+        color: #f2f2f2;
+    }
+    
+    .uppy-Dashboard-Item-status {
+        color: #bbb;
+    }
+    
+    .uppy-Dashboard-Item-statusSize {
+        color: #888;
+    }
+    
+    /* Status Bar */
+    .uppy-StatusBar {
+        background-color: #35393d !important;
+        border-top-color: #404448 !important;
+    }
+    
+    .uppy-StatusBar-content {
+        color: #f2f2f2 !important;
+    }
+    
+    .uppy-StatusBar-status {
+        color: #bbb !important;
+    }
+    
+    .uppy-StatusBar-statusSecondary {
+        color: #888 !important;
+    }
+    
+    .uppy-StatusBar-actions {
+        background-color: #35393d !important;
+    }
+    
+    /* Progress */
+    .uppy-StatusBar-progress {
+        background-color: #4a90e2;
+    }
+    
+    .uppy-StatusBar-progressIndicator {
+        background-color: #4a90e2;
+    }
+    
+    /* Action Buttons */
+    .uppy-StatusBar-actionBtn--upload {
+        background-color: #28a745 !important;
+        color: #fff !important;
+        border: none !important;
+    }
+    
+    .uppy-StatusBar-actionBtn--upload:hover {
+        background-color: #218838 !important;
+        color: #fff !important;
+    }
+    
+    .uppy-StatusBar-actionBtn--done {
+        background-color: #6fbf73 !important;
+        color: #fff !important;
+    }
+    
+    .uppy-StatusBar-actionBtn--done:hover {
+        background-color: #7fcf83 !important;
+    }
+    
+    .uppy-StatusBar-actionBtn {
+        background-color: transparent !important;
+        color: #4a90e2 !important;
+    }
+    
+    .uppy-StatusBar-actionCircleBtn {
+        background-color: transparent !important;
+        color: #4a90e2 !important;
+    }
+    
+    /* File Card (Meta Editor) */
+    .uppy-Dashboard-FileCard {
+        background-color: #35393d !important;
+    }
+    
+    .uppy-Dashboard-FileCard-inner {
+        background-color: #2c3136 !important;
+    }
+    
+    .uppy-Dashboard-FileCard-preview {
+        background-color: #35393d !important;
+    }
+    
+    .uppy-Dashboard-FileCard-info {
+        background-color: #35393d !important;
+        border-color: #404448 !important;
+    }
+    
+    .uppy-DashboardContent-back {
+        color: #4a90e2 !important;
+    }
+    
+    .uppy-DashboardContent-back:hover {
+        color: #5da3f5 !important;
+    }
+    
+    /* Dashboard Header/Bar */
+    .uppy-DashboardContent-panelBody {
+        background-color: #2c3136 !important;
+    }
+    
+    /* Top Bar Buttons */
+    .uppy-DashboardContent-addMore,
+    .uppy-DashboardContent-save {
+        color: #4a90e2 !important;
+    }
+    
+    .uppy-DashboardContent-addMore:hover,
+    .uppy-DashboardContent-save:hover {
+        color: #5da3f5 !important;
+    }
+    
+    /* Cancel Button */
+    .uppy-DashboardContent-back,
+    [data-uppy-super-focusable="true"] {
+        color: #4a90e2 !important;
+    }
+    
+    /* Input Fields in Meta Editor */
+    .uppy-Dashboard-FileCard-input,
+    .uppy-Dashboard-FileCard-input[type="text"],
+    .uppy-Dashboard-FileCard-textarea {
+        background-color: #35393d;
+        border-color: #404448;
+        color: #f2f2f2;
+    }
+    
+    .uppy-Dashboard-FileCard-input:focus,
+    .uppy-Dashboard-FileCard-textarea:focus {
+        border-color: #4a90e2;
+        background-color: #2c3136;
+    }
+    
+    .uppy-Dashboard-FileCard-label {
+        color: #f2f2f2;
+    }
+    
+    /* Action Buttons in File Items */
+    .uppy-Dashboard-Item-action {
+        color: #bbb;
+    }
+    
+    .uppy-Dashboard-Item-action:hover {
+        color: #f2f2f2;
+    }
+    
+    .uppy-Dashboard-Item-action--remove:hover {
+        color: #e74c3c;
+    }
+    
+    /* Modals */
+    .uppy-Dashboard--modal .uppy-Dashboard-overlay {
+        background-color: rgba(0, 0, 0, 0.7);
+    }
+    
+    .uppy-Dashboard--modal .uppy-Dashboard-inner {
+        background-color: #2c3136;
+        border-color: #404448;
+    }
+    
+    /* Info Badge */
+    .uppy-ProviderIconBg {
+        fill: #35393d;
+    }
+    
+    /* Error Messages */
+    .uppy-StatusBar.is-error .uppy-StatusBar-statusPrimary {
+        color: #e74c3c;
+    }
+    
+    .uppy-Dashboard-Item.is-error .uppy-Dashboard-Item-errorMessage {
+        color: #e74c3c;
+        background-color: rgba(231, 76, 60, 0.1);
+    }
+    
+    /* Success Messages */
+    .uppy-StatusBar.is-complete .uppy-StatusBar-statusPrimary {
+        color: #6fbf73;
+    }
+    
+    /* Drop Zone */
+    .uppy-Dashboard-dropFilesHereHint {
+        color: #bbb;
+        background-color: rgba(44, 49, 54, 0.95);
+        border-color: #4a90e2;
+    }
+    
+    /* Powered by Uppy Link */
+    .uppy-Dashboard-poweredBy {
+        color: #888;
+    }
+    
+    .uppy-Dashboard-poweredByLink {
+        color: #4a90e2;
+    }
+    
+    .uppy-Dashboard-poweredByLink:hover {
+        color: #5da3f5;
+    }
+    
+    /* Super Important: Override ALL white backgrounds */
+    .uppy-Root,
+    .uppy-Dashboard,
+    .uppy-Dashboard-overlay,
+    .uppy-Dashboard-innerWrap {
+        background-color: #2c3136 !important;
+    }
+    
+    /* Override any remaining text colors */
+    .uppy-Dashboard-AddFiles-title,
+    .uppy-DashboardContent-addMore,
+    .uppy-DashboardContent-save,
+    button[type="button"] {
+        color: #4a90e2 !important;
+    }
+}
+
+/* System Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+    body:not(.rex-theme-light) {
+        /* Dashboard Container */
+        .uppy-Dashboard-inner {
+            background-color: #2c3136 !important;
+            border-color: #404448 !important;
+        }
+        
+        /* Dashboard Outer Wrapper */
+        .uppy-Dashboard {
+            background-color: #2c3136;
+        }
+        
+        /* Dashboard Content */
+        .uppy-DashboardContent-bar {
+            background-color: #35393d !important;
+            border-bottom-color: #404448 !important;
+        }
+        
+        .uppy-DashboardContent-title {
+            color: #f2f2f2 !important;
+        }
+        
+        /* AddFiles Area */
+        .uppy-Dashboard-AddFiles {
+            background-color: #2c3136 !important;
+            border-color: #404448 !important;
+        }
+        
+        .uppy-Dashboard-AddFiles-list {
+            background-color: #2c3136 !important;
+        }
+        
+        .uppy-Dashboard-AddFiles-title {
+            color: #f2f2f2 !important;
+        }
+        
+        .uppy-Dashboard-AddFiles-info {
+            color: #bbb !important;
+        }
+        
+        /* Drop Target */
+        .uppy-Dashboard-AddFilesPanel {
+            background-color: #35393d !important;
+        }
+        
+        /* Files List */
+        .uppy-Dashboard-filesContainer {
+            background-color: #2c3136 !important;
+        }
+        
+        /* File Items */
+        .uppy-Dashboard-Item {
+            background-color: #35393d;
+            border-color: #404448;
+        }
+        
+        .uppy-Dashboard-Item-preview {
+            background-color: #2c3136;
+        }
+        
+        .uppy-Dashboard-Item-name {
+            color: #f2f2f2;
+        }
+        
+        .uppy-Dashboard-Item-status {
+            color: #bbb;
+        }
+        
+        .uppy-Dashboard-Item-statusSize {
+            color: #888;
+        }
+        
+        /* Status Bar */
+        .uppy-StatusBar {
+            background-color: #35393d !important;
+            border-top-color: #404448 !important;
+        }
+        
+        .uppy-StatusBar-content {
+            color: #f2f2f2 !important;
+        }
+        
+        .uppy-StatusBar-status {
+            color: #bbb !important;
+        }
+        
+        .uppy-StatusBar-statusSecondary {
+            color: #888 !important;
+        }
+        
+        .uppy-StatusBar-actions {
+            background-color: #35393d !important;
+        }
+        
+        /* Progress */
+        .uppy-StatusBar-progress {
+            background-color: #4a90e2;
+        }
+        
+        .uppy-StatusBar-progressIndicator {
+            background-color: #4a90e2;
+        }
+        
+        /* Action Buttons */
+        .uppy-StatusBar-actionBtn--upload {
+            background-color: #28a745 !important;
+            color: #fff !important;
+            border: none !important;
+        }
+        
+        .uppy-StatusBar-actionBtn--upload:hover {
+            background-color: #218838 !important;
+            color: #fff !important;
+        }
+        
+        .uppy-StatusBar-actionBtn--done {
+            background-color: #6fbf73 !important;
+            color: #fff !important;
+        }
+        
+        .uppy-StatusBar-actionBtn--done:hover {
+            background-color: #7fcf83 !important;
+        }
+        
+        .uppy-StatusBar-actionBtn {
+            background-color: transparent !important;
+            color: #4a90e2 !important;
+        }
+        
+        .uppy-StatusBar-actionCircleBtn {
+            background-color: transparent !important;
+            color: #4a90e2 !important;
+        }
+        
+        /* File Card (Meta Editor) */
+        .uppy-Dashboard-FileCard {
+            background-color: #35393d !important;
+        }
+        
+        .uppy-Dashboard-FileCard-inner {
+            background-color: #2c3136 !important;
+        }
+        
+        .uppy-Dashboard-FileCard-preview {
+            background-color: #35393d !important;
+        }
+        
+        .uppy-Dashboard-FileCard-info {
+            background-color: #35393d !important;
+            border-color: #404448 !important;
+        }
+        
+        .uppy-DashboardContent-back {
+            color: #4a90e2 !important;
+        }
+        
+        .uppy-DashboardContent-back:hover {
+            color: #5da3f5 !important;
+        }
+        
+        /* Dashboard Header/Bar */
+        .uppy-DashboardContent-panelBody {
+            background-color: #2c3136 !important;
+        }
+        
+        /* Top Bar Buttons */
+        .uppy-DashboardContent-addMore,
+        .uppy-DashboardContent-save {
+            color: #4a90e2 !important;
+        }
+        
+        .uppy-DashboardContent-addMore:hover,
+        .uppy-DashboardContent-save:hover {
+            color: #5da3f5 !important;
+        }
+        
+        /* Cancel Button */
+        .uppy-DashboardContent-back,
+        [data-uppy-super-focusable="true"] {
+            color: #4a90e2 !important;
+        }
+        
+        /* Input Fields in Meta Editor */
+        .uppy-Dashboard-FileCard-input,
+        .uppy-Dashboard-FileCard-input[type="text"],
+        .uppy-Dashboard-FileCard-textarea {
+            background-color: #35393d;
+            border-color: #404448;
+            color: #f2f2f2;
+        }
+        
+        .uppy-Dashboard-FileCard-input:focus,
+        .uppy-Dashboard-FileCard-textarea:focus {
+            border-color: #4a90e2;
+            background-color: #2c3136;
+        }
+        
+        .uppy-Dashboard-FileCard-label {
+            color: #f2f2f2;
+        }
+        
+        /* Action Buttons in File Items */
+        .uppy-Dashboard-Item-action {
+            color: #bbb;
+        }
+        
+        .uppy-Dashboard-Item-action:hover {
+            color: #f2f2f2;
+        }
+        
+        .uppy-Dashboard-Item-action--remove:hover {
+            color: #e74c3c;
+        }
+        
+        /* Modals */
+        .uppy-Dashboard--modal .uppy-Dashboard-overlay {
+            background-color: rgba(0, 0, 0, 0.7);
+        }
+        
+        .uppy-Dashboard--modal .uppy-Dashboard-inner {
+            background-color: #2c3136;
+            border-color: #404448;
+        }
+        
+        /* Info Badge */
+        .uppy-ProviderIconBg {
+            fill: #35393d;
+        }
+        
+        /* Error Messages */
+        .uppy-StatusBar.is-error .uppy-StatusBar-statusPrimary {
+            color: #e74c3c;
+        }
+        
+        .uppy-Dashboard-Item.is-error .uppy-Dashboard-Item-errorMessage {
+            color: #e74c3c;
+            background-color: rgba(231, 76, 60, 0.1);
+        }
+        
+        /* Success Messages */
+        .uppy-StatusBar.is-complete .uppy-StatusBar-statusPrimary {
+            color: #6fbf73;
+        }
+        
+        /* Drop Zone */
+        .uppy-Dashboard-dropFilesHereHint {
+            color: #bbb;
+            background-color: rgba(44, 49, 54, 0.95);
+            border-color: #4a90e2;
+        }
+        
+        /* Powered by Uppy Link */
+        .uppy-Dashboard-poweredBy {
+            color: #888;
+        }
+        
+        .uppy-Dashboard-poweredByLink {
+            color: #4a90e2;
+        }
+        
+        .uppy-Dashboard-poweredByLink:hover {
+            color: #5da3f5;
+        }
+        
+        /* Super Important: Override ALL white backgrounds */
+        .uppy-Root,
+        .uppy-Dashboard,
+        .uppy-Dashboard-overlay,
+        .uppy-Dashboard-innerWrap {
+            background-color: #2c3136 !important;
+        }
+        
+        /* Override any remaining text colors */
+        .uppy-Dashboard-AddFiles-title,
+        .uppy-DashboardContent-addMore,
+        .uppy-DashboardContent-save,
+        button[type="button"] {
+            color: #4a90e2 !important;
+        }
+    }
+}

@@ -1,0 +1,502 @@
+/**
+ * Uppy Custom Styles für REDAXO
+ */
+
+/* CSS Variables for Light/Dark Theme Support */
+:root {
+    --uppy-primary: #337ab7;
+    --uppy-primary-hover: #23527c;
+    --uppy-success: #5cb85c;
+    --uppy-success-text: #3c763d;
+    --uppy-success-bg: #dff0d8;
+    --uppy-success-border: #d6e9c6;
+    --uppy-danger: #d9534f;
+    --uppy-danger-text: #a94442;
+    --uppy-danger-bg: #f2dede;
+    --uppy-danger-border: #ebccd1;
+    --uppy-border: #ddd;
+    --uppy-background: #fff;
+    --uppy-text: #555;
+    --uppy-input-bg: #fff;
+    --uppy-input-border: #ccc;
+    --uppy-input-focus-border: #66afe9;
+    --uppy-dashboard-bg: #fafafa;
+}
+
+/* Dark Mode Variables */
+body.rex-theme-dark {
+    --uppy-primary: #4a90e2;
+    --uppy-primary-hover: #5da3f5;
+    --uppy-success: #6fbf73;
+    --uppy-success-text: #c3e6cb;
+    --uppy-success-bg: rgba(40, 167, 69, 0.2);
+    --uppy-success-border: #28a745;
+    --uppy-danger: #e74c3c;
+    --uppy-danger-text: #f5b7b1;
+    --uppy-danger-bg: rgba(231, 76, 60, 0.2);
+    --uppy-danger-border: #e74c3c;
+    --uppy-border: #404448;
+    --uppy-background: #2c3136;
+    --uppy-text: #f2f2f2;
+    --uppy-input-bg: #35393d;
+    --uppy-input-border: #404448;
+    --uppy-input-focus-border: #4a90e2;
+    --uppy-dashboard-bg: #2c3136;
+}
+
+/* System Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+    body:not(.rex-theme-light) {
+        --uppy-primary: #4a90e2;
+        --uppy-primary-hover: #5da3f5;
+        --uppy-success: #6fbf73;
+        --uppy-success-text: #c3e6cb;
+        --uppy-success-bg: rgba(40, 167, 69, 0.2);
+        --uppy-success-border: #28a745;
+        --uppy-danger: #e74c3c;
+        --uppy-danger-text: #f5b7b1;
+        --uppy-danger-bg: rgba(231, 76, 60, 0.2);
+        --uppy-danger-border: #e74c3c;
+        --uppy-border: #404448;
+        --uppy-background: #2c3136;
+        --uppy-text: #f2f2f2;
+        --uppy-input-bg: #35393d;
+        --uppy-input-border: #404448;
+        --uppy-input-focus-border: #4a90e2;
+        --uppy-dashboard-bg: #2c3136;
+    }
+}
+
+/* Uppy Container */
+.uppy-container {
+    margin: 15px 0;
+}
+
+/* Dashboard Anpassungen für REDAXO */
+.uppy-Dashboard {
+    font-family: inherit;
+}
+
+.uppy-Dashboard-inner {
+    border: 2px dashed var(--uppy-border);
+    border-radius: 4px;
+    background-color: var(--uppy-dashboard-bg);
+}
+
+.uppy-Dashboard--modal .uppy-Dashboard-inner {
+    border: none;
+}
+
+/* Status Messages */
+.uppy-StatusBar.is-complete .uppy-StatusBar-statusPrimary {
+    color: var(--uppy-success-text);
+}
+
+.uppy-StatusBar.is-error .uppy-StatusBar-statusPrimary {
+    color: var(--uppy-danger-text);
+}
+
+/* Progress Bar */
+.uppy-StatusBar-progress {
+    background-color: var(--uppy-success);
+}
+
+/* File Item */
+.uppy-Dashboard-Item {
+    border-radius: 4px;
+    background-color: var(--uppy-background);
+    border: 1px solid var(--uppy-border);
+}
+
+.uppy-Dashboard-Item-name {
+    font-weight: 500;
+    color: var(--uppy-text);
+}
+
+/* Buttons */
+.uppy-Dashboard-browse {
+    color: var(--uppy-primary);
+}
+
+.uppy-Dashboard-browse:hover {
+    color: var(--uppy-primary-hover);
+}
+
+/* Custom Metadata Button */
+.uppy-custom-meta-btn {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--uppy-primary) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 4px !important;
+    padding: 6px 10px !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-right: 6px !important;
+    line-height: 1;
+    opacity: 1 !important;
+}
+
+.uppy-custom-meta-btn:hover {
+    background-color: var(--uppy-primary-hover) !important;
+    transform: scale(1.05);
+}
+
+.uppy-custom-meta-btn svg {
+    width: 13px !important;
+    height: 13px !important;
+    stroke: white !important;
+    display: inline-block;
+}
+
+.uppy-custom-meta-btn span {
+    color: white !important;
+    font-size: 12px;
+}
+
+/* Edit Button Styling - blauer Button mit weißem Icon */
+.uppy-Dashboard-Item-action--edit {
+    background-color: var(--uppy-primary) !important;
+    color: white !important;
+    border-radius: 4px !important;
+    padding: 8px !important;
+    transition: all 0.2s ease !important;
+}
+
+.uppy-Dashboard-Item-action--edit:hover {
+    background-color: var(--uppy-primary-hover) !important;
+    transform: scale(1.05);
+}
+
+.uppy-Dashboard-Item-action--edit svg,
+.uppy-Dashboard-Item-action--edit .uppy-c-icon {
+    fill: white !important;
+    stroke: white !important;
+}
+
+.uppy-Dashboard-Item-action--edit path {
+    fill: white !important;
+}
+
+/* Metadaten Modal Styling */
+.uppy-metadata-modal .modal-dialog {
+    max-width: 800px;
+}
+
+.uppy-metadata-modal .form-group {
+    margin-bottom: 20px;
+}
+
+.uppy-metadata-modal label {
+    font-weight: 600;
+    margin-bottom: 8px;
+    display: block;
+    color: var(--uppy-text);
+}
+
+.uppy-metadata-modal .form-control {
+    padding: 10px 12px;
+    font-size: 14px;
+    border-radius: 4px;
+}
+
+/* Wrapper sichtbar machen */
+.uppy-wrapper {
+    display: block !important;
+    width: 100%;
+}
+
+/* Dashboard vollständig anzeigen */
+.uppy-Dashboard {
+    width: 100% !important;
+}
+
+.uppy-Dashboard-inner {
+    min-height: 350px !important;
+}
+
+/* Meta Fields */
+.uppy-Dashboard-FileCard {
+    max-height: 90vh !important;
+}
+
+.uppy-Dashboard-FileCard-inner {
+    display: flex !important;
+    flex-direction: column !important;
+    max-height: 90vh !important;
+}
+
+.uppy-Dashboard-FileCard-preview {
+    flex-shrink: 0;
+    max-height: 250px !important;
+}
+
+.uppy-Dashboard-FileCard-info {
+    flex-grow: 1 !important;
+    overflow-y: auto !important;
+    padding: 20px !important;
+}
+
+.uppy-Dashboard-FileCard-fieldset {
+    margin-bottom: 20px !important;
+}
+
+.uppy-Dashboard-FileCard-label {
+    font-weight: 500;
+    margin-bottom: 8px !important;
+    display: block;
+    color: var(--uppy-text);
+    font-size: 14px !important;
+}
+
+.uppy-Dashboard-FileCard-input {
+    width: 100%;
+    padding: 10px 12px !important;
+    font-size: 14px;
+    line-height: 1.42857143;
+    color: var(--uppy-text);
+    background-color: var(--uppy-input-bg);
+    border: 1px solid var(--uppy-input-border);
+    border-radius: 4px;
+    min-height: 42px !important;
+}
+
+.uppy-Dashboard-FileCard-input:focus {
+    border-color: var(--uppy-input-focus-border);
+    outline: 0;
+    box-shadow: inset 0 1px 1px rgba(0,0,0,.075), 0 0 8px rgba(74, 144, 226, .3);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .uppy-Dashboard-inner {
+        height: 300px !important;
+    }
+}
+
+/* Loading State */
+.uppy-loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* Error State */
+.uppy-error {
+    border-color: #dc3545 !important;
+    border-width: 2px !important;
+}
+
+.uppy-error-message {
+    color: var(--uppy-danger-text);
+    margin-top: 10px;
+    padding: 10px;
+    background-color: var(--uppy-danger-bg);
+    border: 1px solid var(--uppy-danger-border);
+    border-radius: 4px;
+}
+
+/* Pflichtfeld-Fehler im Modal */
+.uppy-metadata-modal input.uppy-error,
+.uppy-metadata-modal textarea.uppy-error {
+    border-color: #dc3545 !important;
+    border-width: 2px !important;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
+}
+
+/* Success State */
+.uppy-success-message {
+    color: var(--uppy-success-text);
+    margin-top: 10px;
+    padding: 10px;
+    background-color: var(--uppy-success-bg);
+    border: 1px solid var(--uppy-success-border);
+    border-radius: 4px;
+}
+
+/* Additional Dark Mode Overrides for Uppy Core Elements */
+body.rex-theme-dark .uppy-Dashboard-AddFiles-title,
+body.rex-theme-dark .uppy-Dashboard-note {
+    color: var(--uppy-text);
+}
+
+body.rex-theme-dark .uppy-StatusBar {
+    background-color: var(--uppy-background);
+    border-top: 1px solid var(--uppy-border);
+}
+
+body.rex-theme-dark .uppy-Dashboard-Item-preview {
+    background-color: var(--uppy-background);
+}
+
+body.rex-theme-dark .uppy-Dashboard-Item-status {
+    color: var(--uppy-text);
+}
+
+@media (prefers-color-scheme: dark) {
+    body:not(.rex-theme-light) .uppy-Dashboard-AddFiles-title,
+    body:not(.rex-theme-light) .uppy-Dashboard-note {
+        color: var(--uppy-text);
+    }
+    
+    body:not(.rex-theme-light) .uppy-StatusBar {
+        background-color: var(--uppy-background);
+        border-top: 1px solid var(--uppy-border);
+    }
+    
+    body:not(.rex-theme-light) .uppy-Dashboard-Item-preview {
+        background-color: var(--uppy-background);
+    }
+    
+    body:not(.rex-theme-light) .uppy-Dashboard-Item-status {
+        color: var(--uppy-text);
+    }
+}
+
+/* Edit-Button größer und besser sichtbar */
+.uppy-Dashboard-Item-action--edit {
+    min-width: 38px !important;
+    min-height: 38px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.uppy-Dashboard-Item-action--edit svg {
+    width: 18px !important;
+    height: 18px !important;
+}
+
+/* Edit-Button größer und besser sichtbar */
+.uppy-Dashboard-Item-action--edit {
+    min-width: 38px !important;
+    min-height: 38px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.uppy-Dashboard-Item-action--edit svg {
+    width: 18px !important;
+    height: 18px !important;
+}
+
+/* Dark Theme: Weißes Icon für Edit-Button (bessere Sichtbarkeit) */
+body.rex-theme-dark .uppy-Dashboard-Item-action--edit svg {
+    fill: #ffffff !important;
+}
+
+@media (prefers-color-scheme: dark) {
+    body:not(.rex-theme-light) .uppy-Dashboard-Item-action--edit svg {
+        fill: #ffffff !important;
+    }
+}
+
+/* Modal Buttons deutlicher machen */
+.uppy-metadata-modal .modal-footer .btn-primary {
+    background-color: #337ab7 !important;
+    border-color: #2e6da4 !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    font-size: 16px !important;
+    padding: 10px 24px !important;
+}
+
+.uppy-metadata-modal .modal-footer .btn-primary:hover {
+    background-color: #286090 !important;
+    border-color: #204d74 !important;
+    color: #ffffff !important;
+}
+
+/* Dark Theme: Hellerer Button */
+body.rex-theme-dark .uppy-metadata-modal .modal-footer .btn-primary {
+    background-color: #4a90e2 !important;
+    border-color: #4a90e2 !important;
+    color: #ffffff !important;
+}
+
+body.rex-theme-dark .uppy-metadata-modal .modal-footer .btn-primary:hover {
+    background-color: #357abd !important;
+    border-color: #357abd !important;
+    color: #ffffff !important;
+}
+
+@media (prefers-color-scheme: dark) {
+    body:not(.rex-theme-light) .uppy-metadata-modal .modal-footer .btn-primary {
+        background-color: #4a90e2 !important;
+        border-color: #4a90e2 !important;
+        color: #ffffff !important;
+    }
+    body:not(.rex-theme-light) .uppy-metadata-modal .modal-footer .btn-primary:hover {
+        background-color: #357abd !important;
+        border-color: #357abd !important;
+        color: #ffffff !important;
+    }
+}
+
+/* Uploaded Files List (nach Upload) */
+.uppy-uploaded-files-list {
+    margin-top: 20px;
+    padding: 15px;
+    background-color: var(--uppy-success-bg);
+    border: 1px solid var(--uppy-success-border);
+    border-radius: 4px;
+}
+
+.uppy-uploaded-files-list h4 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: var(--uppy-success-text);
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.uppy-uploaded-files-list .list-group {
+    margin-bottom: 0;
+}
+
+.uppy-uploaded-files-list .list-group-item {
+    background-color: var(--uppy-background);
+    border-color: var(--uppy-border);
+    color: var(--uppy-text);
+    padding: 10px 15px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.uppy-uploaded-files-list .uppy-file-name {
+    flex: 1;
+    font-family: monospace;
+    font-size: 14px;
+    word-break: break-all;
+}
+
+.uppy-uploaded-files-list .btn-select {
+    margin-left: 10px;
+    white-space: nowrap;
+}
+
+/* Dark Mode */
+body.rex-theme-dark .uppy-uploaded-files-list {
+    background-color: var(--uppy-success-bg);
+    border-color: var(--uppy-success-border);
+}
+
+body.rex-theme-dark .uppy-uploaded-files-list h4 {
+    color: var(--uppy-success-text);
+}
+
+@media (prefers-color-scheme: dark) {
+    body:not(.rex-theme-light) .uppy-uploaded-files-list {
+        background-color: var(--uppy-success-bg);
+        border-color: var(--uppy-success-border);
+    }
+    
+    body:not(.rex-theme-light) .uppy-uploaded-files-list h4 {
+        color: var(--uppy-success-text);
+    }
+}
