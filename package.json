@@ -12,12 +12,12 @@
   "dependencies": {
     "@uppy/core": "^5.0.0",
     "@uppy/dashboard": "^5.0.0",
+    "@uppy/locales": "^5.0.0",
     "@uppy/webcam": "^5.0.0",
-    "@uppy/xhr-upload": "^5.0.0",
-    "@uppy/locales": "^5.0.0"
+    "@uppy/xhr-upload": "^5.0.0"
   },
   "devDependencies": {
-    "esbuild": "^0.24.0"
+    "esbuild": "^0.27.2"
   },
   "author": "KLXM Crossmedia GmbH",
   "license": "MIT"
