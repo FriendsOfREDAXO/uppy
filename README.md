@@ -2,7 +2,7 @@
 
 Ein modernes File-Upload-AddOn für REDAXO CMS, basierend auf [Uppy 5.0](https://uppy.io/).
 
-![Screenshot](https://raw.githubusercontent.com/FriendsOfREDAXO/uppy/assets/uppy_screen2.png)
+![Screenshot](https://github.com/FriendsOfREDAXO/uppy/blob/assets/uppy_screen2.png?raw=true)
 
 ## Features
 
