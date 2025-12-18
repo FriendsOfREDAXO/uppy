@@ -52,7 +52,7 @@ $formElements = [];
 // Allgemeine Einstellungen
 $n = [];
 $n['label'] = '<label for="uppy-allowed-types">' . $addon->i18n('uppy_allowed_types') . '</label>';
-$n['field'] = '<input class="form-control" type="text" id="uppy-allowed-types" name="config[allowed_types]" value="' . rex_escape(rex_config::get('uppy', 'allowed_types', 'image/*,video/*,application/pdf,.doc,.docx')) . '" />';
+$n['field'] = '<input class="form-control" type="text" id="uppy-allowed-types" name="config[allowed_types]" value="' . rex_escape(rex_config::get('uppy', 'allowed_types', 'image/*,.svg,.webp,video/*,application/pdf,.doc,.docx')) . '" />';
 $n['note'] = $addon->i18n('uppy_allowed_types_notice');
 $formElements[] = $n;
 
