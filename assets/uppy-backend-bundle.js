@@ -648,10 +648,10 @@ var UppyBackend = (() => {
       EventEmitter2.prototype.emit = function emit(event, a1, a22, a32, a4, a5) {
         var evt = prefix ? prefix + event : event;
         if (!this._events[evt]) return false;
-        var listeners = this._events[evt], len = arguments.length, args, i4;
+        var listeners = this._events[evt], len2 = arguments.length, args, i4;
         if (listeners.fn) {
           if (listeners.once) this.removeListener(event, listeners.fn, void 0, true);
-          switch (len) {
+          switch (len2) {
             case 1:
               return listeners.fn.call(listeners.context), true;
             case 2:
@@ -665,7 +665,7 @@ var UppyBackend = (() => {
             case 6:
               return listeners.fn.call(listeners.context, a1, a22, a32, a4, a5), true;
           }
-          for (i4 = 1, args = new Array(len - 1); i4 < len; i4++) {
+          for (i4 = 1, args = new Array(len2 - 1); i4 < len2; i4++) {
             args[i4 - 1] = arguments[i4];
           }
           listeners.fn.apply(listeners.context, args);
@@ -673,7 +673,7 @@ var UppyBackend = (() => {
           var length = listeners.length, j4;
           for (i4 = 0; i4 < length; i4++) {
             if (listeners[i4].once) this.removeListener(event, listeners[i4].fn, void 0, true);
-            switch (len) {
+            switch (len2) {
               case 1:
                 listeners[i4].fn.call(listeners[i4].context);
                 break;
@@ -687,7 +687,7 @@ var UppyBackend = (() => {
                 listeners[i4].fn.call(listeners[i4].context, a1, a22, a32);
                 break;
               default:
-                if (!args) for (j4 = 1, args = new Array(len - 1); j4 < len; j4++) {
+                if (!args) for (j4 = 1, args = new Array(len2 - 1); j4 < len2; j4++) {
                   args[j4 - 1] = arguments[j4];
                 }
                 listeners[i4].fn.apply(listeners[i4].context, args);
@@ -773,6 +773,393 @@ var UppyBackend = (() => {
     }
   });
 
+  // node_modules/requires-port/index.js
+  var require_requires_port = __commonJS({
+    "node_modules/requires-port/index.js"(exports, module) {
+      "use strict";
+      module.exports = function required(port, protocol) {
+        protocol = protocol.split(":")[0];
+        port = +port;
+        if (!port) return false;
+        switch (protocol) {
+          case "http":
+          case "ws":
+            return port !== 80;
+          case "https":
+          case "wss":
+            return port !== 443;
+          case "ftp":
+            return port !== 21;
+          case "gopher":
+            return port !== 70;
+          case "file":
+            return false;
+        }
+        return port !== 0;
+      };
+    }
+  });
+
+  // node_modules/querystringify/index.js
+  var require_querystringify = __commonJS({
+    "node_modules/querystringify/index.js"(exports) {
+      "use strict";
+      var has = Object.prototype.hasOwnProperty;
+      var undef;
+      function decode2(input) {
+        try {
+          return decodeURIComponent(input.replace(/\+/g, " "));
+        } catch (e4) {
+          return null;
+        }
+      }
+      function encode2(input) {
+        try {
+          return encodeURIComponent(input);
+        } catch (e4) {
+          return null;
+        }
+      }
+      function querystring(query) {
+        var parser = /([^=?#&]+)=?([^&]*)/g, result = {}, part;
+        while (part = parser.exec(query)) {
+          var key = decode2(part[1]), value = decode2(part[2]);
+          if (key === null || value === null || key in result) continue;
+          result[key] = value;
+        }
+        return result;
+      }
+      function querystringify(obj, prefix) {
+        prefix = prefix || "";
+        var pairs = [], value, key;
+        if ("string" !== typeof prefix) prefix = "?";
+        for (key in obj) {
+          if (has.call(obj, key)) {
+            value = obj[key];
+            if (!value && (value === null || value === undef || isNaN(value))) {
+              value = "";
+            }
+            key = encode2(key);
+            value = encode2(value);
+            if (key === null || value === null) continue;
+            pairs.push(key + "=" + value);
+          }
+        }
+        return pairs.length ? prefix + pairs.join("&") : "";
+      }
+      exports.stringify = querystringify;
+      exports.parse = querystring;
+    }
+  });
+
+  // node_modules/url-parse/index.js
+  var require_url_parse = __commonJS({
+    "node_modules/url-parse/index.js"(exports, module) {
+      "use strict";
+      var required = require_requires_port();
+      var qs = require_querystringify();
+      var controlOrWhitespace = /^[\x00-\x20\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]+/;
+      var CRHTLF = /[\n\r\t]/g;
+      var slashes = /^[A-Za-z][A-Za-z0-9+-.]*:\/\//;
+      var port = /:\d+$/;
+      var protocolre = /^([a-z][a-z0-9.+-]*:)?(\/\/)?([\\/]+)?([\S\s]*)/i;
+      var windowsDriveLetter = /^[a-zA-Z]:/;
+      function trimLeft(str) {
+        return (str ? str : "").toString().replace(controlOrWhitespace, "");
+      }
+      var rules = [
+        ["#", "hash"],
+        // Extract from the back.
+        ["?", "query"],
+        // Extract from the back.
+        function sanitize(address, url) {
+          return isSpecial(url.protocol) ? address.replace(/\\/g, "/") : address;
+        },
+        ["/", "pathname"],
+        // Extract from the back.
+        ["@", "auth", 1],
+        // Extract from the front.
+        [NaN, "host", void 0, 1, 1],
+        // Set left over value.
+        [/:(\d*)$/, "port", void 0, 1],
+        // RegExp the back.
+        [NaN, "hostname", void 0, 1, 1]
+        // Set left over.
+      ];
+      var ignore = { hash: 1, query: 1 };
+      function lolcation(loc) {
+        var globalVar;
+        if (typeof window !== "undefined") globalVar = window;
+        else if (typeof global !== "undefined") globalVar = global;
+        else if (typeof self !== "undefined") globalVar = self;
+        else globalVar = {};
+        var location2 = globalVar.location || {};
+        loc = loc || location2;
+        var finaldestination = {}, type = typeof loc, key;
+        if ("blob:" === loc.protocol) {
+          finaldestination = new Url(unescape(loc.pathname), {});
+        } else if ("string" === type) {
+          finaldestination = new Url(loc, {});
+          for (key in ignore) delete finaldestination[key];
+        } else if ("object" === type) {
+          for (key in loc) {
+            if (key in ignore) continue;
+            finaldestination[key] = loc[key];
+          }
+          if (finaldestination.slashes === void 0) {
+            finaldestination.slashes = slashes.test(loc.href);
+          }
+        }
+        return finaldestination;
+      }
+      function isSpecial(scheme) {
+        return scheme === "file:" || scheme === "ftp:" || scheme === "http:" || scheme === "https:" || scheme === "ws:" || scheme === "wss:";
+      }
+      function extractProtocol(address, location2) {
+        address = trimLeft(address);
+        address = address.replace(CRHTLF, "");
+        location2 = location2 || {};
+        var match2 = protocolre.exec(address);
+        var protocol = match2[1] ? match2[1].toLowerCase() : "";
+        var forwardSlashes = !!match2[2];
+        var otherSlashes = !!match2[3];
+        var slashesCount = 0;
+        var rest;
+        if (forwardSlashes) {
+          if (otherSlashes) {
+            rest = match2[2] + match2[3] + match2[4];
+            slashesCount = match2[2].length + match2[3].length;
+          } else {
+            rest = match2[2] + match2[4];
+            slashesCount = match2[2].length;
+          }
+        } else {
+          if (otherSlashes) {
+            rest = match2[3] + match2[4];
+            slashesCount = match2[3].length;
+          } else {
+            rest = match2[4];
+          }
+        }
+        if (protocol === "file:") {
+          if (slashesCount >= 2) {
+            rest = rest.slice(2);
+          }
+        } else if (isSpecial(protocol)) {
+          rest = match2[4];
+        } else if (protocol) {
+          if (forwardSlashes) {
+            rest = rest.slice(2);
+          }
+        } else if (slashesCount >= 2 && isSpecial(location2.protocol)) {
+          rest = match2[4];
+        }
+        return {
+          protocol,
+          slashes: forwardSlashes || isSpecial(protocol),
+          slashesCount,
+          rest
+        };
+      }
+      function resolve(relative, base) {
+        if (relative === "") return base;
+        var path = (base || "/").split("/").slice(0, -1).concat(relative.split("/")), i4 = path.length, last = path[i4 - 1], unshift = false, up = 0;
+        while (i4--) {
+          if (path[i4] === ".") {
+            path.splice(i4, 1);
+          } else if (path[i4] === "..") {
+            path.splice(i4, 1);
+            up++;
+          } else if (up) {
+            if (i4 === 0) unshift = true;
+            path.splice(i4, 1);
+            up--;
+          }
+        }
+        if (unshift) path.unshift("");
+        if (last === "." || last === "..") path.push("");
+        return path.join("/");
+      }
+      function Url(address, location2, parser) {
+        address = trimLeft(address);
+        address = address.replace(CRHTLF, "");
+        if (!(this instanceof Url)) {
+          return new Url(address, location2, parser);
+        }
+        var relative, extracted, parse, instruction, index, key, instructions = rules.slice(), type = typeof location2, url = this, i4 = 0;
+        if ("object" !== type && "string" !== type) {
+          parser = location2;
+          location2 = null;
+        }
+        if (parser && "function" !== typeof parser) parser = qs.parse;
+        location2 = lolcation(location2);
+        extracted = extractProtocol(address || "", location2);
+        relative = !extracted.protocol && !extracted.slashes;
+        url.slashes = extracted.slashes || relative && location2.slashes;
+        url.protocol = extracted.protocol || location2.protocol || "";
+        address = extracted.rest;
+        if (extracted.protocol === "file:" && (extracted.slashesCount !== 2 || windowsDriveLetter.test(address)) || !extracted.slashes && (extracted.protocol || extracted.slashesCount < 2 || !isSpecial(url.protocol))) {
+          instructions[3] = [/(.*)/, "pathname"];
+        }
+        for (; i4 < instructions.length; i4++) {
+          instruction = instructions[i4];
+          if (typeof instruction === "function") {
+            address = instruction(address, url);
+            continue;
+          }
+          parse = instruction[0];
+          key = instruction[1];
+          if (parse !== parse) {
+            url[key] = address;
+          } else if ("string" === typeof parse) {
+            index = parse === "@" ? address.lastIndexOf(parse) : address.indexOf(parse);
+            if (~index) {
+              if ("number" === typeof instruction[2]) {
+                url[key] = address.slice(0, index);
+                address = address.slice(index + instruction[2]);
+              } else {
+                url[key] = address.slice(index);
+                address = address.slice(0, index);
+              }
+            }
+          } else if (index = parse.exec(address)) {
+            url[key] = index[1];
+            address = address.slice(0, index.index);
+          }
+          url[key] = url[key] || (relative && instruction[3] ? location2[key] || "" : "");
+          if (instruction[4]) url[key] = url[key].toLowerCase();
+        }
+        if (parser) url.query = parser(url.query);
+        if (relative && location2.slashes && url.pathname.charAt(0) !== "/" && (url.pathname !== "" || location2.pathname !== "")) {
+          url.pathname = resolve(url.pathname, location2.pathname);
+        }
+        if (url.pathname.charAt(0) !== "/" && isSpecial(url.protocol)) {
+          url.pathname = "/" + url.pathname;
+        }
+        if (!required(url.port, url.protocol)) {
+          url.host = url.hostname;
+          url.port = "";
+        }
+        url.username = url.password = "";
+        if (url.auth) {
+          index = url.auth.indexOf(":");
+          if (~index) {
+            url.username = url.auth.slice(0, index);
+            url.username = encodeURIComponent(decodeURIComponent(url.username));
+            url.password = url.auth.slice(index + 1);
+            url.password = encodeURIComponent(decodeURIComponent(url.password));
+          } else {
+            url.username = encodeURIComponent(decodeURIComponent(url.auth));
+          }
+          url.auth = url.password ? url.username + ":" + url.password : url.username;
+        }
+        url.origin = url.protocol !== "file:" && isSpecial(url.protocol) && url.host ? url.protocol + "//" + url.host : "null";
+        url.href = url.toString();
+      }
+      function set(part, value, fn) {
+        var url = this;
+        switch (part) {
+          case "query":
+            if ("string" === typeof value && value.length) {
+              value = (fn || qs.parse)(value);
+            }
+            url[part] = value;
+            break;
+          case "port":
+            url[part] = value;
+            if (!required(value, url.protocol)) {
+              url.host = url.hostname;
+              url[part] = "";
+            } else if (value) {
+              url.host = url.hostname + ":" + value;
+            }
+            break;
+          case "hostname":
+            url[part] = value;
+            if (url.port) value += ":" + url.port;
+            url.host = value;
+            break;
+          case "host":
+            url[part] = value;
+            if (port.test(value)) {
+              value = value.split(":");
+              url.port = value.pop();
+              url.hostname = value.join(":");
+            } else {
+              url.hostname = value;
+              url.port = "";
+            }
+            break;
+          case "protocol":
+            url.protocol = value.toLowerCase();
+            url.slashes = !fn;
+            break;
+          case "pathname":
+          case "hash":
+            if (value) {
+              var char = part === "pathname" ? "/" : "#";
+              url[part] = value.charAt(0) !== char ? char + value : value;
+            } else {
+              url[part] = value;
+            }
+            break;
+          case "username":
+          case "password":
+            url[part] = encodeURIComponent(value);
+            break;
+          case "auth":
+            var index = value.indexOf(":");
+            if (~index) {
+              url.username = value.slice(0, index);
+              url.username = encodeURIComponent(decodeURIComponent(url.username));
+              url.password = value.slice(index + 1);
+              url.password = encodeURIComponent(decodeURIComponent(url.password));
+            } else {
+              url.username = encodeURIComponent(decodeURIComponent(value));
+            }
+        }
+        for (var i4 = 0; i4 < rules.length; i4++) {
+          var ins = rules[i4];
+          if (ins[4]) url[ins[1]] = url[ins[1]].toLowerCase();
+        }
+        url.auth = url.password ? url.username + ":" + url.password : url.username;
+        url.origin = url.protocol !== "file:" && isSpecial(url.protocol) && url.host ? url.protocol + "//" + url.host : "null";
+        url.href = url.toString();
+        return url;
+      }
+      function toString(stringify) {
+        if (!stringify || "function" !== typeof stringify) stringify = qs.stringify;
+        var query, url = this, host = url.host, protocol = url.protocol;
+        if (protocol && protocol.charAt(protocol.length - 1) !== ":") protocol += ":";
+        var result = protocol + (url.protocol && url.slashes || isSpecial(url.protocol) ? "//" : "");
+        if (url.username) {
+          result += url.username;
+          if (url.password) result += ":" + url.password;
+          result += "@";
+        } else if (url.password) {
+          result += ":" + url.password;
+          result += "@";
+        } else if (url.protocol !== "file:" && isSpecial(url.protocol) && !host && url.pathname !== "/") {
+          result += "@";
+        }
+        if (host[host.length - 1] === ":" || port.test(url.hostname) && !url.port) {
+          host += ":";
+        }
+        result += host + url.pathname;
+        query = "object" === typeof url.query ? stringify(url.query) : url.query;
+        if (query) result += "?" !== query.charAt(0) ? "?" + query : query;
+        if (url.hash) result += url.hash;
+        return result;
+      }
+      Url.prototype = { set, toString };
+      Url.extractProtocol = extractProtocol;
+      Url.location = lolcation;
+      Url.trimLeft = trimLeft;
+      Url.qs = qs;
+      module.exports = Url;
+    }
+  });
+
   // node_modules/cropperjs/dist/cropper.js
   var require_cropper = __commonJS({
     "node_modules/cropperjs/dist/cropper.js"(exports, module) {
@@ -780,7 +1167,7 @@ var UppyBackend = (() => {
         typeof exports === "object" && typeof module !== "undefined" ? module.exports = factory() : typeof define === "function" && define.amd ? define(factory) : (global2 = typeof globalThis !== "undefined" ? globalThis : global2 || self, global2.Cropper = factory());
       })(exports, (function() {
         "use strict";
-        function ownKeys(e4, r4) {
+        function ownKeys3(e4, r4) {
           var t4 = Object.keys(e4);
           if (Object.getOwnPropertySymbols) {
             var o4 = Object.getOwnPropertySymbols(e4);
@@ -790,18 +1177,18 @@ var UppyBackend = (() => {
           }
           return t4;
         }
-        function _objectSpread2(e4) {
+        function _objectSpread22(e4) {
           for (var r4 = 1; r4 < arguments.length; r4++) {
             var t4 = null != arguments[r4] ? arguments[r4] : {};
-            r4 % 2 ? ownKeys(Object(t4), true).forEach(function(r5) {
-              _defineProperty(e4, r5, t4[r5]);
-            }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e4, Object.getOwnPropertyDescriptors(t4)) : ownKeys(Object(t4)).forEach(function(r5) {
+            r4 % 2 ? ownKeys3(Object(t4), true).forEach(function(r5) {
+              _defineProperty3(e4, r5, t4[r5]);
+            }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e4, Object.getOwnPropertyDescriptors(t4)) : ownKeys3(Object(t4)).forEach(function(r5) {
               Object.defineProperty(e4, r5, Object.getOwnPropertyDescriptor(t4, r5));
             });
           }
           return e4;
         }
-        function _toPrimitive(t4, r4) {
+        function _toPrimitive10(t4, r4) {
           if ("object" != typeof t4 || !t4) return t4;
           var e4 = t4[Symbol.toPrimitive];
           if (void 0 !== e4) {
@@ -811,42 +1198,42 @@ var UppyBackend = (() => {
           }
           return ("string" === r4 ? String : Number)(t4);
         }
-        function _toPropertyKey(t4) {
-          var i4 = _toPrimitive(t4, "string");
+        function _toPropertyKey10(t4) {
+          var i4 = _toPrimitive10(t4, "string");
           return "symbol" == typeof i4 ? i4 : i4 + "";
         }
-        function _typeof(o4) {
+        function _typeof10(o4) {
           "@babel/helpers - typeof";
-          return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function(o5) {
+          return _typeof10 = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function(o5) {
             return typeof o5;
           } : function(o5) {
             return o5 && "function" == typeof Symbol && o5.constructor === Symbol && o5 !== Symbol.prototype ? "symbol" : typeof o5;
-          }, _typeof(o4);
+          }, _typeof10(o4);
         }
-        function _classCallCheck(instance, Constructor) {
+        function _classCallCheck10(instance, Constructor) {
           if (!(instance instanceof Constructor)) {
             throw new TypeError("Cannot call a class as a function");
           }
         }
-        function _defineProperties(target, props) {
+        function _defineProperties10(target, props) {
           for (var i4 = 0; i4 < props.length; i4++) {
             var descriptor = props[i4];
             descriptor.enumerable = descriptor.enumerable || false;
             descriptor.configurable = true;
             if ("value" in descriptor) descriptor.writable = true;
-            Object.defineProperty(target, _toPropertyKey(descriptor.key), descriptor);
+            Object.defineProperty(target, _toPropertyKey10(descriptor.key), descriptor);
           }
         }
-        function _createClass(Constructor, protoProps, staticProps) {
-          if (protoProps) _defineProperties(Constructor.prototype, protoProps);
-          if (staticProps) _defineProperties(Constructor, staticProps);
+        function _createClass10(Constructor, protoProps, staticProps) {
+          if (protoProps) _defineProperties10(Constructor.prototype, protoProps);
+          if (staticProps) _defineProperties10(Constructor, staticProps);
           Object.defineProperty(Constructor, "prototype", {
             writable: false
           });
           return Constructor;
         }
-        function _defineProperty(obj, key, value) {
-          key = _toPropertyKey(key);
+        function _defineProperty3(obj, key, value) {
+          key = _toPropertyKey10(key);
           if (key in obj) {
             Object.defineProperty(obj, key, {
               value,
@@ -860,25 +1247,25 @@ var UppyBackend = (() => {
           return obj;
         }
         function _toConsumableArray(arr) {
-          return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _unsupportedIterableToArray(arr) || _nonIterableSpread();
+          return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _unsupportedIterableToArray2(arr) || _nonIterableSpread();
         }
         function _arrayWithoutHoles(arr) {
-          if (Array.isArray(arr)) return _arrayLikeToArray(arr);
+          if (Array.isArray(arr)) return _arrayLikeToArray2(arr);
         }
         function _iterableToArray(iter) {
           if (typeof Symbol !== "undefined" && iter[Symbol.iterator] != null || iter["@@iterator"] != null) return Array.from(iter);
         }
-        function _unsupportedIterableToArray(o4, minLen) {
+        function _unsupportedIterableToArray2(o4, minLen) {
           if (!o4) return;
-          if (typeof o4 === "string") return _arrayLikeToArray(o4, minLen);
+          if (typeof o4 === "string") return _arrayLikeToArray2(o4, minLen);
           var n3 = Object.prototype.toString.call(o4).slice(8, -1);
           if (n3 === "Object" && o4.constructor) n3 = o4.constructor.name;
           if (n3 === "Map" || n3 === "Set") return Array.from(o4);
-          if (n3 === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n3)) return _arrayLikeToArray(o4, minLen);
+          if (n3 === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n3)) return _arrayLikeToArray2(o4, minLen);
         }
-        function _arrayLikeToArray(arr, len) {
-          if (len == null || len > arr.length) len = arr.length;
-          for (var i4 = 0, arr2 = new Array(len); i4 < len; i4++) arr2[i4] = arr[i4];
+        function _arrayLikeToArray2(arr, len2) {
+          if (len2 == null || len2 > arr.length) len2 = arr.length;
+          for (var i4 = 0, arr2 = new Array(len2); i4 < len2; i4++) arr2[i4] = arr[i4];
           return arr2;
         }
         function _nonIterableSpread() {
@@ -1008,9 +1395,9 @@ var UppyBackend = (() => {
           zoom: null
         };
         var TEMPLATE = '<div class="cropper-container" touch-action="none"><div class="cropper-wrap-box"><div class="cropper-canvas"></div></div><div class="cropper-drag-box"></div><div class="cropper-crop-box"><span class="cropper-view-box"></span><span class="cropper-dashed dashed-h"></span><span class="cropper-dashed dashed-v"></span><span class="cropper-center"></span><span class="cropper-face"></span><span class="cropper-line line-e" data-cropper-action="e"></span><span class="cropper-line line-n" data-cropper-action="n"></span><span class="cropper-line line-w" data-cropper-action="w"></span><span class="cropper-line line-s" data-cropper-action="s"></span><span class="cropper-point point-e" data-cropper-action="e"></span><span class="cropper-point point-n" data-cropper-action="n"></span><span class="cropper-point point-w" data-cropper-action="w"></span><span class="cropper-point point-s" data-cropper-action="s"></span><span class="cropper-point point-ne" data-cropper-action="ne"></span><span class="cropper-point point-nw" data-cropper-action="nw"></span><span class="cropper-point point-sw" data-cropper-action="sw"></span><span class="cropper-point point-se" data-cropper-action="se"></span></div></div>';
-        var isNaN = Number.isNaN || WINDOW.isNaN;
+        var isNaN2 = Number.isNaN || WINDOW.isNaN;
         function isNumber(value) {
-          return typeof value === "number" && !isNaN(value);
+          return typeof value === "number" && !isNaN2(value);
         }
         var isPositiveNumber = function isPositiveNumber2(value) {
           return value > 0 && value < Infinity;
@@ -1019,7 +1406,7 @@ var UppyBackend = (() => {
           return typeof value === "undefined";
         }
         function isObject(value) {
-          return _typeof(value) === "object" && value !== null;
+          return _typeof10(value) === "object" && value !== null;
         }
         var hasOwnProperty = Object.prototype.hasOwnProperty;
         function isPlainObject(value) {
@@ -1311,7 +1698,7 @@ var UppyBackend = (() => {
           };
         }
         function getMaxZoomRatio(pointers) {
-          var pointers2 = _objectSpread2({}, pointers);
+          var pointers2 = _objectSpread22({}, pointers);
           var maxRatio = 0;
           forEach(pointers, function(pointer, pointerId) {
             delete pointers2[pointerId];
@@ -1336,7 +1723,7 @@ var UppyBackend = (() => {
             endX: pageX,
             endY: pageY
           };
-          return endOnly ? end : _objectSpread2({
+          return endOnly ? end : _objectSpread22({
             startX: pageX,
             startY: pageY
           }, end);
@@ -3197,7 +3584,7 @@ var UppyBackend = (() => {
         var Cropper2 = /* @__PURE__ */ (function() {
           function Cropper3(element) {
             var options = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : {};
-            _classCallCheck(this, Cropper3);
+            _classCallCheck10(this, Cropper3);
             if (!element || !REGEXP_TAG_NAME.test(element.tagName)) {
               throw new Error("The first argument is required and must be an <img> or <canvas> element.");
             }
@@ -3213,7 +3600,7 @@ var UppyBackend = (() => {
             this.sizing = false;
             this.init();
           }
-          return _createClass(Cropper3, [{
+          return _createClass10(Cropper3, [{
             key: "init",
             value: function init() {
               var element = this.element;
@@ -3512,6 +3899,11 @@ var UppyBackend = (() => {
     }
   });
 
+  // node_modules/@uppy/utils/lib/hasProperty.js
+  function hasProperty(object, key) {
+    return Object.hasOwn(object, key);
+  }
+
   // node_modules/@uppy/utils/lib/canvasToBlob.js
   function canvasToBlob(canvas, type, quality) {
     return new Promise((resolve) => {
@@ -3617,14 +4009,14 @@ var UppyBackend = (() => {
   var noop = () => {
   };
   function fetcher(url, options = {}) {
-    const { body = null, headers = {}, method = "GET", onBeforeRequest = noop, onUploadProgress = noop, shouldRetry = () => true, onAfterResponse = noop, onTimeout = noop, responseType, retries = 3, signal = null, timeout = 3e4, withCredentials = false } = options;
+    const { body = null, headers = {}, method = "GET", onBeforeRequest = noop, onUploadProgress = noop, shouldRetry: shouldRetry2 = () => true, onAfterResponse = noop, onTimeout = noop, responseType, retries = 3, signal = null, timeout = 3e4, withCredentials = false } = options;
     const delay = (attempt) => 0.3 * 2 ** (attempt - 1) * 1e3;
     const timer = new ProgressTimeout_default(timeout, onTimeout);
     function requestWithRetry(retryCount = 0) {
       return new Promise(async (resolve, reject) => {
         const xhr = new XMLHttpRequest();
         const onError = (error) => {
-          if (shouldRetry(xhr) && retryCount < retries) {
+          if (shouldRetry2(xhr) && retryCount < retries) {
             setTimeout(() => {
               requestWithRetry(retryCount + 1).then(resolve, reject);
             }, delay(retryCount));
@@ -3649,7 +4041,7 @@ var UppyBackend = (() => {
           if (xhr.status >= 200 && xhr.status < 300) {
             timer.done();
             resolve(xhr);
-          } else if (shouldRetry(xhr) && retryCount < retries) {
+          } else if (shouldRetry2(xhr) && retryCount < retries) {
             setTimeout(() => {
               requestWithRetry(retryCount + 1).then(resolve, reject);
             }, delay(retryCount));
@@ -5583,9 +5975,9 @@ var UppyBackend = (() => {
     if (!m4)
       return true;
     const edgeVersion = m4[1];
-    const version = edgeVersion.split(".", 2);
-    const major = parseInt(version[0], 10);
-    const minor = parseInt(version[1], 10);
+    const version2 = edgeVersion.split(".", 2);
+    const major = parseInt(version2[0], 10);
+    const minor = parseInt(version2[1], 10);
     if (major < 15 || major === 15 && minor < 15063) {
       return true;
     }
@@ -5681,7 +6073,7 @@ var UppyBackend = (() => {
       // (calling /refresh-token up to 6 times), which will probably fail for some providers
       __privateAdd(this, _requestClientById, /* @__PURE__ */ new Map());
       this.defaultLocale = locale_default;
-      const defaultOptions7 = {
+      const defaultOptions10 = {
         id: "uppy",
         autoProceed: false,
         allowMultipleUploadBatches: true,
@@ -5694,11 +6086,11 @@ var UppyBackend = (() => {
         logger: justErrorsLogger,
         infoTimeout: 5e3
       };
-      const merged = { ...defaultOptions7, ...opts };
+      const merged = { ...defaultOptions10, ...opts };
       this.opts = {
         ...merged,
         restrictions: {
-          ...defaultOptions7.restrictions,
+          ...defaultOptions10.restrictions,
           ...opts?.restrictions
         }
       };
@@ -8237,7 +8629,7 @@ Uppy plugins must have unique \`id\` options.`;
       });
       this.plugin = plugin;
       this.provider = opts.provider;
-      const defaultOptions7 = {
+      const defaultOptions10 = {
         viewType: "list",
         showTitles: true,
         showFilter: true,
@@ -8245,7 +8637,7 @@ Uppy plugins must have unique \`id\` options.`;
         loadAllFiles: false,
         virtualList: false
       };
-      this.opts = { ...defaultOptions7, ...opts };
+      this.opts = { ...defaultOptions10, ...opts };
       this.openFolder = this.openFolder.bind(this);
       this.logout = this.logout.bind(this);
       this.handleAuth = this.handleAuth.bind(this);
@@ -10252,11 +10644,11 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
     }
     const aKeys = Object.keys(objA);
     const bKeys = Object.keys(objB);
-    const len = aKeys.length;
-    if (bKeys.length !== len) {
+    const len2 = aKeys.length;
+    if (bKeys.length !== len2) {
       return false;
     }
-    for (let i4 = 0; i4 < len; i4++) {
+    for (let i4 = 0; i4 < len2; i4++) {
       const key = aKeys[i4];
       if (objA[key] !== objB[key] || !Object.prototype.hasOwnProperty.call(objB, key)) {
         return false;
@@ -13647,8 +14039,3141 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
   _handleUpload = new WeakMap();
   __publicField(XHRUpload, "VERSION", package_default7.version);
 
-  // node_modules/@uppy/image-editor/package.json
+  // node_modules/tus-js-client/lib.esm/error.js
+  function _typeof(o4) {
+    "@babel/helpers - typeof";
+    return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function(o5) {
+      return typeof o5;
+    } : function(o5) {
+      return o5 && "function" == typeof Symbol && o5.constructor === Symbol && o5 !== Symbol.prototype ? "symbol" : typeof o5;
+    }, _typeof(o4);
+  }
+  function _defineProperties(target, props) {
+    for (var i4 = 0; i4 < props.length; i4++) {
+      var descriptor = props[i4];
+      descriptor.enumerable = descriptor.enumerable || false;
+      descriptor.configurable = true;
+      if ("value" in descriptor) descriptor.writable = true;
+      Object.defineProperty(target, _toPropertyKey(descriptor.key), descriptor);
+    }
+  }
+  function _createClass(Constructor, protoProps, staticProps) {
+    if (protoProps) _defineProperties(Constructor.prototype, protoProps);
+    if (staticProps) _defineProperties(Constructor, staticProps);
+    Object.defineProperty(Constructor, "prototype", { writable: false });
+    return Constructor;
+  }
+  function _toPropertyKey(t4) {
+    var i4 = _toPrimitive(t4, "string");
+    return "symbol" == _typeof(i4) ? i4 : i4 + "";
+  }
+  function _toPrimitive(t4, r4) {
+    if ("object" != _typeof(t4) || !t4) return t4;
+    var e4 = t4[Symbol.toPrimitive];
+    if (void 0 !== e4) {
+      var i4 = e4.call(t4, r4 || "default");
+      if ("object" != _typeof(i4)) return i4;
+      throw new TypeError("@@toPrimitive must return a primitive value.");
+    }
+    return ("string" === r4 ? String : Number)(t4);
+  }
+  function _classCallCheck(instance, Constructor) {
+    if (!(instance instanceof Constructor)) {
+      throw new TypeError("Cannot call a class as a function");
+    }
+  }
+  function _callSuper(t4, o4, e4) {
+    return o4 = _getPrototypeOf(o4), _possibleConstructorReturn(t4, _isNativeReflectConstruct() ? Reflect.construct(o4, e4 || [], _getPrototypeOf(t4).constructor) : o4.apply(t4, e4));
+  }
+  function _possibleConstructorReturn(self2, call) {
+    if (call && (_typeof(call) === "object" || typeof call === "function")) {
+      return call;
+    } else if (call !== void 0) {
+      throw new TypeError("Derived constructors may only return object or undefined");
+    }
+    return _assertThisInitialized(self2);
+  }
+  function _assertThisInitialized(self2) {
+    if (self2 === void 0) {
+      throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
+    }
+    return self2;
+  }
+  function _inherits(subClass, superClass) {
+    if (typeof superClass !== "function" && superClass !== null) {
+      throw new TypeError("Super expression must either be null or a function");
+    }
+    subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } });
+    Object.defineProperty(subClass, "prototype", { writable: false });
+    if (superClass) _setPrototypeOf(subClass, superClass);
+  }
+  function _wrapNativeSuper(Class) {
+    var _cache = typeof Map === "function" ? /* @__PURE__ */ new Map() : void 0;
+    _wrapNativeSuper = function _wrapNativeSuper2(Class2) {
+      if (Class2 === null || !_isNativeFunction(Class2)) return Class2;
+      if (typeof Class2 !== "function") {
+        throw new TypeError("Super expression must either be null or a function");
+      }
+      if (typeof _cache !== "undefined") {
+        if (_cache.has(Class2)) return _cache.get(Class2);
+        _cache.set(Class2, Wrapper);
+      }
+      function Wrapper() {
+        return _construct(Class2, arguments, _getPrototypeOf(this).constructor);
+      }
+      Wrapper.prototype = Object.create(Class2.prototype, { constructor: { value: Wrapper, enumerable: false, writable: true, configurable: true } });
+      return _setPrototypeOf(Wrapper, Class2);
+    };
+    return _wrapNativeSuper(Class);
+  }
+  function _construct(t4, e4, r4) {
+    if (_isNativeReflectConstruct()) return Reflect.construct.apply(null, arguments);
+    var o4 = [null];
+    o4.push.apply(o4, e4);
+    var p4 = new (t4.bind.apply(t4, o4))();
+    return r4 && _setPrototypeOf(p4, r4.prototype), p4;
+  }
+  function _isNativeReflectConstruct() {
+    try {
+      var t4 = !Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function() {
+      }));
+    } catch (t5) {
+    }
+    return (_isNativeReflectConstruct = function _isNativeReflectConstruct3() {
+      return !!t4;
+    })();
+  }
+  function _isNativeFunction(fn) {
+    try {
+      return Function.toString.call(fn).indexOf("[native code]") !== -1;
+    } catch (e4) {
+      return typeof fn === "function";
+    }
+  }
+  function _setPrototypeOf(o4, p4) {
+    _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function _setPrototypeOf3(o5, p5) {
+      o5.__proto__ = p5;
+      return o5;
+    };
+    return _setPrototypeOf(o4, p4);
+  }
+  function _getPrototypeOf(o4) {
+    _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function _getPrototypeOf3(o5) {
+      return o5.__proto__ || Object.getPrototypeOf(o5);
+    };
+    return _getPrototypeOf(o4);
+  }
+  var DetailedError = /* @__PURE__ */ (function(_Error) {
+    function DetailedError2(message) {
+      var _this;
+      var causingErr = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : null;
+      var req = arguments.length > 2 && arguments[2] !== void 0 ? arguments[2] : null;
+      var res = arguments.length > 3 && arguments[3] !== void 0 ? arguments[3] : null;
+      _classCallCheck(this, DetailedError2);
+      _this = _callSuper(this, DetailedError2, [message]);
+      _this.originalRequest = req;
+      _this.originalResponse = res;
+      _this.causingError = causingErr;
+      if (causingErr != null) {
+        message += ", caused by ".concat(causingErr.toString());
+      }
+      if (req != null) {
+        var requestId = req.getHeader("X-Request-ID") || "n/a";
+        var method = req.getMethod();
+        var url = req.getURL();
+        var status = res ? res.getStatus() : "n/a";
+        var body = res ? res.getBody() || "" : "n/a";
+        message += ", originated from request (method: ".concat(method, ", url: ").concat(url, ", response code: ").concat(status, ", response text: ").concat(body, ", request id: ").concat(requestId, ")");
+      }
+      _this.message = message;
+      return _this;
+    }
+    _inherits(DetailedError2, _Error);
+    return _createClass(DetailedError2);
+  })(/* @__PURE__ */ _wrapNativeSuper(Error));
+  var error_default = DetailedError;
+
+  // node_modules/tus-js-client/lib.esm/logger.js
+  var isEnabled = false;
+  function log(msg) {
+    if (!isEnabled) return;
+    console.log(msg);
+  }
+
+  // node_modules/tus-js-client/lib.esm/noopUrlStorage.js
+  function _typeof2(o4) {
+    "@babel/helpers - typeof";
+    return _typeof2 = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function(o5) {
+      return typeof o5;
+    } : function(o5) {
+      return o5 && "function" == typeof Symbol && o5.constructor === Symbol && o5 !== Symbol.prototype ? "symbol" : typeof o5;
+    }, _typeof2(o4);
+  }
+  function _classCallCheck2(instance, Constructor) {
+    if (!(instance instanceof Constructor)) {
+      throw new TypeError("Cannot call a class as a function");
+    }
+  }
+  function _defineProperties2(target, props) {
+    for (var i4 = 0; i4 < props.length; i4++) {
+      var descriptor = props[i4];
+      descriptor.enumerable = descriptor.enumerable || false;
+      descriptor.configurable = true;
+      if ("value" in descriptor) descriptor.writable = true;
+      Object.defineProperty(target, _toPropertyKey2(descriptor.key), descriptor);
+    }
+  }
+  function _createClass2(Constructor, protoProps, staticProps) {
+    if (protoProps) _defineProperties2(Constructor.prototype, protoProps);
+    if (staticProps) _defineProperties2(Constructor, staticProps);
+    Object.defineProperty(Constructor, "prototype", { writable: false });
+    return Constructor;
+  }
+  function _toPropertyKey2(t4) {
+    var i4 = _toPrimitive2(t4, "string");
+    return "symbol" == _typeof2(i4) ? i4 : i4 + "";
+  }
+  function _toPrimitive2(t4, r4) {
+    if ("object" != _typeof2(t4) || !t4) return t4;
+    var e4 = t4[Symbol.toPrimitive];
+    if (void 0 !== e4) {
+      var i4 = e4.call(t4, r4 || "default");
+      if ("object" != _typeof2(i4)) return i4;
+      throw new TypeError("@@toPrimitive must return a primitive value.");
+    }
+    return ("string" === r4 ? String : Number)(t4);
+  }
+  var NoopUrlStorage = /* @__PURE__ */ (function() {
+    function NoopUrlStorage2() {
+      _classCallCheck2(this, NoopUrlStorage2);
+    }
+    return _createClass2(NoopUrlStorage2, [{
+      key: "listAllUploads",
+      value: function listAllUploads() {
+        return Promise.resolve([]);
+      }
+    }, {
+      key: "findUploadsByFingerprint",
+      value: function findUploadsByFingerprint(_fingerprint) {
+        return Promise.resolve([]);
+      }
+    }, {
+      key: "removeUpload",
+      value: function removeUpload(_urlStorageKey) {
+        return Promise.resolve();
+      }
+    }, {
+      key: "addUpload",
+      value: function addUpload(_fingerprint, _upload) {
+        return Promise.resolve(null);
+      }
+    }]);
+  })();
+
+  // node_modules/js-base64/base64.mjs
+  var version = "3.7.8";
+  var VERSION = version;
+  var _hasBuffer = typeof Buffer === "function";
+  var _TD = typeof TextDecoder === "function" ? new TextDecoder() : void 0;
+  var _TE = typeof TextEncoder === "function" ? new TextEncoder() : void 0;
+  var b64ch = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
+  var b64chs = Array.prototype.slice.call(b64ch);
+  var b64tab = ((a4) => {
+    let tab = {};
+    a4.forEach((c4, i4) => tab[c4] = i4);
+    return tab;
+  })(b64chs);
+  var b64re = /^(?:[A-Za-z\d+\/]{4})*?(?:[A-Za-z\d+\/]{2}(?:==)?|[A-Za-z\d+\/]{3}=?)?$/;
+  var _fromCC = String.fromCharCode.bind(String);
+  var _U8Afrom = typeof Uint8Array.from === "function" ? Uint8Array.from.bind(Uint8Array) : (it) => new Uint8Array(Array.prototype.slice.call(it, 0));
+  var _mkUriSafe = (src) => src.replace(/=/g, "").replace(/[+\/]/g, (m0) => m0 == "+" ? "-" : "_");
+  var _tidyB64 = (s4) => s4.replace(/[^A-Za-z0-9\+\/]/g, "");
+  var btoaPolyfill = (bin) => {
+    let u32, c0, c1, c22, asc = "";
+    const pad2 = bin.length % 3;
+    for (let i4 = 0; i4 < bin.length; ) {
+      if ((c0 = bin.charCodeAt(i4++)) > 255 || (c1 = bin.charCodeAt(i4++)) > 255 || (c22 = bin.charCodeAt(i4++)) > 255)
+        throw new TypeError("invalid character found");
+      u32 = c0 << 16 | c1 << 8 | c22;
+      asc += b64chs[u32 >> 18 & 63] + b64chs[u32 >> 12 & 63] + b64chs[u32 >> 6 & 63] + b64chs[u32 & 63];
+    }
+    return pad2 ? asc.slice(0, pad2 - 3) + "===".substring(pad2) : asc;
+  };
+  var _btoa = typeof btoa === "function" ? (bin) => btoa(bin) : _hasBuffer ? (bin) => Buffer.from(bin, "binary").toString("base64") : btoaPolyfill;
+  var _fromUint8Array = _hasBuffer ? (u8a) => Buffer.from(u8a).toString("base64") : (u8a) => {
+    const maxargs = 4096;
+    let strs = [];
+    for (let i4 = 0, l4 = u8a.length; i4 < l4; i4 += maxargs) {
+      strs.push(_fromCC.apply(null, u8a.subarray(i4, i4 + maxargs)));
+    }
+    return _btoa(strs.join(""));
+  };
+  var fromUint8Array = (u8a, urlsafe = false) => urlsafe ? _mkUriSafe(_fromUint8Array(u8a)) : _fromUint8Array(u8a);
+  var cb_utob = (c4) => {
+    if (c4.length < 2) {
+      var cc = c4.charCodeAt(0);
+      return cc < 128 ? c4 : cc < 2048 ? _fromCC(192 | cc >>> 6) + _fromCC(128 | cc & 63) : _fromCC(224 | cc >>> 12 & 15) + _fromCC(128 | cc >>> 6 & 63) + _fromCC(128 | cc & 63);
+    } else {
+      var cc = 65536 + (c4.charCodeAt(0) - 55296) * 1024 + (c4.charCodeAt(1) - 56320);
+      return _fromCC(240 | cc >>> 18 & 7) + _fromCC(128 | cc >>> 12 & 63) + _fromCC(128 | cc >>> 6 & 63) + _fromCC(128 | cc & 63);
+    }
+  };
+  var re_utob = /[\uD800-\uDBFF][\uDC00-\uDFFFF]|[^\x00-\x7F]/g;
+  var utob = (u5) => u5.replace(re_utob, cb_utob);
+  var _encode = _hasBuffer ? (s4) => Buffer.from(s4, "utf8").toString("base64") : _TE ? (s4) => _fromUint8Array(_TE.encode(s4)) : (s4) => _btoa(utob(s4));
+  var encode = (src, urlsafe = false) => urlsafe ? _mkUriSafe(_encode(src)) : _encode(src);
+  var encodeURI = (src) => encode(src, true);
+  var re_btou = /[\xC0-\xDF][\x80-\xBF]|[\xE0-\xEF][\x80-\xBF]{2}|[\xF0-\xF7][\x80-\xBF]{3}/g;
+  var cb_btou = (cccc) => {
+    switch (cccc.length) {
+      case 4:
+        var cp = (7 & cccc.charCodeAt(0)) << 18 | (63 & cccc.charCodeAt(1)) << 12 | (63 & cccc.charCodeAt(2)) << 6 | 63 & cccc.charCodeAt(3), offset = cp - 65536;
+        return _fromCC((offset >>> 10) + 55296) + _fromCC((offset & 1023) + 56320);
+      case 3:
+        return _fromCC((15 & cccc.charCodeAt(0)) << 12 | (63 & cccc.charCodeAt(1)) << 6 | 63 & cccc.charCodeAt(2));
+      default:
+        return _fromCC((31 & cccc.charCodeAt(0)) << 6 | 63 & cccc.charCodeAt(1));
+    }
+  };
+  var btou = (b3) => b3.replace(re_btou, cb_btou);
+  var atobPolyfill = (asc) => {
+    asc = asc.replace(/\s+/g, "");
+    if (!b64re.test(asc))
+      throw new TypeError("malformed base64.");
+    asc += "==".slice(2 - (asc.length & 3));
+    let u24, r1, r22;
+    let binArray = [];
+    for (let i4 = 0; i4 < asc.length; ) {
+      u24 = b64tab[asc.charAt(i4++)] << 18 | b64tab[asc.charAt(i4++)] << 12 | (r1 = b64tab[asc.charAt(i4++)]) << 6 | (r22 = b64tab[asc.charAt(i4++)]);
+      if (r1 === 64) {
+        binArray.push(_fromCC(u24 >> 16 & 255));
+      } else if (r22 === 64) {
+        binArray.push(_fromCC(u24 >> 16 & 255, u24 >> 8 & 255));
+      } else {
+        binArray.push(_fromCC(u24 >> 16 & 255, u24 >> 8 & 255, u24 & 255));
+      }
+    }
+    return binArray.join("");
+  };
+  var _atob = typeof atob === "function" ? (asc) => atob(_tidyB64(asc)) : _hasBuffer ? (asc) => Buffer.from(asc, "base64").toString("binary") : atobPolyfill;
+  var _toUint8Array = _hasBuffer ? (a4) => _U8Afrom(Buffer.from(a4, "base64")) : (a4) => _U8Afrom(_atob(a4).split("").map((c4) => c4.charCodeAt(0)));
+  var toUint8Array = (a4) => _toUint8Array(_unURI(a4));
+  var _decode = _hasBuffer ? (a4) => Buffer.from(a4, "base64").toString("utf8") : _TD ? (a4) => _TD.decode(_toUint8Array(a4)) : (a4) => btou(_atob(a4));
+  var _unURI = (a4) => _tidyB64(a4.replace(/[-_]/g, (m0) => m0 == "-" ? "+" : "/"));
+  var decode = (src) => _decode(_unURI(src));
+  var isValid = (src) => {
+    if (typeof src !== "string")
+      return false;
+    const s4 = src.replace(/\s+/g, "").replace(/={0,2}$/, "");
+    return !/[^\s0-9a-zA-Z\+/]/.test(s4) || !/[^\s0-9a-zA-Z\-_]/.test(s4);
+  };
+  var _noEnum = (v4) => {
+    return {
+      value: v4,
+      enumerable: false,
+      writable: true,
+      configurable: true
+    };
+  };
+  var extendString = function() {
+    const _add = (name, body) => Object.defineProperty(String.prototype, name, _noEnum(body));
+    _add("fromBase64", function() {
+      return decode(this);
+    });
+    _add("toBase64", function(urlsafe) {
+      return encode(this, urlsafe);
+    });
+    _add("toBase64URI", function() {
+      return encode(this, true);
+    });
+    _add("toBase64URL", function() {
+      return encode(this, true);
+    });
+    _add("toUint8Array", function() {
+      return toUint8Array(this);
+    });
+  };
+  var extendUint8Array = function() {
+    const _add = (name, body) => Object.defineProperty(Uint8Array.prototype, name, _noEnum(body));
+    _add("toBase64", function(urlsafe) {
+      return fromUint8Array(this, urlsafe);
+    });
+    _add("toBase64URI", function() {
+      return fromUint8Array(this, true);
+    });
+    _add("toBase64URL", function() {
+      return fromUint8Array(this, true);
+    });
+  };
+  var extendBuiltins = () => {
+    extendString();
+    extendUint8Array();
+  };
+  var gBase64 = {
+    version,
+    VERSION,
+    atob: _atob,
+    atobPolyfill,
+    btoa: _btoa,
+    btoaPolyfill,
+    fromBase64: decode,
+    toBase64: encode,
+    encode,
+    encodeURI,
+    encodeURL: encodeURI,
+    utob,
+    btou,
+    decode,
+    isValid,
+    fromUint8Array,
+    toUint8Array,
+    extendString,
+    extendUint8Array,
+    extendBuiltins
+  };
+
+  // node_modules/tus-js-client/lib.esm/upload.js
+  var import_url_parse = __toESM(require_url_parse());
+
+  // node_modules/tus-js-client/lib.esm/uuid.js
+  function uuid() {
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c4) {
+      var r4 = Math.random() * 16 | 0;
+      var v4 = c4 === "x" ? r4 : r4 & 3 | 8;
+      return v4.toString(16);
+    });
+  }
+
+  // node_modules/tus-js-client/lib.esm/upload.js
+  function _regeneratorRuntime() {
+    "use strict";
+    _regeneratorRuntime = function _regeneratorRuntime3() {
+      return e4;
+    };
+    var t4, e4 = {}, r4 = Object.prototype, n3 = r4.hasOwnProperty, o4 = Object.defineProperty || function(t5, e5, r5) {
+      t5[e5] = r5.value;
+    }, i4 = "function" == typeof Symbol ? Symbol : {}, a4 = i4.iterator || "@@iterator", c4 = i4.asyncIterator || "@@asyncIterator", u5 = i4.toStringTag || "@@toStringTag";
+    function define2(t5, e5, r5) {
+      return Object.defineProperty(t5, e5, { value: r5, enumerable: true, configurable: true, writable: true }), t5[e5];
+    }
+    try {
+      define2({}, "");
+    } catch (t5) {
+      define2 = function define3(t6, e5, r5) {
+        return t6[e5] = r5;
+      };
+    }
+    function wrap(t5, e5, r5, n4) {
+      var i5 = e5 && e5.prototype instanceof Generator ? e5 : Generator, a5 = Object.create(i5.prototype), c5 = new Context(n4 || []);
+      return o4(a5, "_invoke", { value: makeInvokeMethod(t5, r5, c5) }), a5;
+    }
+    function tryCatch(t5, e5, r5) {
+      try {
+        return { type: "normal", arg: t5.call(e5, r5) };
+      } catch (t6) {
+        return { type: "throw", arg: t6 };
+      }
+    }
+    e4.wrap = wrap;
+    var h4 = "suspendedStart", l4 = "suspendedYield", f5 = "executing", s4 = "completed", y4 = {};
+    function Generator() {
+    }
+    function GeneratorFunction() {
+    }
+    function GeneratorFunctionPrototype() {
+    }
+    var p4 = {};
+    define2(p4, a4, function() {
+      return this;
+    });
+    var d4 = Object.getPrototypeOf, v4 = d4 && d4(d4(values([])));
+    v4 && v4 !== r4 && n3.call(v4, a4) && (p4 = v4);
+    var g3 = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(p4);
+    function defineIteratorMethods(t5) {
+      ["next", "throw", "return"].forEach(function(e5) {
+        define2(t5, e5, function(t6) {
+          return this._invoke(e5, t6);
+        });
+      });
+    }
+    function AsyncIterator(t5, e5) {
+      function invoke(r6, o5, i5, a5) {
+        var c5 = tryCatch(t5[r6], t5, o5);
+        if ("throw" !== c5.type) {
+          var u6 = c5.arg, h5 = u6.value;
+          return h5 && "object" == _typeof3(h5) && n3.call(h5, "__await") ? e5.resolve(h5.__await).then(function(t6) {
+            invoke("next", t6, i5, a5);
+          }, function(t6) {
+            invoke("throw", t6, i5, a5);
+          }) : e5.resolve(h5).then(function(t6) {
+            u6.value = t6, i5(u6);
+          }, function(t6) {
+            return invoke("throw", t6, i5, a5);
+          });
+        }
+        a5(c5.arg);
+      }
+      var r5;
+      o4(this, "_invoke", { value: function value(t6, n4) {
+        function callInvokeWithMethodAndArg() {
+          return new e5(function(e6, r6) {
+            invoke(t6, n4, e6, r6);
+          });
+        }
+        return r5 = r5 ? r5.then(callInvokeWithMethodAndArg, callInvokeWithMethodAndArg) : callInvokeWithMethodAndArg();
+      } });
+    }
+    function makeInvokeMethod(e5, r5, n4) {
+      var o5 = h4;
+      return function(i5, a5) {
+        if (o5 === f5) throw Error("Generator is already running");
+        if (o5 === s4) {
+          if ("throw" === i5) throw a5;
+          return { value: t4, done: true };
+        }
+        for (n4.method = i5, n4.arg = a5; ; ) {
+          var c5 = n4.delegate;
+          if (c5) {
+            var u6 = maybeInvokeDelegate(c5, n4);
+            if (u6) {
+              if (u6 === y4) continue;
+              return u6;
+            }
+          }
+          if ("next" === n4.method) n4.sent = n4._sent = n4.arg;
+          else if ("throw" === n4.method) {
+            if (o5 === h4) throw o5 = s4, n4.arg;
+            n4.dispatchException(n4.arg);
+          } else "return" === n4.method && n4.abrupt("return", n4.arg);
+          o5 = f5;
+          var p5 = tryCatch(e5, r5, n4);
+          if ("normal" === p5.type) {
+            if (o5 = n4.done ? s4 : l4, p5.arg === y4) continue;
+            return { value: p5.arg, done: n4.done };
+          }
+          "throw" === p5.type && (o5 = s4, n4.method = "throw", n4.arg = p5.arg);
+        }
+      };
+    }
+    function maybeInvokeDelegate(e5, r5) {
+      var n4 = r5.method, o5 = e5.iterator[n4];
+      if (o5 === t4) return r5.delegate = null, "throw" === n4 && e5.iterator["return"] && (r5.method = "return", r5.arg = t4, maybeInvokeDelegate(e5, r5), "throw" === r5.method) || "return" !== n4 && (r5.method = "throw", r5.arg = new TypeError("The iterator does not provide a '" + n4 + "' method")), y4;
+      var i5 = tryCatch(o5, e5.iterator, r5.arg);
+      if ("throw" === i5.type) return r5.method = "throw", r5.arg = i5.arg, r5.delegate = null, y4;
+      var a5 = i5.arg;
+      return a5 ? a5.done ? (r5[e5.resultName] = a5.value, r5.next = e5.nextLoc, "return" !== r5.method && (r5.method = "next", r5.arg = t4), r5.delegate = null, y4) : a5 : (r5.method = "throw", r5.arg = new TypeError("iterator result is not an object"), r5.delegate = null, y4);
+    }
+    function pushTryEntry(t5) {
+      var e5 = { tryLoc: t5[0] };
+      1 in t5 && (e5.catchLoc = t5[1]), 2 in t5 && (e5.finallyLoc = t5[2], e5.afterLoc = t5[3]), this.tryEntries.push(e5);
+    }
+    function resetTryEntry(t5) {
+      var e5 = t5.completion || {};
+      e5.type = "normal", delete e5.arg, t5.completion = e5;
+    }
+    function Context(t5) {
+      this.tryEntries = [{ tryLoc: "root" }], t5.forEach(pushTryEntry, this), this.reset(true);
+    }
+    function values(e5) {
+      if (e5 || "" === e5) {
+        var r5 = e5[a4];
+        if (r5) return r5.call(e5);
+        if ("function" == typeof e5.next) return e5;
+        if (!isNaN(e5.length)) {
+          var o5 = -1, i5 = function next() {
+            for (; ++o5 < e5.length; ) if (n3.call(e5, o5)) return next.value = e5[o5], next.done = false, next;
+            return next.value = t4, next.done = true, next;
+          };
+          return i5.next = i5;
+        }
+      }
+      throw new TypeError(_typeof3(e5) + " is not iterable");
+    }
+    return GeneratorFunction.prototype = GeneratorFunctionPrototype, o4(g3, "constructor", { value: GeneratorFunctionPrototype, configurable: true }), o4(GeneratorFunctionPrototype, "constructor", { value: GeneratorFunction, configurable: true }), GeneratorFunction.displayName = define2(GeneratorFunctionPrototype, u5, "GeneratorFunction"), e4.isGeneratorFunction = function(t5) {
+      var e5 = "function" == typeof t5 && t5.constructor;
+      return !!e5 && (e5 === GeneratorFunction || "GeneratorFunction" === (e5.displayName || e5.name));
+    }, e4.mark = function(t5) {
+      return Object.setPrototypeOf ? Object.setPrototypeOf(t5, GeneratorFunctionPrototype) : (t5.__proto__ = GeneratorFunctionPrototype, define2(t5, u5, "GeneratorFunction")), t5.prototype = Object.create(g3), t5;
+    }, e4.awrap = function(t5) {
+      return { __await: t5 };
+    }, defineIteratorMethods(AsyncIterator.prototype), define2(AsyncIterator.prototype, c4, function() {
+      return this;
+    }), e4.AsyncIterator = AsyncIterator, e4.async = function(t5, r5, n4, o5, i5) {
+      void 0 === i5 && (i5 = Promise);
+      var a5 = new AsyncIterator(wrap(t5, r5, n4, o5), i5);
+      return e4.isGeneratorFunction(r5) ? a5 : a5.next().then(function(t6) {
+        return t6.done ? t6.value : a5.next();
+      });
+    }, defineIteratorMethods(g3), define2(g3, u5, "Generator"), define2(g3, a4, function() {
+      return this;
+    }), define2(g3, "toString", function() {
+      return "[object Generator]";
+    }), e4.keys = function(t5) {
+      var e5 = Object(t5), r5 = [];
+      for (var n4 in e5) r5.push(n4);
+      return r5.reverse(), function next() {
+        for (; r5.length; ) {
+          var t6 = r5.pop();
+          if (t6 in e5) return next.value = t6, next.done = false, next;
+        }
+        return next.done = true, next;
+      };
+    }, e4.values = values, Context.prototype = { constructor: Context, reset: function reset(e5) {
+      if (this.prev = 0, this.next = 0, this.sent = this._sent = t4, this.done = false, this.delegate = null, this.method = "next", this.arg = t4, this.tryEntries.forEach(resetTryEntry), !e5) for (var r5 in this) "t" === r5.charAt(0) && n3.call(this, r5) && !isNaN(+r5.slice(1)) && (this[r5] = t4);
+    }, stop: function stop() {
+      this.done = true;
+      var t5 = this.tryEntries[0].completion;
+      if ("throw" === t5.type) throw t5.arg;
+      return this.rval;
+    }, dispatchException: function dispatchException(e5) {
+      if (this.done) throw e5;
+      var r5 = this;
+      function handle(n4, o6) {
+        return a5.type = "throw", a5.arg = e5, r5.next = n4, o6 && (r5.method = "next", r5.arg = t4), !!o6;
+      }
+      for (var o5 = this.tryEntries.length - 1; o5 >= 0; --o5) {
+        var i5 = this.tryEntries[o5], a5 = i5.completion;
+        if ("root" === i5.tryLoc) return handle("end");
+        if (i5.tryLoc <= this.prev) {
+          var c5 = n3.call(i5, "catchLoc"), u6 = n3.call(i5, "finallyLoc");
+          if (c5 && u6) {
+            if (this.prev < i5.catchLoc) return handle(i5.catchLoc, true);
+            if (this.prev < i5.finallyLoc) return handle(i5.finallyLoc);
+          } else if (c5) {
+            if (this.prev < i5.catchLoc) return handle(i5.catchLoc, true);
+          } else {
+            if (!u6) throw Error("try statement without catch or finally");
+            if (this.prev < i5.finallyLoc) return handle(i5.finallyLoc);
+          }
+        }
+      }
+    }, abrupt: function abrupt(t5, e5) {
+      for (var r5 = this.tryEntries.length - 1; r5 >= 0; --r5) {
+        var o5 = this.tryEntries[r5];
+        if (o5.tryLoc <= this.prev && n3.call(o5, "finallyLoc") && this.prev < o5.finallyLoc) {
+          var i5 = o5;
+          break;
+        }
+      }
+      i5 && ("break" === t5 || "continue" === t5) && i5.tryLoc <= e5 && e5 <= i5.finallyLoc && (i5 = null);
+      var a5 = i5 ? i5.completion : {};
+      return a5.type = t5, a5.arg = e5, i5 ? (this.method = "next", this.next = i5.finallyLoc, y4) : this.complete(a5);
+    }, complete: function complete(t5, e5) {
+      if ("throw" === t5.type) throw t5.arg;
+      return "break" === t5.type || "continue" === t5.type ? this.next = t5.arg : "return" === t5.type ? (this.rval = this.arg = t5.arg, this.method = "return", this.next = "end") : "normal" === t5.type && e5 && (this.next = e5), y4;
+    }, finish: function finish(t5) {
+      for (var e5 = this.tryEntries.length - 1; e5 >= 0; --e5) {
+        var r5 = this.tryEntries[e5];
+        if (r5.finallyLoc === t5) return this.complete(r5.completion, r5.afterLoc), resetTryEntry(r5), y4;
+      }
+    }, "catch": function _catch(t5) {
+      for (var e5 = this.tryEntries.length - 1; e5 >= 0; --e5) {
+        var r5 = this.tryEntries[e5];
+        if (r5.tryLoc === t5) {
+          var n4 = r5.completion;
+          if ("throw" === n4.type) {
+            var o5 = n4.arg;
+            resetTryEntry(r5);
+          }
+          return o5;
+        }
+      }
+      throw Error("illegal catch attempt");
+    }, delegateYield: function delegateYield(e5, r5, n4) {
+      return this.delegate = { iterator: values(e5), resultName: r5, nextLoc: n4 }, "next" === this.method && (this.arg = t4), y4;
+    } }, e4;
+  }
+  function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) {
+    try {
+      var info = gen[key](arg);
+      var value = info.value;
+    } catch (error) {
+      reject(error);
+      return;
+    }
+    if (info.done) {
+      resolve(value);
+    } else {
+      Promise.resolve(value).then(_next, _throw);
+    }
+  }
+  function _asyncToGenerator(fn) {
+    return function() {
+      var self2 = this, args = arguments;
+      return new Promise(function(resolve, reject) {
+        var gen = fn.apply(self2, args);
+        function _next(value) {
+          asyncGeneratorStep(gen, resolve, reject, _next, _throw, "next", value);
+        }
+        function _throw(err) {
+          asyncGeneratorStep(gen, resolve, reject, _next, _throw, "throw", err);
+        }
+        _next(void 0);
+      });
+    };
+  }
+  function _slicedToArray(arr, i4) {
+    return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i4) || _unsupportedIterableToArray(arr, i4) || _nonIterableRest();
+  }
+  function _nonIterableRest() {
+    throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
+  }
+  function _iterableToArrayLimit(r4, l4) {
+    var t4 = null == r4 ? null : "undefined" != typeof Symbol && r4[Symbol.iterator] || r4["@@iterator"];
+    if (null != t4) {
+      var e4, n3, i4, u5, a4 = [], f5 = true, o4 = false;
+      try {
+        if (i4 = (t4 = t4.call(r4)).next, 0 === l4) {
+          if (Object(t4) !== t4) return;
+          f5 = false;
+        } else for (; !(f5 = (e4 = i4.call(t4)).done) && (a4.push(e4.value), a4.length !== l4); f5 = true) ;
+      } catch (r5) {
+        o4 = true, n3 = r5;
+      } finally {
+        try {
+          if (!f5 && null != t4["return"] && (u5 = t4["return"](), Object(u5) !== u5)) return;
+        } finally {
+          if (o4) throw n3;
+        }
+      }
+      return a4;
+    }
+  }
+  function _arrayWithHoles(arr) {
+    if (Array.isArray(arr)) return arr;
+  }
+  function _typeof3(o4) {
+    "@babel/helpers - typeof";
+    return _typeof3 = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function(o5) {
+      return typeof o5;
+    } : function(o5) {
+      return o5 && "function" == typeof Symbol && o5.constructor === Symbol && o5 !== Symbol.prototype ? "symbol" : typeof o5;
+    }, _typeof3(o4);
+  }
+  function _createForOfIteratorHelper(o4, allowArrayLike) {
+    var it = typeof Symbol !== "undefined" && o4[Symbol.iterator] || o4["@@iterator"];
+    if (!it) {
+      if (Array.isArray(o4) || (it = _unsupportedIterableToArray(o4)) || allowArrayLike && o4 && typeof o4.length === "number") {
+        if (it) o4 = it;
+        var i4 = 0;
+        var F3 = function F4() {
+        };
+        return { s: F3, n: function n3() {
+          if (i4 >= o4.length) return { done: true };
+          return { done: false, value: o4[i4++] };
+        }, e: function e4(_e) {
+          throw _e;
+        }, f: F3 };
+      }
+      throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
+    }
+    var normalCompletion = true, didErr = false, err;
+    return { s: function s4() {
+      it = it.call(o4);
+    }, n: function n3() {
+      var step = it.next();
+      normalCompletion = step.done;
+      return step;
+    }, e: function e4(_e2) {
+      didErr = true;
+      err = _e2;
+    }, f: function f5() {
+      try {
+        if (!normalCompletion && it["return"] != null) it["return"]();
+      } finally {
+        if (didErr) throw err;
+      }
+    } };
+  }
+  function _unsupportedIterableToArray(o4, minLen) {
+    if (!o4) return;
+    if (typeof o4 === "string") return _arrayLikeToArray(o4, minLen);
+    var n3 = Object.prototype.toString.call(o4).slice(8, -1);
+    if (n3 === "Object" && o4.constructor) n3 = o4.constructor.name;
+    if (n3 === "Map" || n3 === "Set") return Array.from(o4);
+    if (n3 === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n3)) return _arrayLikeToArray(o4, minLen);
+  }
+  function _arrayLikeToArray(arr, len2) {
+    if (len2 == null || len2 > arr.length) len2 = arr.length;
+    for (var i4 = 0, arr2 = new Array(len2); i4 < len2; i4++) arr2[i4] = arr[i4];
+    return arr2;
+  }
+  function ownKeys(e4, r4) {
+    var t4 = Object.keys(e4);
+    if (Object.getOwnPropertySymbols) {
+      var o4 = Object.getOwnPropertySymbols(e4);
+      r4 && (o4 = o4.filter(function(r5) {
+        return Object.getOwnPropertyDescriptor(e4, r5).enumerable;
+      })), t4.push.apply(t4, o4);
+    }
+    return t4;
+  }
+  function _objectSpread(e4) {
+    for (var r4 = 1; r4 < arguments.length; r4++) {
+      var t4 = null != arguments[r4] ? arguments[r4] : {};
+      r4 % 2 ? ownKeys(Object(t4), true).forEach(function(r5) {
+        _defineProperty(e4, r5, t4[r5]);
+      }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e4, Object.getOwnPropertyDescriptors(t4)) : ownKeys(Object(t4)).forEach(function(r5) {
+        Object.defineProperty(e4, r5, Object.getOwnPropertyDescriptor(t4, r5));
+      });
+    }
+    return e4;
+  }
+  function _defineProperty(obj, key, value) {
+    key = _toPropertyKey3(key);
+    if (key in obj) {
+      Object.defineProperty(obj, key, { value, enumerable: true, configurable: true, writable: true });
+    } else {
+      obj[key] = value;
+    }
+    return obj;
+  }
+  function _classCallCheck3(instance, Constructor) {
+    if (!(instance instanceof Constructor)) {
+      throw new TypeError("Cannot call a class as a function");
+    }
+  }
+  function _defineProperties3(target, props) {
+    for (var i4 = 0; i4 < props.length; i4++) {
+      var descriptor = props[i4];
+      descriptor.enumerable = descriptor.enumerable || false;
+      descriptor.configurable = true;
+      if ("value" in descriptor) descriptor.writable = true;
+      Object.defineProperty(target, _toPropertyKey3(descriptor.key), descriptor);
+    }
+  }
+  function _createClass3(Constructor, protoProps, staticProps) {
+    if (protoProps) _defineProperties3(Constructor.prototype, protoProps);
+    if (staticProps) _defineProperties3(Constructor, staticProps);
+    Object.defineProperty(Constructor, "prototype", { writable: false });
+    return Constructor;
+  }
+  function _toPropertyKey3(t4) {
+    var i4 = _toPrimitive3(t4, "string");
+    return "symbol" == _typeof3(i4) ? i4 : i4 + "";
+  }
+  function _toPrimitive3(t4, r4) {
+    if ("object" != _typeof3(t4) || !t4) return t4;
+    var e4 = t4[Symbol.toPrimitive];
+    if (void 0 !== e4) {
+      var i4 = e4.call(t4, r4 || "default");
+      if ("object" != _typeof3(i4)) return i4;
+      throw new TypeError("@@toPrimitive must return a primitive value.");
+    }
+    return ("string" === r4 ? String : Number)(t4);
+  }
+  var PROTOCOL_TUS_V1 = "tus-v1";
+  var PROTOCOL_IETF_DRAFT_03 = "ietf-draft-03";
+  var PROTOCOL_IETF_DRAFT_05 = "ietf-draft-05";
+  var defaultOptions6 = {
+    endpoint: null,
+    uploadUrl: null,
+    metadata: {},
+    metadataForPartialUploads: {},
+    fingerprint: null,
+    uploadSize: null,
+    onProgress: null,
+    onChunkComplete: null,
+    onSuccess: null,
+    onError: null,
+    onUploadUrlAvailable: null,
+    overridePatchMethod: false,
+    headers: {},
+    addRequestId: false,
+    onBeforeRequest: null,
+    onAfterResponse: null,
+    onShouldRetry: defaultOnShouldRetry,
+    chunkSize: Number.POSITIVE_INFINITY,
+    retryDelays: [0, 1e3, 3e3, 5e3],
+    parallelUploads: 1,
+    parallelUploadBoundaries: null,
+    storeFingerprintForResuming: true,
+    removeFingerprintOnSuccess: false,
+    uploadLengthDeferred: false,
+    uploadDataDuringCreation: false,
+    urlStorage: null,
+    fileReader: null,
+    httpStack: null,
+    protocol: PROTOCOL_TUS_V1
+  };
+  var BaseUpload = /* @__PURE__ */ (function() {
+    function BaseUpload2(file, options) {
+      _classCallCheck3(this, BaseUpload2);
+      if ("resume" in options) {
+        console.log("tus: The `resume` option has been removed in tus-js-client v2. Please use the URL storage API instead.");
+      }
+      this.options = options;
+      this.options.chunkSize = Number(this.options.chunkSize);
+      this._urlStorage = this.options.urlStorage;
+      this.file = file;
+      this.url = null;
+      this._req = null;
+      this._fingerprint = null;
+      this._urlStorageKey = null;
+      this._offset = null;
+      this._aborted = false;
+      this._size = null;
+      this._source = null;
+      this._retryAttempt = 0;
+      this._retryTimeout = null;
+      this._offsetBeforeRetry = 0;
+      this._parallelUploads = null;
+      this._parallelUploadUrls = null;
+    }
+    return _createClass3(BaseUpload2, [{
+      key: "findPreviousUploads",
+      value: function findPreviousUploads() {
+        var _this = this;
+        return this.options.fingerprint(this.file, this.options).then(function(fingerprint2) {
+          return _this._urlStorage.findUploadsByFingerprint(fingerprint2);
+        });
+      }
+    }, {
+      key: "resumeFromPreviousUpload",
+      value: function resumeFromPreviousUpload(previousUpload) {
+        this.url = previousUpload.uploadUrl || null;
+        this._parallelUploadUrls = previousUpload.parallelUploadUrls || null;
+        this._urlStorageKey = previousUpload.urlStorageKey;
+      }
+    }, {
+      key: "start",
+      value: function start() {
+        var _this2 = this;
+        var file = this.file;
+        if (!file) {
+          this._emitError(new Error("tus: no file or stream to upload provided"));
+          return;
+        }
+        if (![PROTOCOL_TUS_V1, PROTOCOL_IETF_DRAFT_03, PROTOCOL_IETF_DRAFT_05].includes(this.options.protocol)) {
+          this._emitError(new Error("tus: unsupported protocol ".concat(this.options.protocol)));
+          return;
+        }
+        if (!this.options.endpoint && !this.options.uploadUrl && !this.url) {
+          this._emitError(new Error("tus: neither an endpoint or an upload URL is provided"));
+          return;
+        }
+        var retryDelays = this.options.retryDelays;
+        if (retryDelays != null && Object.prototype.toString.call(retryDelays) !== "[object Array]") {
+          this._emitError(new Error("tus: the `retryDelays` option must either be an array or null"));
+          return;
+        }
+        if (this.options.parallelUploads > 1) {
+          for (var _i = 0, _arr = ["uploadUrl", "uploadSize", "uploadLengthDeferred"]; _i < _arr.length; _i++) {
+            var optionName = _arr[_i];
+            if (this.options[optionName]) {
+              this._emitError(new Error("tus: cannot use the ".concat(optionName, " option when parallelUploads is enabled")));
+              return;
+            }
+          }
+        }
+        if (this.options.parallelUploadBoundaries) {
+          if (this.options.parallelUploads <= 1) {
+            this._emitError(new Error("tus: cannot use the `parallelUploadBoundaries` option when `parallelUploads` is disabled"));
+            return;
+          }
+          if (this.options.parallelUploads !== this.options.parallelUploadBoundaries.length) {
+            this._emitError(new Error("tus: the `parallelUploadBoundaries` must have the same length as the value of `parallelUploads`"));
+            return;
+          }
+        }
+        this.options.fingerprint(file, this.options).then(function(fingerprint2) {
+          if (fingerprint2 == null) {
+            log("No fingerprint was calculated meaning that the upload cannot be stored in the URL storage.");
+          } else {
+            log("Calculated fingerprint: ".concat(fingerprint2));
+          }
+          _this2._fingerprint = fingerprint2;
+          if (_this2._source) {
+            return _this2._source;
+          }
+          return _this2.options.fileReader.openFile(file, _this2.options.chunkSize);
+        }).then(function(source) {
+          _this2._source = source;
+          if (_this2.options.uploadLengthDeferred) {
+            _this2._size = null;
+          } else if (_this2.options.uploadSize != null) {
+            _this2._size = Number(_this2.options.uploadSize);
+            if (Number.isNaN(_this2._size)) {
+              _this2._emitError(new Error("tus: cannot convert `uploadSize` option into a number"));
+              return;
+            }
+          } else {
+            _this2._size = _this2._source.size;
+            if (_this2._size == null) {
+              _this2._emitError(new Error("tus: cannot automatically derive upload's size from input. Specify it manually using the `uploadSize` option or use the `uploadLengthDeferred` option"));
+              return;
+            }
+          }
+          if (_this2.options.parallelUploads > 1 || _this2._parallelUploadUrls != null) {
+            _this2._startParallelUpload();
+          } else {
+            _this2._startSingleUpload();
+          }
+        })["catch"](function(err) {
+          _this2._emitError(err);
+        });
+      }
+      /**
+       * Initiate the uploading procedure for a parallelized upload, where one file is split into
+       * multiple request which are run in parallel.
+       *
+       * @api private
+       */
+    }, {
+      key: "_startParallelUpload",
+      value: function _startParallelUpload() {
+        var _this$options$paralle, _this3 = this;
+        var totalSize = this._size;
+        var totalProgress = 0;
+        this._parallelUploads = [];
+        var partCount = this._parallelUploadUrls != null ? this._parallelUploadUrls.length : this.options.parallelUploads;
+        var parts = (_this$options$paralle = this.options.parallelUploadBoundaries) !== null && _this$options$paralle !== void 0 ? _this$options$paralle : splitSizeIntoParts(this._source.size, partCount);
+        if (this._parallelUploadUrls) {
+          parts.forEach(function(part, index) {
+            part.uploadUrl = _this3._parallelUploadUrls[index] || null;
+          });
+        }
+        this._parallelUploadUrls = new Array(parts.length);
+        var uploads = parts.map(function(part, index) {
+          var lastPartProgress = 0;
+          return _this3._source.slice(part.start, part.end).then(function(_ref) {
+            var value = _ref.value;
+            return new Promise(function(resolve, reject) {
+              var options = _objectSpread(_objectSpread({}, _this3.options), {}, {
+                // If available, the partial upload should be resumed from a previous URL.
+                uploadUrl: part.uploadUrl || null,
+                // We take manually care of resuming for partial uploads, so they should
+                // not be stored in the URL storage.
+                storeFingerprintForResuming: false,
+                removeFingerprintOnSuccess: false,
+                // Reset the parallelUploads option to not cause recursion.
+                parallelUploads: 1,
+                // Reset this option as we are not doing a parallel upload.
+                parallelUploadBoundaries: null,
+                metadata: _this3.options.metadataForPartialUploads,
+                // Add the header to indicate the this is a partial upload.
+                headers: _objectSpread(_objectSpread({}, _this3.options.headers), {}, {
+                  "Upload-Concat": "partial"
+                }),
+                // Reject or resolve the promise if the upload errors or completes.
+                onSuccess: resolve,
+                onError: reject,
+                // Based in the progress for this partial upload, calculate the progress
+                // for the entire final upload.
+                onProgress: function onProgress(newPartProgress) {
+                  totalProgress = totalProgress - lastPartProgress + newPartProgress;
+                  lastPartProgress = newPartProgress;
+                  _this3._emitProgress(totalProgress, totalSize);
+                },
+                // Wait until every partial upload has an upload URL, so we can add
+                // them to the URL storage.
+                onUploadUrlAvailable: function onUploadUrlAvailable() {
+                  _this3._parallelUploadUrls[index] = upload.url;
+                  if (_this3._parallelUploadUrls.filter(function(u5) {
+                    return Boolean(u5);
+                  }).length === parts.length) {
+                    _this3._saveUploadInUrlStorage();
+                  }
+                }
+              });
+              var upload = new BaseUpload2(value, options);
+              upload.start();
+              _this3._parallelUploads.push(upload);
+            });
+          });
+        });
+        var req;
+        Promise.all(uploads).then(function() {
+          req = _this3._openRequest("POST", _this3.options.endpoint);
+          req.setHeader("Upload-Concat", "final;".concat(_this3._parallelUploadUrls.join(" ")));
+          var metadata = encodeMetadata(_this3.options.metadata);
+          if (metadata !== "") {
+            req.setHeader("Upload-Metadata", metadata);
+          }
+          return _this3._sendRequest(req, null);
+        }).then(function(res) {
+          if (!inStatusCategory(res.getStatus(), 200)) {
+            _this3._emitHttpError(req, res, "tus: unexpected response while creating upload");
+            return;
+          }
+          var location2 = res.getHeader("Location");
+          if (location2 == null) {
+            _this3._emitHttpError(req, res, "tus: invalid or missing Location header");
+            return;
+          }
+          _this3.url = resolveUrl(_this3.options.endpoint, location2);
+          log("Created upload at ".concat(_this3.url));
+          _this3._emitSuccess(res);
+        })["catch"](function(err) {
+          _this3._emitError(err);
+        });
+      }
+      /**
+       * Initiate the uploading procedure for a non-parallel upload. Here the entire file is
+       * uploaded in a sequential matter.
+       *
+       * @api private
+       */
+    }, {
+      key: "_startSingleUpload",
+      value: function _startSingleUpload() {
+        this._aborted = false;
+        if (this.url != null) {
+          log("Resuming upload from previous URL: ".concat(this.url));
+          this._resumeUpload();
+          return;
+        }
+        if (this.options.uploadUrl != null) {
+          log("Resuming upload from provided URL: ".concat(this.options.uploadUrl));
+          this.url = this.options.uploadUrl;
+          this._resumeUpload();
+          return;
+        }
+        log("Creating a new upload");
+        this._createUpload();
+      }
+      /**
+       * Abort any running request and stop the current upload. After abort is called, no event
+       * handler will be invoked anymore. You can use the `start` method to resume the upload
+       * again.
+       * If `shouldTerminate` is true, the `terminate` function will be called to remove the
+       * current upload from the server.
+       *
+       * @param {boolean} shouldTerminate True if the upload should be deleted from the server.
+       * @return {Promise} The Promise will be resolved/rejected when the requests finish.
+       */
+    }, {
+      key: "abort",
+      value: function abort(shouldTerminate) {
+        var _this4 = this;
+        if (this._parallelUploads != null) {
+          var _iterator = _createForOfIteratorHelper(this._parallelUploads), _step;
+          try {
+            for (_iterator.s(); !(_step = _iterator.n()).done; ) {
+              var upload = _step.value;
+              upload.abort(shouldTerminate);
+            }
+          } catch (err) {
+            _iterator.e(err);
+          } finally {
+            _iterator.f();
+          }
+        }
+        if (this._req !== null) {
+          this._req.abort();
+        }
+        this._aborted = true;
+        if (this._retryTimeout != null) {
+          clearTimeout(this._retryTimeout);
+          this._retryTimeout = null;
+        }
+        if (!shouldTerminate || this.url == null) {
+          return Promise.resolve();
+        }
+        return BaseUpload2.terminate(this.url, this.options).then(function() {
+          return _this4._removeFromUrlStorage();
+        });
+      }
+    }, {
+      key: "_emitHttpError",
+      value: function _emitHttpError(req, res, message, causingErr) {
+        this._emitError(new error_default(message, causingErr, req, res));
+      }
+    }, {
+      key: "_emitError",
+      value: function _emitError(err) {
+        var _this5 = this;
+        if (this._aborted) return;
+        if (this.options.retryDelays != null) {
+          var shouldResetDelays = this._offset != null && this._offset > this._offsetBeforeRetry;
+          if (shouldResetDelays) {
+            this._retryAttempt = 0;
+          }
+          if (shouldRetry(err, this._retryAttempt, this.options)) {
+            var delay = this.options.retryDelays[this._retryAttempt++];
+            this._offsetBeforeRetry = this._offset;
+            this._retryTimeout = setTimeout(function() {
+              _this5.start();
+            }, delay);
+            return;
+          }
+        }
+        if (typeof this.options.onError === "function") {
+          this.options.onError(err);
+        } else {
+          throw err;
+        }
+      }
+      /**
+       * Publishes notification if the upload has been successfully completed.
+       *
+       * @param {object} lastResponse Last HTTP response.
+       * @api private
+       */
+    }, {
+      key: "_emitSuccess",
+      value: function _emitSuccess(lastResponse) {
+        if (this.options.removeFingerprintOnSuccess) {
+          this._removeFromUrlStorage();
+        }
+        if (typeof this.options.onSuccess === "function") {
+          this.options.onSuccess({
+            lastResponse
+          });
+        }
+      }
+      /**
+       * Publishes notification when data has been sent to the server. This
+       * data may not have been accepted by the server yet.
+       *
+       * @param {number} bytesSent  Number of bytes sent to the server.
+       * @param {number} bytesTotal Total number of bytes to be sent to the server.
+       * @api private
+       */
+    }, {
+      key: "_emitProgress",
+      value: function _emitProgress(bytesSent, bytesTotal) {
+        if (typeof this.options.onProgress === "function") {
+          this.options.onProgress(bytesSent, bytesTotal);
+        }
+      }
+      /**
+       * Publishes notification when a chunk of data has been sent to the server
+       * and accepted by the server.
+       * @param {number} chunkSize  Size of the chunk that was accepted by the server.
+       * @param {number} bytesAccepted Total number of bytes that have been
+       *                                accepted by the server.
+       * @param {number} bytesTotal Total number of bytes to be sent to the server.
+       * @api private
+       */
+    }, {
+      key: "_emitChunkComplete",
+      value: function _emitChunkComplete(chunkSize, bytesAccepted, bytesTotal) {
+        if (typeof this.options.onChunkComplete === "function") {
+          this.options.onChunkComplete(chunkSize, bytesAccepted, bytesTotal);
+        }
+      }
+      /**
+       * Create a new upload using the creation extension by sending a POST
+       * request to the endpoint. After successful creation the file will be
+       * uploaded
+       *
+       * @api private
+       */
+    }, {
+      key: "_createUpload",
+      value: function _createUpload() {
+        var _this6 = this;
+        if (!this.options.endpoint) {
+          this._emitError(new Error("tus: unable to create upload because no endpoint is provided"));
+          return;
+        }
+        var req = this._openRequest("POST", this.options.endpoint);
+        if (this.options.uploadLengthDeferred) {
+          req.setHeader("Upload-Defer-Length", "1");
+        } else {
+          req.setHeader("Upload-Length", "".concat(this._size));
+        }
+        var metadata = encodeMetadata(this.options.metadata);
+        if (metadata !== "") {
+          req.setHeader("Upload-Metadata", metadata);
+        }
+        var promise;
+        if (this.options.uploadDataDuringCreation && !this.options.uploadLengthDeferred) {
+          this._offset = 0;
+          promise = this._addChunkToRequest(req);
+        } else {
+          if (this.options.protocol === PROTOCOL_IETF_DRAFT_03 || this.options.protocol === PROTOCOL_IETF_DRAFT_05) {
+            req.setHeader("Upload-Complete", "?0");
+          }
+          promise = this._sendRequest(req, null);
+        }
+        promise.then(function(res) {
+          if (!inStatusCategory(res.getStatus(), 200)) {
+            _this6._emitHttpError(req, res, "tus: unexpected response while creating upload");
+            return;
+          }
+          var location2 = res.getHeader("Location");
+          if (location2 == null) {
+            _this6._emitHttpError(req, res, "tus: invalid or missing Location header");
+            return;
+          }
+          _this6.url = resolveUrl(_this6.options.endpoint, location2);
+          log("Created upload at ".concat(_this6.url));
+          if (typeof _this6.options.onUploadUrlAvailable === "function") {
+            _this6.options.onUploadUrlAvailable();
+          }
+          if (_this6._size === 0) {
+            _this6._emitSuccess(res);
+            _this6._source.close();
+            return;
+          }
+          _this6._saveUploadInUrlStorage().then(function() {
+            if (_this6.options.uploadDataDuringCreation) {
+              _this6._handleUploadResponse(req, res);
+            } else {
+              _this6._offset = 0;
+              _this6._performUpload();
+            }
+          });
+        })["catch"](function(err) {
+          _this6._emitHttpError(req, null, "tus: failed to create upload", err);
+        });
+      }
+      /*
+       * Try to resume an existing upload. First a HEAD request will be sent
+       * to retrieve the offset. If the request fails a new upload will be
+       * created. In the case of a successful response the file will be uploaded.
+       *
+       * @api private
+       */
+    }, {
+      key: "_resumeUpload",
+      value: function _resumeUpload() {
+        var _this7 = this;
+        var req = this._openRequest("HEAD", this.url);
+        var promise = this._sendRequest(req, null);
+        promise.then(function(res) {
+          var status = res.getStatus();
+          if (!inStatusCategory(status, 200)) {
+            if (status === 423) {
+              _this7._emitHttpError(req, res, "tus: upload is currently locked; retry later");
+              return;
+            }
+            if (inStatusCategory(status, 400)) {
+              _this7._removeFromUrlStorage();
+            }
+            if (!_this7.options.endpoint) {
+              _this7._emitHttpError(req, res, "tus: unable to resume upload (new upload cannot be created without an endpoint)");
+              return;
+            }
+            _this7.url = null;
+            _this7._createUpload();
+            return;
+          }
+          var offset = Number.parseInt(res.getHeader("Upload-Offset"), 10);
+          if (Number.isNaN(offset)) {
+            _this7._emitHttpError(req, res, "tus: invalid or missing offset value");
+            return;
+          }
+          var length = Number.parseInt(res.getHeader("Upload-Length"), 10);
+          if (Number.isNaN(length) && !_this7.options.uploadLengthDeferred && _this7.options.protocol === PROTOCOL_TUS_V1) {
+            _this7._emitHttpError(req, res, "tus: invalid or missing length value");
+            return;
+          }
+          if (typeof _this7.options.onUploadUrlAvailable === "function") {
+            _this7.options.onUploadUrlAvailable();
+          }
+          _this7._saveUploadInUrlStorage().then(function() {
+            if (offset === length) {
+              _this7._emitProgress(length, length);
+              _this7._emitSuccess(res);
+              return;
+            }
+            _this7._offset = offset;
+            _this7._performUpload();
+          });
+        })["catch"](function(err) {
+          _this7._emitHttpError(req, null, "tus: failed to resume upload", err);
+        });
+      }
+      /**
+       * Start uploading the file using PATCH requests. The file will be divided
+       * into chunks as specified in the chunkSize option. During the upload
+       * the onProgress event handler may be invoked multiple times.
+       *
+       * @api private
+       */
+    }, {
+      key: "_performUpload",
+      value: function _performUpload() {
+        var _this8 = this;
+        if (this._aborted) {
+          return;
+        }
+        var req;
+        if (this.options.overridePatchMethod) {
+          req = this._openRequest("POST", this.url);
+          req.setHeader("X-HTTP-Method-Override", "PATCH");
+        } else {
+          req = this._openRequest("PATCH", this.url);
+        }
+        req.setHeader("Upload-Offset", "".concat(this._offset));
+        var promise = this._addChunkToRequest(req);
+        promise.then(function(res) {
+          if (!inStatusCategory(res.getStatus(), 200)) {
+            _this8._emitHttpError(req, res, "tus: unexpected response while uploading chunk");
+            return;
+          }
+          _this8._handleUploadResponse(req, res);
+        })["catch"](function(err) {
+          if (_this8._aborted) {
+            return;
+          }
+          _this8._emitHttpError(req, null, "tus: failed to upload chunk at offset ".concat(_this8._offset), err);
+        });
+      }
+      /**
+       * _addChunktoRequest reads a chunk from the source and sends it using the
+       * supplied request object. It will not handle the response.
+       *
+       * @api private
+       */
+    }, {
+      key: "_addChunkToRequest",
+      value: function _addChunkToRequest(req) {
+        var _this9 = this;
+        var start = this._offset;
+        var end = this._offset + this.options.chunkSize;
+        req.setProgressHandler(function(bytesSent) {
+          _this9._emitProgress(start + bytesSent, _this9._size);
+        });
+        if (this.options.protocol === PROTOCOL_TUS_V1) {
+          req.setHeader("Content-Type", "application/offset+octet-stream");
+        } else if (this.options.protocol === PROTOCOL_IETF_DRAFT_05) {
+          req.setHeader("Content-Type", "application/partial-upload");
+        }
+        if ((end === Number.POSITIVE_INFINITY || end > this._size) && !this.options.uploadLengthDeferred) {
+          end = this._size;
+        }
+        return this._source.slice(start, end).then(function(_ref2) {
+          var value = _ref2.value, done = _ref2.done;
+          var valueSize = value !== null && value !== void 0 && value.size ? value.size : 0;
+          if (_this9.options.uploadLengthDeferred && done) {
+            _this9._size = _this9._offset + valueSize;
+            req.setHeader("Upload-Length", "".concat(_this9._size));
+          }
+          var newSize = _this9._offset + valueSize;
+          if (!_this9.options.uploadLengthDeferred && done && newSize !== _this9._size) {
+            return Promise.reject(new Error("upload was configured with a size of ".concat(_this9._size, " bytes, but the source is done after ").concat(newSize, " bytes")));
+          }
+          if (value === null) {
+            return _this9._sendRequest(req);
+          }
+          if (_this9.options.protocol === PROTOCOL_IETF_DRAFT_03 || _this9.options.protocol === PROTOCOL_IETF_DRAFT_05) {
+            req.setHeader("Upload-Complete", done ? "?1" : "?0");
+          }
+          _this9._emitProgress(_this9._offset, _this9._size);
+          return _this9._sendRequest(req, value);
+        });
+      }
+      /**
+       * _handleUploadResponse is used by requests that haven been sent using _addChunkToRequest
+       * and already have received a response.
+       *
+       * @api private
+       */
+    }, {
+      key: "_handleUploadResponse",
+      value: function _handleUploadResponse(req, res) {
+        var offset = Number.parseInt(res.getHeader("Upload-Offset"), 10);
+        if (Number.isNaN(offset)) {
+          this._emitHttpError(req, res, "tus: invalid or missing offset value");
+          return;
+        }
+        this._emitProgress(offset, this._size);
+        this._emitChunkComplete(offset - this._offset, offset, this._size);
+        this._offset = offset;
+        if (offset === this._size) {
+          this._emitSuccess(res);
+          this._source.close();
+          return;
+        }
+        this._performUpload();
+      }
+      /**
+       * Create a new HTTP request object with the given method and URL.
+       *
+       * @api private
+       */
+    }, {
+      key: "_openRequest",
+      value: function _openRequest(method, url) {
+        var req = openRequest(method, url, this.options);
+        this._req = req;
+        return req;
+      }
+      /**
+       * Remove the entry in the URL storage, if it has been saved before.
+       *
+       * @api private
+       */
+    }, {
+      key: "_removeFromUrlStorage",
+      value: function _removeFromUrlStorage() {
+        var _this10 = this;
+        if (!this._urlStorageKey) return;
+        this._urlStorage.removeUpload(this._urlStorageKey)["catch"](function(err) {
+          _this10._emitError(err);
+        });
+        this._urlStorageKey = null;
+      }
+      /**
+       * Add the upload URL to the URL storage, if possible.
+       *
+       * @api private
+       */
+    }, {
+      key: "_saveUploadInUrlStorage",
+      value: function _saveUploadInUrlStorage() {
+        var _this11 = this;
+        if (!this.options.storeFingerprintForResuming || !this._fingerprint || this._urlStorageKey !== null) {
+          return Promise.resolve();
+        }
+        var storedUpload = {
+          size: this._size,
+          metadata: this.options.metadata,
+          creationTime: (/* @__PURE__ */ new Date()).toString()
+        };
+        if (this._parallelUploads) {
+          storedUpload.parallelUploadUrls = this._parallelUploadUrls;
+        } else {
+          storedUpload.uploadUrl = this.url;
+        }
+        return this._urlStorage.addUpload(this._fingerprint, storedUpload).then(function(urlStorageKey) {
+          _this11._urlStorageKey = urlStorageKey;
+        });
+      }
+      /**
+       * Send a request with the provided body.
+       *
+       * @api private
+       */
+    }, {
+      key: "_sendRequest",
+      value: function _sendRequest(req) {
+        var body = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : null;
+        return sendRequest(req, body, this.options);
+      }
+    }], [{
+      key: "terminate",
+      value: function terminate(url) {
+        var options = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : {};
+        var req = openRequest("DELETE", url, options);
+        return sendRequest(req, null, options).then(function(res) {
+          if (res.getStatus() === 204) {
+            return;
+          }
+          throw new error_default("tus: unexpected response while terminating upload", null, req, res);
+        })["catch"](function(err) {
+          if (!(err instanceof error_default)) {
+            err = new error_default("tus: failed to terminate upload", err, req, null);
+          }
+          if (!shouldRetry(err, 0, options)) {
+            throw err;
+          }
+          var delay = options.retryDelays[0];
+          var remainingDelays = options.retryDelays.slice(1);
+          var newOptions = _objectSpread(_objectSpread({}, options), {}, {
+            retryDelays: remainingDelays
+          });
+          return new Promise(function(resolve) {
+            return setTimeout(resolve, delay);
+          }).then(function() {
+            return BaseUpload2.terminate(url, newOptions);
+          });
+        });
+      }
+    }]);
+  })();
+  function encodeMetadata(metadata) {
+    return Object.entries(metadata).map(function(_ref3) {
+      var _ref4 = _slicedToArray(_ref3, 2), key = _ref4[0], value = _ref4[1];
+      return "".concat(key, " ").concat(gBase64.encode(String(value)));
+    }).join(",");
+  }
+  function inStatusCategory(status, category) {
+    return status >= category && status < category + 100;
+  }
+  function openRequest(method, url, options) {
+    var req = options.httpStack.createRequest(method, url);
+    if (options.protocol === PROTOCOL_IETF_DRAFT_03) {
+      req.setHeader("Upload-Draft-Interop-Version", "5");
+    } else if (options.protocol === PROTOCOL_IETF_DRAFT_05) {
+      req.setHeader("Upload-Draft-Interop-Version", "6");
+    } else {
+      req.setHeader("Tus-Resumable", "1.0.0");
+    }
+    var headers = options.headers || {};
+    for (var _i2 = 0, _Object$entries = Object.entries(headers); _i2 < _Object$entries.length; _i2++) {
+      var _Object$entries$_i = _slicedToArray(_Object$entries[_i2], 2), name = _Object$entries$_i[0], value = _Object$entries$_i[1];
+      req.setHeader(name, value);
+    }
+    if (options.addRequestId) {
+      var requestId = uuid();
+      req.setHeader("X-Request-ID", requestId);
+    }
+    return req;
+  }
+  function sendRequest(_x, _x2, _x3) {
+    return _sendRequest2.apply(this, arguments);
+  }
+  function _sendRequest2() {
+    _sendRequest2 = _asyncToGenerator(/* @__PURE__ */ _regeneratorRuntime().mark(function _callee(req, body, options) {
+      var res;
+      return _regeneratorRuntime().wrap(function _callee$(_context) {
+        while (1) switch (_context.prev = _context.next) {
+          case 0:
+            if (!(typeof options.onBeforeRequest === "function")) {
+              _context.next = 3;
+              break;
+            }
+            _context.next = 3;
+            return options.onBeforeRequest(req);
+          case 3:
+            _context.next = 5;
+            return req.send(body);
+          case 5:
+            res = _context.sent;
+            if (!(typeof options.onAfterResponse === "function")) {
+              _context.next = 9;
+              break;
+            }
+            _context.next = 9;
+            return options.onAfterResponse(req, res);
+          case 9:
+            return _context.abrupt("return", res);
+          case 10:
+          case "end":
+            return _context.stop();
+        }
+      }, _callee);
+    }));
+    return _sendRequest2.apply(this, arguments);
+  }
+  function isOnline() {
+    var online = true;
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      online = false;
+    }
+    return online;
+  }
+  function shouldRetry(err, retryAttempt, options) {
+    if (options.retryDelays == null || retryAttempt >= options.retryDelays.length || err.originalRequest == null) {
+      return false;
+    }
+    if (options && typeof options.onShouldRetry === "function") {
+      return options.onShouldRetry(err, retryAttempt, options);
+    }
+    return defaultOnShouldRetry(err);
+  }
+  function defaultOnShouldRetry(err) {
+    var status = err.originalResponse ? err.originalResponse.getStatus() : 0;
+    return (!inStatusCategory(status, 400) || status === 409 || status === 423) && isOnline();
+  }
+  function resolveUrl(origin, link) {
+    return new import_url_parse.default(link, origin).toString();
+  }
+  function splitSizeIntoParts(totalSize, partCount) {
+    var partSize = Math.floor(totalSize / partCount);
+    var parts = [];
+    for (var i4 = 0; i4 < partCount; i4++) {
+      parts.push({
+        start: partSize * i4,
+        end: partSize * (i4 + 1)
+      });
+    }
+    parts[partCount - 1].end = totalSize;
+    return parts;
+  }
+  BaseUpload.defaultOptions = defaultOptions6;
+  var upload_default = BaseUpload;
+
+  // node_modules/tus-js-client/lib.esm/browser/isReactNative.js
+  var isReactNative = function isReactNative2() {
+    return typeof navigator !== "undefined" && typeof navigator.product === "string" && navigator.product.toLowerCase() === "reactnative";
+  };
+  var isReactNative_default = isReactNative;
+
+  // node_modules/tus-js-client/lib.esm/browser/uriToBlob.js
+  function uriToBlob(uri) {
+    return new Promise(function(resolve, reject) {
+      var xhr = new XMLHttpRequest();
+      xhr.responseType = "blob";
+      xhr.onload = function() {
+        var blob = xhr.response;
+        resolve(blob);
+      };
+      xhr.onerror = function(err) {
+        reject(err);
+      };
+      xhr.open("GET", uri);
+      xhr.send();
+    });
+  }
+
+  // node_modules/tus-js-client/lib.esm/browser/sources/isCordova.js
+  var isCordova = function isCordova2() {
+    return typeof window !== "undefined" && (typeof window.PhoneGap !== "undefined" || typeof window.Cordova !== "undefined" || typeof window.cordova !== "undefined");
+  };
+  var isCordova_default = isCordova;
+
+  // node_modules/tus-js-client/lib.esm/browser/sources/readAsByteArray.js
+  function readAsByteArray(chunk) {
+    return new Promise(function(resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function() {
+        var value = new Uint8Array(reader.result);
+        resolve({
+          value
+        });
+      };
+      reader.onerror = function(err) {
+        reject(err);
+      };
+      reader.readAsArrayBuffer(chunk);
+    });
+  }
+
+  // node_modules/tus-js-client/lib.esm/browser/sources/FileSource.js
+  function _typeof4(o4) {
+    "@babel/helpers - typeof";
+    return _typeof4 = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function(o5) {
+      return typeof o5;
+    } : function(o5) {
+      return o5 && "function" == typeof Symbol && o5.constructor === Symbol && o5 !== Symbol.prototype ? "symbol" : typeof o5;
+    }, _typeof4(o4);
+  }
+  function _classCallCheck4(instance, Constructor) {
+    if (!(instance instanceof Constructor)) {
+      throw new TypeError("Cannot call a class as a function");
+    }
+  }
+  function _defineProperties4(target, props) {
+    for (var i4 = 0; i4 < props.length; i4++) {
+      var descriptor = props[i4];
+      descriptor.enumerable = descriptor.enumerable || false;
+      descriptor.configurable = true;
+      if ("value" in descriptor) descriptor.writable = true;
+      Object.defineProperty(target, _toPropertyKey4(descriptor.key), descriptor);
+    }
+  }
+  function _createClass4(Constructor, protoProps, staticProps) {
+    if (protoProps) _defineProperties4(Constructor.prototype, protoProps);
+    if (staticProps) _defineProperties4(Constructor, staticProps);
+    Object.defineProperty(Constructor, "prototype", { writable: false });
+    return Constructor;
+  }
+  function _toPropertyKey4(t4) {
+    var i4 = _toPrimitive4(t4, "string");
+    return "symbol" == _typeof4(i4) ? i4 : i4 + "";
+  }
+  function _toPrimitive4(t4, r4) {
+    if ("object" != _typeof4(t4) || !t4) return t4;
+    var e4 = t4[Symbol.toPrimitive];
+    if (void 0 !== e4) {
+      var i4 = e4.call(t4, r4 || "default");
+      if ("object" != _typeof4(i4)) return i4;
+      throw new TypeError("@@toPrimitive must return a primitive value.");
+    }
+    return ("string" === r4 ? String : Number)(t4);
+  }
+  var FileSource = /* @__PURE__ */ (function() {
+    function FileSource2(file) {
+      _classCallCheck4(this, FileSource2);
+      this._file = file;
+      this.size = file.size;
+    }
+    return _createClass4(FileSource2, [{
+      key: "slice",
+      value: function slice(start, end) {
+        if (isCordova_default()) {
+          return readAsByteArray(this._file.slice(start, end));
+        }
+        var value = this._file.slice(start, end);
+        var done = end >= this.size;
+        return Promise.resolve({
+          value,
+          done
+        });
+      }
+    }, {
+      key: "close",
+      value: function close() {
+      }
+    }]);
+  })();
+
+  // node_modules/tus-js-client/lib.esm/browser/sources/StreamSource.js
+  function _typeof5(o4) {
+    "@babel/helpers - typeof";
+    return _typeof5 = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function(o5) {
+      return typeof o5;
+    } : function(o5) {
+      return o5 && "function" == typeof Symbol && o5.constructor === Symbol && o5 !== Symbol.prototype ? "symbol" : typeof o5;
+    }, _typeof5(o4);
+  }
+  function _classCallCheck5(instance, Constructor) {
+    if (!(instance instanceof Constructor)) {
+      throw new TypeError("Cannot call a class as a function");
+    }
+  }
+  function _defineProperties5(target, props) {
+    for (var i4 = 0; i4 < props.length; i4++) {
+      var descriptor = props[i4];
+      descriptor.enumerable = descriptor.enumerable || false;
+      descriptor.configurable = true;
+      if ("value" in descriptor) descriptor.writable = true;
+      Object.defineProperty(target, _toPropertyKey5(descriptor.key), descriptor);
+    }
+  }
+  function _createClass5(Constructor, protoProps, staticProps) {
+    if (protoProps) _defineProperties5(Constructor.prototype, protoProps);
+    if (staticProps) _defineProperties5(Constructor, staticProps);
+    Object.defineProperty(Constructor, "prototype", { writable: false });
+    return Constructor;
+  }
+  function _toPropertyKey5(t4) {
+    var i4 = _toPrimitive5(t4, "string");
+    return "symbol" == _typeof5(i4) ? i4 : i4 + "";
+  }
+  function _toPrimitive5(t4, r4) {
+    if ("object" != _typeof5(t4) || !t4) return t4;
+    var e4 = t4[Symbol.toPrimitive];
+    if (void 0 !== e4) {
+      var i4 = e4.call(t4, r4 || "default");
+      if ("object" != _typeof5(i4)) return i4;
+      throw new TypeError("@@toPrimitive must return a primitive value.");
+    }
+    return ("string" === r4 ? String : Number)(t4);
+  }
+  function len(blobOrArray) {
+    if (blobOrArray === void 0) return 0;
+    if (blobOrArray.size !== void 0) return blobOrArray.size;
+    return blobOrArray.length;
+  }
+  function concat(a4, b3) {
+    if (a4.concat) {
+      return a4.concat(b3);
+    }
+    if (a4 instanceof Blob) {
+      return new Blob([a4, b3], {
+        type: a4.type
+      });
+    }
+    if (a4.set) {
+      var c4 = new a4.constructor(a4.length + b3.length);
+      c4.set(a4);
+      c4.set(b3, a4.length);
+      return c4;
+    }
+    throw new Error("Unknown data type");
+  }
+  var StreamSource = /* @__PURE__ */ (function() {
+    function StreamSource2(reader) {
+      _classCallCheck5(this, StreamSource2);
+      this._buffer = void 0;
+      this._bufferOffset = 0;
+      this._reader = reader;
+      this._done = false;
+    }
+    return _createClass5(StreamSource2, [{
+      key: "slice",
+      value: function slice(start, end) {
+        if (start < this._bufferOffset) {
+          return Promise.reject(new Error("Requested data is before the reader's current offset"));
+        }
+        return this._readUntilEnoughDataOrDone(start, end);
+      }
+    }, {
+      key: "_readUntilEnoughDataOrDone",
+      value: function _readUntilEnoughDataOrDone(start, end) {
+        var _this = this;
+        var hasEnoughData = end <= this._bufferOffset + len(this._buffer);
+        if (this._done || hasEnoughData) {
+          var value = this._getDataFromBuffer(start, end);
+          var done = value == null ? this._done : false;
+          return Promise.resolve({
+            value,
+            done
+          });
+        }
+        return this._reader.read().then(function(_ref) {
+          var value2 = _ref.value, done2 = _ref.done;
+          if (done2) {
+            _this._done = true;
+          } else if (_this._buffer === void 0) {
+            _this._buffer = value2;
+          } else {
+            _this._buffer = concat(_this._buffer, value2);
+          }
+          return _this._readUntilEnoughDataOrDone(start, end);
+        });
+      }
+    }, {
+      key: "_getDataFromBuffer",
+      value: function _getDataFromBuffer(start, end) {
+        if (start > this._bufferOffset) {
+          this._buffer = this._buffer.slice(start - this._bufferOffset);
+          this._bufferOffset = start;
+        }
+        var hasAllDataBeenRead = len(this._buffer) === 0;
+        if (this._done && hasAllDataBeenRead) {
+          return null;
+        }
+        return this._buffer.slice(0, end - start);
+      }
+    }, {
+      key: "close",
+      value: function close() {
+        if (this._reader.cancel) {
+          this._reader.cancel();
+        }
+      }
+    }]);
+  })();
+
+  // node_modules/tus-js-client/lib.esm/browser/fileReader.js
+  function _typeof6(o4) {
+    "@babel/helpers - typeof";
+    return _typeof6 = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function(o5) {
+      return typeof o5;
+    } : function(o5) {
+      return o5 && "function" == typeof Symbol && o5.constructor === Symbol && o5 !== Symbol.prototype ? "symbol" : typeof o5;
+    }, _typeof6(o4);
+  }
+  function _regeneratorRuntime2() {
+    "use strict";
+    _regeneratorRuntime2 = function _regeneratorRuntime3() {
+      return e4;
+    };
+    var t4, e4 = {}, r4 = Object.prototype, n3 = r4.hasOwnProperty, o4 = Object.defineProperty || function(t5, e5, r5) {
+      t5[e5] = r5.value;
+    }, i4 = "function" == typeof Symbol ? Symbol : {}, a4 = i4.iterator || "@@iterator", c4 = i4.asyncIterator || "@@asyncIterator", u5 = i4.toStringTag || "@@toStringTag";
+    function define2(t5, e5, r5) {
+      return Object.defineProperty(t5, e5, { value: r5, enumerable: true, configurable: true, writable: true }), t5[e5];
+    }
+    try {
+      define2({}, "");
+    } catch (t5) {
+      define2 = function define3(t6, e5, r5) {
+        return t6[e5] = r5;
+      };
+    }
+    function wrap(t5, e5, r5, n4) {
+      var i5 = e5 && e5.prototype instanceof Generator ? e5 : Generator, a5 = Object.create(i5.prototype), c5 = new Context(n4 || []);
+      return o4(a5, "_invoke", { value: makeInvokeMethod(t5, r5, c5) }), a5;
+    }
+    function tryCatch(t5, e5, r5) {
+      try {
+        return { type: "normal", arg: t5.call(e5, r5) };
+      } catch (t6) {
+        return { type: "throw", arg: t6 };
+      }
+    }
+    e4.wrap = wrap;
+    var h4 = "suspendedStart", l4 = "suspendedYield", f5 = "executing", s4 = "completed", y4 = {};
+    function Generator() {
+    }
+    function GeneratorFunction() {
+    }
+    function GeneratorFunctionPrototype() {
+    }
+    var p4 = {};
+    define2(p4, a4, function() {
+      return this;
+    });
+    var d4 = Object.getPrototypeOf, v4 = d4 && d4(d4(values([])));
+    v4 && v4 !== r4 && n3.call(v4, a4) && (p4 = v4);
+    var g3 = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(p4);
+    function defineIteratorMethods(t5) {
+      ["next", "throw", "return"].forEach(function(e5) {
+        define2(t5, e5, function(t6) {
+          return this._invoke(e5, t6);
+        });
+      });
+    }
+    function AsyncIterator(t5, e5) {
+      function invoke(r6, o5, i5, a5) {
+        var c5 = tryCatch(t5[r6], t5, o5);
+        if ("throw" !== c5.type) {
+          var u6 = c5.arg, h5 = u6.value;
+          return h5 && "object" == _typeof6(h5) && n3.call(h5, "__await") ? e5.resolve(h5.__await).then(function(t6) {
+            invoke("next", t6, i5, a5);
+          }, function(t6) {
+            invoke("throw", t6, i5, a5);
+          }) : e5.resolve(h5).then(function(t6) {
+            u6.value = t6, i5(u6);
+          }, function(t6) {
+            return invoke("throw", t6, i5, a5);
+          });
+        }
+        a5(c5.arg);
+      }
+      var r5;
+      o4(this, "_invoke", { value: function value(t6, n4) {
+        function callInvokeWithMethodAndArg() {
+          return new e5(function(e6, r6) {
+            invoke(t6, n4, e6, r6);
+          });
+        }
+        return r5 = r5 ? r5.then(callInvokeWithMethodAndArg, callInvokeWithMethodAndArg) : callInvokeWithMethodAndArg();
+      } });
+    }
+    function makeInvokeMethod(e5, r5, n4) {
+      var o5 = h4;
+      return function(i5, a5) {
+        if (o5 === f5) throw Error("Generator is already running");
+        if (o5 === s4) {
+          if ("throw" === i5) throw a5;
+          return { value: t4, done: true };
+        }
+        for (n4.method = i5, n4.arg = a5; ; ) {
+          var c5 = n4.delegate;
+          if (c5) {
+            var u6 = maybeInvokeDelegate(c5, n4);
+            if (u6) {
+              if (u6 === y4) continue;
+              return u6;
+            }
+          }
+          if ("next" === n4.method) n4.sent = n4._sent = n4.arg;
+          else if ("throw" === n4.method) {
+            if (o5 === h4) throw o5 = s4, n4.arg;
+            n4.dispatchException(n4.arg);
+          } else "return" === n4.method && n4.abrupt("return", n4.arg);
+          o5 = f5;
+          var p5 = tryCatch(e5, r5, n4);
+          if ("normal" === p5.type) {
+            if (o5 = n4.done ? s4 : l4, p5.arg === y4) continue;
+            return { value: p5.arg, done: n4.done };
+          }
+          "throw" === p5.type && (o5 = s4, n4.method = "throw", n4.arg = p5.arg);
+        }
+      };
+    }
+    function maybeInvokeDelegate(e5, r5) {
+      var n4 = r5.method, o5 = e5.iterator[n4];
+      if (o5 === t4) return r5.delegate = null, "throw" === n4 && e5.iterator["return"] && (r5.method = "return", r5.arg = t4, maybeInvokeDelegate(e5, r5), "throw" === r5.method) || "return" !== n4 && (r5.method = "throw", r5.arg = new TypeError("The iterator does not provide a '" + n4 + "' method")), y4;
+      var i5 = tryCatch(o5, e5.iterator, r5.arg);
+      if ("throw" === i5.type) return r5.method = "throw", r5.arg = i5.arg, r5.delegate = null, y4;
+      var a5 = i5.arg;
+      return a5 ? a5.done ? (r5[e5.resultName] = a5.value, r5.next = e5.nextLoc, "return" !== r5.method && (r5.method = "next", r5.arg = t4), r5.delegate = null, y4) : a5 : (r5.method = "throw", r5.arg = new TypeError("iterator result is not an object"), r5.delegate = null, y4);
+    }
+    function pushTryEntry(t5) {
+      var e5 = { tryLoc: t5[0] };
+      1 in t5 && (e5.catchLoc = t5[1]), 2 in t5 && (e5.finallyLoc = t5[2], e5.afterLoc = t5[3]), this.tryEntries.push(e5);
+    }
+    function resetTryEntry(t5) {
+      var e5 = t5.completion || {};
+      e5.type = "normal", delete e5.arg, t5.completion = e5;
+    }
+    function Context(t5) {
+      this.tryEntries = [{ tryLoc: "root" }], t5.forEach(pushTryEntry, this), this.reset(true);
+    }
+    function values(e5) {
+      if (e5 || "" === e5) {
+        var r5 = e5[a4];
+        if (r5) return r5.call(e5);
+        if ("function" == typeof e5.next) return e5;
+        if (!isNaN(e5.length)) {
+          var o5 = -1, i5 = function next() {
+            for (; ++o5 < e5.length; ) if (n3.call(e5, o5)) return next.value = e5[o5], next.done = false, next;
+            return next.value = t4, next.done = true, next;
+          };
+          return i5.next = i5;
+        }
+      }
+      throw new TypeError(_typeof6(e5) + " is not iterable");
+    }
+    return GeneratorFunction.prototype = GeneratorFunctionPrototype, o4(g3, "constructor", { value: GeneratorFunctionPrototype, configurable: true }), o4(GeneratorFunctionPrototype, "constructor", { value: GeneratorFunction, configurable: true }), GeneratorFunction.displayName = define2(GeneratorFunctionPrototype, u5, "GeneratorFunction"), e4.isGeneratorFunction = function(t5) {
+      var e5 = "function" == typeof t5 && t5.constructor;
+      return !!e5 && (e5 === GeneratorFunction || "GeneratorFunction" === (e5.displayName || e5.name));
+    }, e4.mark = function(t5) {
+      return Object.setPrototypeOf ? Object.setPrototypeOf(t5, GeneratorFunctionPrototype) : (t5.__proto__ = GeneratorFunctionPrototype, define2(t5, u5, "GeneratorFunction")), t5.prototype = Object.create(g3), t5;
+    }, e4.awrap = function(t5) {
+      return { __await: t5 };
+    }, defineIteratorMethods(AsyncIterator.prototype), define2(AsyncIterator.prototype, c4, function() {
+      return this;
+    }), e4.AsyncIterator = AsyncIterator, e4.async = function(t5, r5, n4, o5, i5) {
+      void 0 === i5 && (i5 = Promise);
+      var a5 = new AsyncIterator(wrap(t5, r5, n4, o5), i5);
+      return e4.isGeneratorFunction(r5) ? a5 : a5.next().then(function(t6) {
+        return t6.done ? t6.value : a5.next();
+      });
+    }, defineIteratorMethods(g3), define2(g3, u5, "Generator"), define2(g3, a4, function() {
+      return this;
+    }), define2(g3, "toString", function() {
+      return "[object Generator]";
+    }), e4.keys = function(t5) {
+      var e5 = Object(t5), r5 = [];
+      for (var n4 in e5) r5.push(n4);
+      return r5.reverse(), function next() {
+        for (; r5.length; ) {
+          var t6 = r5.pop();
+          if (t6 in e5) return next.value = t6, next.done = false, next;
+        }
+        return next.done = true, next;
+      };
+    }, e4.values = values, Context.prototype = { constructor: Context, reset: function reset(e5) {
+      if (this.prev = 0, this.next = 0, this.sent = this._sent = t4, this.done = false, this.delegate = null, this.method = "next", this.arg = t4, this.tryEntries.forEach(resetTryEntry), !e5) for (var r5 in this) "t" === r5.charAt(0) && n3.call(this, r5) && !isNaN(+r5.slice(1)) && (this[r5] = t4);
+    }, stop: function stop() {
+      this.done = true;
+      var t5 = this.tryEntries[0].completion;
+      if ("throw" === t5.type) throw t5.arg;
+      return this.rval;
+    }, dispatchException: function dispatchException(e5) {
+      if (this.done) throw e5;
+      var r5 = this;
+      function handle(n4, o6) {
+        return a5.type = "throw", a5.arg = e5, r5.next = n4, o6 && (r5.method = "next", r5.arg = t4), !!o6;
+      }
+      for (var o5 = this.tryEntries.length - 1; o5 >= 0; --o5) {
+        var i5 = this.tryEntries[o5], a5 = i5.completion;
+        if ("root" === i5.tryLoc) return handle("end");
+        if (i5.tryLoc <= this.prev) {
+          var c5 = n3.call(i5, "catchLoc"), u6 = n3.call(i5, "finallyLoc");
+          if (c5 && u6) {
+            if (this.prev < i5.catchLoc) return handle(i5.catchLoc, true);
+            if (this.prev < i5.finallyLoc) return handle(i5.finallyLoc);
+          } else if (c5) {
+            if (this.prev < i5.catchLoc) return handle(i5.catchLoc, true);
+          } else {
+            if (!u6) throw Error("try statement without catch or finally");
+            if (this.prev < i5.finallyLoc) return handle(i5.finallyLoc);
+          }
+        }
+      }
+    }, abrupt: function abrupt(t5, e5) {
+      for (var r5 = this.tryEntries.length - 1; r5 >= 0; --r5) {
+        var o5 = this.tryEntries[r5];
+        if (o5.tryLoc <= this.prev && n3.call(o5, "finallyLoc") && this.prev < o5.finallyLoc) {
+          var i5 = o5;
+          break;
+        }
+      }
+      i5 && ("break" === t5 || "continue" === t5) && i5.tryLoc <= e5 && e5 <= i5.finallyLoc && (i5 = null);
+      var a5 = i5 ? i5.completion : {};
+      return a5.type = t5, a5.arg = e5, i5 ? (this.method = "next", this.next = i5.finallyLoc, y4) : this.complete(a5);
+    }, complete: function complete(t5, e5) {
+      if ("throw" === t5.type) throw t5.arg;
+      return "break" === t5.type || "continue" === t5.type ? this.next = t5.arg : "return" === t5.type ? (this.rval = this.arg = t5.arg, this.method = "return", this.next = "end") : "normal" === t5.type && e5 && (this.next = e5), y4;
+    }, finish: function finish(t5) {
+      for (var e5 = this.tryEntries.length - 1; e5 >= 0; --e5) {
+        var r5 = this.tryEntries[e5];
+        if (r5.finallyLoc === t5) return this.complete(r5.completion, r5.afterLoc), resetTryEntry(r5), y4;
+      }
+    }, "catch": function _catch(t5) {
+      for (var e5 = this.tryEntries.length - 1; e5 >= 0; --e5) {
+        var r5 = this.tryEntries[e5];
+        if (r5.tryLoc === t5) {
+          var n4 = r5.completion;
+          if ("throw" === n4.type) {
+            var o5 = n4.arg;
+            resetTryEntry(r5);
+          }
+          return o5;
+        }
+      }
+      throw Error("illegal catch attempt");
+    }, delegateYield: function delegateYield(e5, r5, n4) {
+      return this.delegate = { iterator: values(e5), resultName: r5, nextLoc: n4 }, "next" === this.method && (this.arg = t4), y4;
+    } }, e4;
+  }
+  function asyncGeneratorStep2(gen, resolve, reject, _next, _throw, key, arg) {
+    try {
+      var info = gen[key](arg);
+      var value = info.value;
+    } catch (error) {
+      reject(error);
+      return;
+    }
+    if (info.done) {
+      resolve(value);
+    } else {
+      Promise.resolve(value).then(_next, _throw);
+    }
+  }
+  function _asyncToGenerator2(fn) {
+    return function() {
+      var self2 = this, args = arguments;
+      return new Promise(function(resolve, reject) {
+        var gen = fn.apply(self2, args);
+        function _next(value) {
+          asyncGeneratorStep2(gen, resolve, reject, _next, _throw, "next", value);
+        }
+        function _throw(err) {
+          asyncGeneratorStep2(gen, resolve, reject, _next, _throw, "throw", err);
+        }
+        _next(void 0);
+      });
+    };
+  }
+  function _classCallCheck6(instance, Constructor) {
+    if (!(instance instanceof Constructor)) {
+      throw new TypeError("Cannot call a class as a function");
+    }
+  }
+  function _defineProperties6(target, props) {
+    for (var i4 = 0; i4 < props.length; i4++) {
+      var descriptor = props[i4];
+      descriptor.enumerable = descriptor.enumerable || false;
+      descriptor.configurable = true;
+      if ("value" in descriptor) descriptor.writable = true;
+      Object.defineProperty(target, _toPropertyKey6(descriptor.key), descriptor);
+    }
+  }
+  function _createClass6(Constructor, protoProps, staticProps) {
+    if (protoProps) _defineProperties6(Constructor.prototype, protoProps);
+    if (staticProps) _defineProperties6(Constructor, staticProps);
+    Object.defineProperty(Constructor, "prototype", { writable: false });
+    return Constructor;
+  }
+  function _toPropertyKey6(t4) {
+    var i4 = _toPrimitive6(t4, "string");
+    return "symbol" == _typeof6(i4) ? i4 : i4 + "";
+  }
+  function _toPrimitive6(t4, r4) {
+    if ("object" != _typeof6(t4) || !t4) return t4;
+    var e4 = t4[Symbol.toPrimitive];
+    if (void 0 !== e4) {
+      var i4 = e4.call(t4, r4 || "default");
+      if ("object" != _typeof6(i4)) return i4;
+      throw new TypeError("@@toPrimitive must return a primitive value.");
+    }
+    return ("string" === r4 ? String : Number)(t4);
+  }
+  var FileReader2 = /* @__PURE__ */ (function() {
+    function FileReader3() {
+      _classCallCheck6(this, FileReader3);
+    }
+    return _createClass6(FileReader3, [{
+      key: "openFile",
+      value: (function() {
+        var _openFile = _asyncToGenerator2(/* @__PURE__ */ _regeneratorRuntime2().mark(function _callee(input, chunkSize) {
+          var blob;
+          return _regeneratorRuntime2().wrap(function _callee$(_context) {
+            while (1) switch (_context.prev = _context.next) {
+              case 0:
+                if (!(isReactNative_default() && input && typeof input.uri !== "undefined")) {
+                  _context.next = 11;
+                  break;
+                }
+                _context.prev = 1;
+                _context.next = 4;
+                return uriToBlob(input.uri);
+              case 4:
+                blob = _context.sent;
+                return _context.abrupt("return", new FileSource(blob));
+              case 8:
+                _context.prev = 8;
+                _context.t0 = _context["catch"](1);
+                throw new Error("tus: cannot fetch `file.uri` as Blob, make sure the uri is correct and accessible. ".concat(_context.t0));
+              case 11:
+                if (!(typeof input.slice === "function" && typeof input.size !== "undefined")) {
+                  _context.next = 13;
+                  break;
+                }
+                return _context.abrupt("return", Promise.resolve(new FileSource(input)));
+              case 13:
+                if (!(typeof input.read === "function")) {
+                  _context.next = 18;
+                  break;
+                }
+                chunkSize = Number(chunkSize);
+                if (Number.isFinite(chunkSize)) {
+                  _context.next = 17;
+                  break;
+                }
+                return _context.abrupt("return", Promise.reject(new Error("cannot create source for stream without a finite value for the `chunkSize` option")));
+              case 17:
+                return _context.abrupt("return", Promise.resolve(new StreamSource(input, chunkSize)));
+              case 18:
+                return _context.abrupt("return", Promise.reject(new Error("source object may only be an instance of File, Blob, or Reader in this environment")));
+              case 19:
+              case "end":
+                return _context.stop();
+            }
+          }, _callee, null, [[1, 8]]);
+        }));
+        function openFile(_x, _x2) {
+          return _openFile.apply(this, arguments);
+        }
+        return openFile;
+      })()
+    }]);
+  })();
+
+  // node_modules/tus-js-client/lib.esm/browser/fileSignature.js
+  function fingerprint(file, options) {
+    if (isReactNative_default()) {
+      return Promise.resolve(reactNativeFingerprint(file, options));
+    }
+    return Promise.resolve(["tus-br", file.name, file.type, file.size, file.lastModified, options.endpoint].join("-"));
+  }
+  function reactNativeFingerprint(file, options) {
+    var exifHash = file.exif ? hashCode(JSON.stringify(file.exif)) : "noexif";
+    return ["tus-rn", file.name || "noname", file.size || "nosize", exifHash, options.endpoint].join("/");
+  }
+  function hashCode(str) {
+    var hash = 0;
+    if (str.length === 0) {
+      return hash;
+    }
+    for (var i4 = 0; i4 < str.length; i4++) {
+      var _char = str.charCodeAt(i4);
+      hash = (hash << 5) - hash + _char;
+      hash &= hash;
+    }
+    return hash;
+  }
+
+  // node_modules/tus-js-client/lib.esm/browser/httpStack.js
+  function _typeof7(o4) {
+    "@babel/helpers - typeof";
+    return _typeof7 = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function(o5) {
+      return typeof o5;
+    } : function(o5) {
+      return o5 && "function" == typeof Symbol && o5.constructor === Symbol && o5 !== Symbol.prototype ? "symbol" : typeof o5;
+    }, _typeof7(o4);
+  }
+  function _classCallCheck7(instance, Constructor) {
+    if (!(instance instanceof Constructor)) {
+      throw new TypeError("Cannot call a class as a function");
+    }
+  }
+  function _defineProperties7(target, props) {
+    for (var i4 = 0; i4 < props.length; i4++) {
+      var descriptor = props[i4];
+      descriptor.enumerable = descriptor.enumerable || false;
+      descriptor.configurable = true;
+      if ("value" in descriptor) descriptor.writable = true;
+      Object.defineProperty(target, _toPropertyKey7(descriptor.key), descriptor);
+    }
+  }
+  function _createClass7(Constructor, protoProps, staticProps) {
+    if (protoProps) _defineProperties7(Constructor.prototype, protoProps);
+    if (staticProps) _defineProperties7(Constructor, staticProps);
+    Object.defineProperty(Constructor, "prototype", { writable: false });
+    return Constructor;
+  }
+  function _toPropertyKey7(t4) {
+    var i4 = _toPrimitive7(t4, "string");
+    return "symbol" == _typeof7(i4) ? i4 : i4 + "";
+  }
+  function _toPrimitive7(t4, r4) {
+    if ("object" != _typeof7(t4) || !t4) return t4;
+    var e4 = t4[Symbol.toPrimitive];
+    if (void 0 !== e4) {
+      var i4 = e4.call(t4, r4 || "default");
+      if ("object" != _typeof7(i4)) return i4;
+      throw new TypeError("@@toPrimitive must return a primitive value.");
+    }
+    return ("string" === r4 ? String : Number)(t4);
+  }
+  var XHRHttpStack = /* @__PURE__ */ (function() {
+    function XHRHttpStack2() {
+      _classCallCheck7(this, XHRHttpStack2);
+    }
+    return _createClass7(XHRHttpStack2, [{
+      key: "createRequest",
+      value: function createRequest(method, url) {
+        return new Request(method, url);
+      }
+    }, {
+      key: "getName",
+      value: function getName() {
+        return "XHRHttpStack";
+      }
+    }]);
+  })();
+  var Request = /* @__PURE__ */ (function() {
+    function Request2(method, url) {
+      _classCallCheck7(this, Request2);
+      this._xhr = new XMLHttpRequest();
+      this._xhr.open(method, url, true);
+      this._method = method;
+      this._url = url;
+      this._headers = {};
+    }
+    return _createClass7(Request2, [{
+      key: "getMethod",
+      value: function getMethod() {
+        return this._method;
+      }
+    }, {
+      key: "getURL",
+      value: function getURL() {
+        return this._url;
+      }
+    }, {
+      key: "setHeader",
+      value: function setHeader(header, value) {
+        this._xhr.setRequestHeader(header, value);
+        this._headers[header] = value;
+      }
+    }, {
+      key: "getHeader",
+      value: function getHeader(header) {
+        return this._headers[header];
+      }
+    }, {
+      key: "setProgressHandler",
+      value: function setProgressHandler(progressHandler) {
+        if (!("upload" in this._xhr)) {
+          return;
+        }
+        this._xhr.upload.onprogress = function(e4) {
+          if (!e4.lengthComputable) {
+            return;
+          }
+          progressHandler(e4.loaded);
+        };
+      }
+    }, {
+      key: "send",
+      value: function send() {
+        var _this = this;
+        var body = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : null;
+        return new Promise(function(resolve, reject) {
+          _this._xhr.onload = function() {
+            resolve(new Response(_this._xhr));
+          };
+          _this._xhr.onerror = function(err) {
+            reject(err);
+          };
+          _this._xhr.send(body);
+        });
+      }
+    }, {
+      key: "abort",
+      value: function abort() {
+        this._xhr.abort();
+        return Promise.resolve();
+      }
+    }, {
+      key: "getUnderlyingObject",
+      value: function getUnderlyingObject() {
+        return this._xhr;
+      }
+    }]);
+  })();
+  var Response = /* @__PURE__ */ (function() {
+    function Response2(xhr) {
+      _classCallCheck7(this, Response2);
+      this._xhr = xhr;
+    }
+    return _createClass7(Response2, [{
+      key: "getStatus",
+      value: function getStatus() {
+        return this._xhr.status;
+      }
+    }, {
+      key: "getHeader",
+      value: function getHeader(header) {
+        return this._xhr.getResponseHeader(header);
+      }
+    }, {
+      key: "getBody",
+      value: function getBody() {
+        return this._xhr.responseText;
+      }
+    }, {
+      key: "getUnderlyingObject",
+      value: function getUnderlyingObject() {
+        return this._xhr;
+      }
+    }]);
+  })();
+
+  // node_modules/tus-js-client/lib.esm/browser/urlStorage.js
+  function _typeof8(o4) {
+    "@babel/helpers - typeof";
+    return _typeof8 = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function(o5) {
+      return typeof o5;
+    } : function(o5) {
+      return o5 && "function" == typeof Symbol && o5.constructor === Symbol && o5 !== Symbol.prototype ? "symbol" : typeof o5;
+    }, _typeof8(o4);
+  }
+  function _classCallCheck8(instance, Constructor) {
+    if (!(instance instanceof Constructor)) {
+      throw new TypeError("Cannot call a class as a function");
+    }
+  }
+  function _defineProperties8(target, props) {
+    for (var i4 = 0; i4 < props.length; i4++) {
+      var descriptor = props[i4];
+      descriptor.enumerable = descriptor.enumerable || false;
+      descriptor.configurable = true;
+      if ("value" in descriptor) descriptor.writable = true;
+      Object.defineProperty(target, _toPropertyKey8(descriptor.key), descriptor);
+    }
+  }
+  function _createClass8(Constructor, protoProps, staticProps) {
+    if (protoProps) _defineProperties8(Constructor.prototype, protoProps);
+    if (staticProps) _defineProperties8(Constructor, staticProps);
+    Object.defineProperty(Constructor, "prototype", { writable: false });
+    return Constructor;
+  }
+  function _toPropertyKey8(t4) {
+    var i4 = _toPrimitive8(t4, "string");
+    return "symbol" == _typeof8(i4) ? i4 : i4 + "";
+  }
+  function _toPrimitive8(t4, r4) {
+    if ("object" != _typeof8(t4) || !t4) return t4;
+    var e4 = t4[Symbol.toPrimitive];
+    if (void 0 !== e4) {
+      var i4 = e4.call(t4, r4 || "default");
+      if ("object" != _typeof8(i4)) return i4;
+      throw new TypeError("@@toPrimitive must return a primitive value.");
+    }
+    return ("string" === r4 ? String : Number)(t4);
+  }
+  var hasStorage = false;
+  try {
+    hasStorage = "localStorage" in window;
+    key = "tusSupport";
+    originalValue = localStorage.getItem(key);
+    localStorage.setItem(key, originalValue);
+    if (originalValue === null) localStorage.removeItem(key);
+  } catch (e4) {
+    if (e4.code === e4.SECURITY_ERR || e4.code === e4.QUOTA_EXCEEDED_ERR) {
+      hasStorage = false;
+    } else {
+      throw e4;
+    }
+  }
+  var key;
+  var originalValue;
+  var canStoreURLs = hasStorage;
+  var WebStorageUrlStorage = /* @__PURE__ */ (function() {
+    function WebStorageUrlStorage2() {
+      _classCallCheck8(this, WebStorageUrlStorage2);
+    }
+    return _createClass8(WebStorageUrlStorage2, [{
+      key: "findAllUploads",
+      value: function findAllUploads() {
+        var results = this._findEntries("tus::");
+        return Promise.resolve(results);
+      }
+    }, {
+      key: "findUploadsByFingerprint",
+      value: function findUploadsByFingerprint(fingerprint2) {
+        var results = this._findEntries("tus::".concat(fingerprint2, "::"));
+        return Promise.resolve(results);
+      }
+    }, {
+      key: "removeUpload",
+      value: function removeUpload(urlStorageKey) {
+        localStorage.removeItem(urlStorageKey);
+        return Promise.resolve();
+      }
+    }, {
+      key: "addUpload",
+      value: function addUpload(fingerprint2, upload) {
+        var id = Math.round(Math.random() * 1e12);
+        var key = "tus::".concat(fingerprint2, "::").concat(id);
+        localStorage.setItem(key, JSON.stringify(upload));
+        return Promise.resolve(key);
+      }
+    }, {
+      key: "_findEntries",
+      value: function _findEntries(prefix) {
+        var results = [];
+        for (var i4 = 0; i4 < localStorage.length; i4++) {
+          var _key = localStorage.key(i4);
+          if (_key.indexOf(prefix) !== 0) continue;
+          try {
+            var upload = JSON.parse(localStorage.getItem(_key));
+            upload.urlStorageKey = _key;
+            results.push(upload);
+          } catch (_e) {
+          }
+        }
+        return results;
+      }
+    }]);
+  })();
+
+  // node_modules/tus-js-client/lib.esm/browser/index.js
+  function _typeof9(o4) {
+    "@babel/helpers - typeof";
+    return _typeof9 = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function(o5) {
+      return typeof o5;
+    } : function(o5) {
+      return o5 && "function" == typeof Symbol && o5.constructor === Symbol && o5 !== Symbol.prototype ? "symbol" : typeof o5;
+    }, _typeof9(o4);
+  }
+  function _classCallCheck9(instance, Constructor) {
+    if (!(instance instanceof Constructor)) {
+      throw new TypeError("Cannot call a class as a function");
+    }
+  }
+  function _defineProperties9(target, props) {
+    for (var i4 = 0; i4 < props.length; i4++) {
+      var descriptor = props[i4];
+      descriptor.enumerable = descriptor.enumerable || false;
+      descriptor.configurable = true;
+      if ("value" in descriptor) descriptor.writable = true;
+      Object.defineProperty(target, _toPropertyKey9(descriptor.key), descriptor);
+    }
+  }
+  function _createClass9(Constructor, protoProps, staticProps) {
+    if (protoProps) _defineProperties9(Constructor.prototype, protoProps);
+    if (staticProps) _defineProperties9(Constructor, staticProps);
+    Object.defineProperty(Constructor, "prototype", { writable: false });
+    return Constructor;
+  }
+  function _callSuper2(t4, o4, e4) {
+    return o4 = _getPrototypeOf2(o4), _possibleConstructorReturn2(t4, _isNativeReflectConstruct2() ? Reflect.construct(o4, e4 || [], _getPrototypeOf2(t4).constructor) : o4.apply(t4, e4));
+  }
+  function _possibleConstructorReturn2(self2, call) {
+    if (call && (_typeof9(call) === "object" || typeof call === "function")) {
+      return call;
+    } else if (call !== void 0) {
+      throw new TypeError("Derived constructors may only return object or undefined");
+    }
+    return _assertThisInitialized2(self2);
+  }
+  function _assertThisInitialized2(self2) {
+    if (self2 === void 0) {
+      throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
+    }
+    return self2;
+  }
+  function _isNativeReflectConstruct2() {
+    try {
+      var t4 = !Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function() {
+      }));
+    } catch (t5) {
+    }
+    return (_isNativeReflectConstruct2 = function _isNativeReflectConstruct3() {
+      return !!t4;
+    })();
+  }
+  function _getPrototypeOf2(o4) {
+    _getPrototypeOf2 = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function _getPrototypeOf3(o5) {
+      return o5.__proto__ || Object.getPrototypeOf(o5);
+    };
+    return _getPrototypeOf2(o4);
+  }
+  function _inherits2(subClass, superClass) {
+    if (typeof superClass !== "function" && superClass !== null) {
+      throw new TypeError("Super expression must either be null or a function");
+    }
+    subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } });
+    Object.defineProperty(subClass, "prototype", { writable: false });
+    if (superClass) _setPrototypeOf2(subClass, superClass);
+  }
+  function _setPrototypeOf2(o4, p4) {
+    _setPrototypeOf2 = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function _setPrototypeOf3(o5, p5) {
+      o5.__proto__ = p5;
+      return o5;
+    };
+    return _setPrototypeOf2(o4, p4);
+  }
+  function ownKeys2(e4, r4) {
+    var t4 = Object.keys(e4);
+    if (Object.getOwnPropertySymbols) {
+      var o4 = Object.getOwnPropertySymbols(e4);
+      r4 && (o4 = o4.filter(function(r5) {
+        return Object.getOwnPropertyDescriptor(e4, r5).enumerable;
+      })), t4.push.apply(t4, o4);
+    }
+    return t4;
+  }
+  function _objectSpread2(e4) {
+    for (var r4 = 1; r4 < arguments.length; r4++) {
+      var t4 = null != arguments[r4] ? arguments[r4] : {};
+      r4 % 2 ? ownKeys2(Object(t4), true).forEach(function(r5) {
+        _defineProperty2(e4, r5, t4[r5]);
+      }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e4, Object.getOwnPropertyDescriptors(t4)) : ownKeys2(Object(t4)).forEach(function(r5) {
+        Object.defineProperty(e4, r5, Object.getOwnPropertyDescriptor(t4, r5));
+      });
+    }
+    return e4;
+  }
+  function _defineProperty2(obj, key, value) {
+    key = _toPropertyKey9(key);
+    if (key in obj) {
+      Object.defineProperty(obj, key, { value, enumerable: true, configurable: true, writable: true });
+    } else {
+      obj[key] = value;
+    }
+    return obj;
+  }
+  function _toPropertyKey9(t4) {
+    var i4 = _toPrimitive9(t4, "string");
+    return "symbol" == _typeof9(i4) ? i4 : i4 + "";
+  }
+  function _toPrimitive9(t4, r4) {
+    if ("object" != _typeof9(t4) || !t4) return t4;
+    var e4 = t4[Symbol.toPrimitive];
+    if (void 0 !== e4) {
+      var i4 = e4.call(t4, r4 || "default");
+      if ("object" != _typeof9(i4)) return i4;
+      throw new TypeError("@@toPrimitive must return a primitive value.");
+    }
+    return ("string" === r4 ? String : Number)(t4);
+  }
+  var defaultOptions7 = _objectSpread2(_objectSpread2({}, upload_default.defaultOptions), {}, {
+    httpStack: new XHRHttpStack(),
+    fileReader: new FileReader2(),
+    urlStorage: canStoreURLs ? new WebStorageUrlStorage() : new NoopUrlStorage(),
+    fingerprint
+  });
+  var Upload = /* @__PURE__ */ (function(_BaseUpload) {
+    function Upload2() {
+      var file = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : null;
+      var options = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : {};
+      _classCallCheck9(this, Upload2);
+      options = _objectSpread2(_objectSpread2({}, defaultOptions7), options);
+      return _callSuper2(this, Upload2, [file, options]);
+    }
+    _inherits2(Upload2, _BaseUpload);
+    return _createClass9(Upload2, null, [{
+      key: "terminate",
+      value: function terminate(url) {
+        var options = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : {};
+        options = _objectSpread2(_objectSpread2({}, defaultOptions7), options);
+        return upload_default.terminate(url, options);
+      }
+    }]);
+  })(upload_default);
+  var isSupported = typeof XMLHttpRequest === "function" && typeof Blob === "function" && typeof Blob.prototype.slice === "function";
+
+  // node_modules/@uppy/tus/package.json
   var package_default8 = {
+    name: "@uppy/tus",
+    description: "Resumable uploads for Uppy using Tus.io",
+    version: "5.1.0",
+    license: "MIT",
+    type: "module",
+    sideEffects: false,
+    scripts: {
+      build: "tsc --build tsconfig.build.json",
+      typecheck: "tsc --build",
+      test: "vitest run --environment=jsdom --silent='passed-only'"
+    },
+    keywords: [
+      "file uploader",
+      "uppy",
+      "uppy-plugin",
+      "upload",
+      "resumable",
+      "tus"
+    ],
+    homepage: "https://uppy.io",
+    bugs: {
+      url: "https://github.com/transloadit/uppy/issues"
+    },
+    repository: {
+      type: "git",
+      url: "git+https://github.com/transloadit/uppy.git"
+    },
+    files: [
+      "src",
+      "lib",
+      "dist",
+      "CHANGELOG.md"
+    ],
+    exports: {
+      ".": "./lib/index.js",
+      "./package.json": "./package.json"
+    },
+    dependencies: {
+      "@uppy/companion-client": "^5.1.1",
+      "@uppy/utils": "^7.1.4",
+      "tus-js-client": "^4.2.3"
+    },
+    devDependencies: {
+      "@uppy/core": "^5.2.0",
+      jsdom: "^26.1.0",
+      typescript: "^5.8.3",
+      vitest: "^3.2.4"
+    },
+    peerDependencies: {
+      "@uppy/core": "^5.2.0"
+    }
+  };
+
+  // node_modules/@uppy/tus/lib/getFingerprint.js
+  function isCordova3() {
+    return typeof window !== "undefined" && // @ts-expect-error may exist
+    (typeof window.PhoneGap !== "undefined" || // @ts-expect-error may exist
+    typeof window.Cordova !== "undefined" || // @ts-expect-error may exist
+    typeof window.cordova !== "undefined");
+  }
+  function isReactNative3() {
+    return typeof navigator !== "undefined" && typeof navigator.product === "string" && navigator.product.toLowerCase() === "reactnative";
+  }
+  function getFingerprint(uppyFile) {
+    return (file, options) => {
+      if (isCordova3() || isReactNative3()) {
+        return defaultOptions7.fingerprint(file, options);
+      }
+      const uppyFingerprint = ["tus", uppyFile.id, options.endpoint].join("-");
+      return Promise.resolve(uppyFingerprint);
+    };
+  }
+
+  // node_modules/@uppy/tus/lib/index.js
+  var tusDefaultOptions = {
+    endpoint: "",
+    uploadUrl: null,
+    metadata: {},
+    uploadSize: null,
+    onProgress: null,
+    onChunkComplete: null,
+    onSuccess: null,
+    onError: null,
+    overridePatchMethod: false,
+    headers: {},
+    addRequestId: false,
+    chunkSize: Infinity,
+    retryDelays: [100, 1e3, 3e3, 5e3],
+    parallelUploads: 1,
+    removeFingerprintOnSuccess: false,
+    uploadLengthDeferred: false,
+    uploadDataDuringCreation: false
+  };
+  var defaultOptions8 = {
+    limit: 20,
+    retryDelays: tusDefaultOptions.retryDelays,
+    withCredentials: false,
+    allowedMetaFields: true
+  };
+  var _retryDelayIterator, _Tus_instances, uploadLocalFile_fn2, getCompanionClientArgs_fn2, uploadFiles_fn2, _handleUpload2;
+  var Tus = class extends BasePlugin {
+    constructor(uppy, opts) {
+      super(uppy, { ...defaultOptions8, ...opts });
+      __privateAdd(this, _Tus_instances);
+      __privateAdd(this, _retryDelayIterator);
+      __publicField(this, "requests");
+      __publicField(this, "uploaders");
+      __publicField(this, "uploaderEvents");
+      __privateAdd(this, _handleUpload2, async (fileIDs) => {
+        if (fileIDs.length === 0) {
+          this.uppy.log("[Tus] No files to upload");
+          return;
+        }
+        if (this.opts.limit === 0) {
+          this.uppy.log("[Tus] When uploading multiple files at once, consider setting the `limit` option (to `10` for example), to limit the number of concurrent uploads, which helps prevent memory and network issues: https://uppy.io/docs/tus/#limit-0", "warning");
+        }
+        this.uppy.log("[Tus] Uploading...");
+        const filesToUpload = this.uppy.getFilesByIds(fileIDs);
+        await __privateMethod(this, _Tus_instances, uploadFiles_fn2).call(this, filesToUpload);
+      });
+      this.type = "uploader";
+      this.id = this.opts.id || "Tus";
+      if (opts?.allowedMetaFields === void 0 && "metaFields" in this.opts) {
+        throw new Error("The `metaFields` option has been renamed to `allowedMetaFields`.");
+      }
+      if ("autoRetry" in opts) {
+        throw new Error("The `autoRetry` option was deprecated and has been removed.");
+      }
+      this.requests = this.opts.rateLimitedQueue ?? new RateLimitedQueue(this.opts.limit);
+      __privateSet(this, _retryDelayIterator, this.opts.retryDelays?.values());
+      this.uploaders = /* @__PURE__ */ Object.create(null);
+      this.uploaderEvents = /* @__PURE__ */ Object.create(null);
+    }
+    /**
+     * Clean up all references for a file's upload: the tus.Upload instance,
+     * any events related to the file, and the Companion WebSocket connection.
+     */
+    resetUploaderReferences(fileID, opts) {
+      const uploader = this.uploaders[fileID];
+      if (uploader) {
+        uploader.abort();
+        if (opts?.abort) {
+          uploader.abort(true);
+        }
+        this.uploaders[fileID] = null;
+      }
+      if (this.uploaderEvents[fileID]) {
+        this.uploaderEvents[fileID].remove();
+        this.uploaderEvents[fileID] = null;
+      }
+    }
+    /**
+     * Store the uploadUrl on the file options, so that when Golden Retriever
+     * restores state, we will continue uploading to the correct URL.
+     */
+    onReceiveUploadUrl(file, uploadURL) {
+      const currentFile = this.uppy.getFile(file.id);
+      if (!currentFile)
+        return;
+      if (!currentFile.tus || currentFile.tus.uploadUrl !== uploadURL) {
+        this.uppy.log("[Tus] Storing upload url");
+        this.uppy.setFileState(currentFile.id, {
+          tus: { ...currentFile.tus, uploadUrl: uploadURL }
+        });
+      }
+    }
+    install() {
+      this.uppy.setState({
+        capabilities: {
+          ...this.uppy.getState().capabilities,
+          resumableUploads: true
+        }
+      });
+      this.uppy.addUploader(__privateGet(this, _handleUpload2));
+    }
+    uninstall() {
+      this.uppy.setState({
+        capabilities: {
+          ...this.uppy.getState().capabilities,
+          resumableUploads: false
+        }
+      });
+      this.uppy.removeUploader(__privateGet(this, _handleUpload2));
+    }
+  };
+  _retryDelayIterator = new WeakMap();
+  _Tus_instances = new WeakSet();
+  uploadLocalFile_fn2 = async function(file) {
+    this.resetUploaderReferences(file.id);
+    return new Promise((resolve, reject) => {
+      let queuedRequest;
+      let qRequest;
+      let upload;
+      const opts = {
+        ...this.opts,
+        ...file.tus || {}
+      };
+      if (typeof opts.headers === "function") {
+        opts.headers = opts.headers(file);
+      }
+      const { onShouldRetry, onBeforeRequest, ...commonOpts } = opts;
+      const uploadOptions = {
+        ...tusDefaultOptions,
+        ...commonOpts
+      };
+      uploadOptions.fingerprint = getFingerprint(file);
+      uploadOptions.onBeforeRequest = async (req) => {
+        const xhr = req.getUnderlyingObject();
+        xhr.withCredentials = !!opts.withCredentials;
+        let userProvidedPromise;
+        if (typeof onBeforeRequest === "function") {
+          userProvidedPromise = onBeforeRequest(req, file);
+        }
+        if (hasProperty(queuedRequest, "shouldBeRequeued")) {
+          if (!queuedRequest.shouldBeRequeued)
+            return Promise.reject();
+          let done;
+          const p4 = new Promise((res) => {
+            done = res;
+          });
+          queuedRequest = this.requests.run(() => {
+            if (file.isPaused) {
+              queuedRequest.abort();
+            }
+            done();
+            return () => {
+            };
+          });
+          await Promise.all([p4, userProvidedPromise]);
+          return void 0;
+        }
+        return userProvidedPromise;
+      };
+      uploadOptions.onError = (err) => {
+        this.uppy.log(err);
+        const xhr = err.originalRequest != null ? err.originalRequest.getUnderlyingObject() : null;
+        if (isNetworkError_default(xhr)) {
+          err = new NetworkError_default(err, xhr);
+        }
+        this.resetUploaderReferences(file.id);
+        queuedRequest?.abort();
+        if (typeof opts.onError === "function") {
+          opts.onError(err);
+        }
+        reject(err);
+      };
+      uploadOptions.onProgress = (bytesUploaded, bytesTotal) => {
+        this.onReceiveUploadUrl(file, upload.url);
+        if (typeof opts.onProgress === "function") {
+          opts.onProgress(bytesUploaded, bytesTotal);
+        }
+        const latestFile = this.uppy.getFile(file.id);
+        this.uppy.emit("upload-progress", latestFile, {
+          uploadStarted: latestFile.progress.uploadStarted ?? 0,
+          bytesUploaded,
+          bytesTotal
+        });
+      };
+      uploadOptions.onSuccess = (payload) => {
+        const uploadResp = {
+          uploadURL: upload.url ?? void 0,
+          status: 200,
+          body: {
+            // We have to put `as XMLHttpRequest` because tus-js-client
+            // returns `any`, as the type differs in Node.js and the browser.
+            // In the browser it's always `XMLHttpRequest`.
+            xhr: payload.lastResponse.getUnderlyingObject()
+            // Body extends Record<string, unknown> and thus `xhr` is not known
+            // but we export the `TusBody` type, which people pass as a generic into the Uppy class,
+            // so on the implementer side it works as expected.
+          }
+        };
+        this.uppy.emit("upload-success", this.uppy.getFile(file.id), uploadResp);
+        this.resetUploaderReferences(file.id);
+        queuedRequest.done();
+        if (upload.url) {
+          const { name } = upload.file;
+          this.uppy.log(`Download ${name} from ${upload.url}`);
+        }
+        if (typeof opts.onSuccess === "function") {
+          opts.onSuccess(payload);
+        }
+        resolve(upload);
+      };
+      const defaultOnShouldRetry2 = (err) => {
+        const status = err?.originalResponse?.getStatus();
+        if (status === 429) {
+          if (!this.requests.isPaused) {
+            const next = __privateGet(this, _retryDelayIterator)?.next();
+            if (next == null || next.done) {
+              return false;
+            }
+            this.requests.rateLimit(next.value);
+          }
+        } else if (status != null && status >= 400 && status < 500 && status !== 409 && status !== 423) {
+          return false;
+        } else if (typeof navigator !== "undefined" && navigator.onLine === false) {
+          if (!this.requests.isPaused) {
+            this.requests.pause();
+            window.addEventListener("online", () => {
+              this.requests.resume();
+            }, { once: true });
+          }
+        }
+        queuedRequest.abort();
+        queuedRequest = {
+          shouldBeRequeued: true,
+          abort() {
+            this.shouldBeRequeued = false;
+          },
+          done() {
+            throw new Error("Cannot mark a queued request as done: this indicates a bug");
+          },
+          fn() {
+            throw new Error("Cannot run a queued request: this indicates a bug");
+          }
+        };
+        return true;
+      };
+      if (onShouldRetry != null) {
+        uploadOptions.onShouldRetry = (error, retryAttempt) => onShouldRetry(error, retryAttempt, opts, defaultOnShouldRetry2);
+      } else {
+        uploadOptions.onShouldRetry = defaultOnShouldRetry2;
+      }
+      const copyProp = (obj, srcProp, destProp) => {
+        if (hasProperty(obj, srcProp) && !hasProperty(obj, destProp)) {
+          obj[destProp] = obj[srcProp];
+        }
+      };
+      const meta = {};
+      const allowedMetaFields = getAllowedMetaFields(opts.allowedMetaFields, file.meta);
+      allowedMetaFields.forEach((item) => {
+        meta[item] = String(file.meta[item]);
+      });
+      copyProp(meta, "type", "filetype");
+      copyProp(meta, "name", "filename");
+      uploadOptions.metadata = meta;
+      if (file.data == null)
+        throw new Error("File data is empty");
+      upload = new Upload(file.data, uploadOptions);
+      this.uploaders[file.id] = upload;
+      const eventManager = new EventManager(this.uppy);
+      this.uploaderEvents[file.id] = eventManager;
+      qRequest = () => {
+        if (!file.isPaused) {
+          upload.start();
+        }
+        return () => {
+        };
+      };
+      upload.findPreviousUploads().then((previousUploads) => {
+        const previousUpload = previousUploads[0];
+        if (previousUpload) {
+          this.uppy.log(`[Tus] Resuming upload of ${file.id} started at ${previousUpload.creationTime}`);
+          upload.resumeFromPreviousUpload(previousUpload);
+        }
+        queuedRequest = this.requests.run(qRequest);
+      });
+      eventManager.onFileRemove(file.id, (targetFileID) => {
+        queuedRequest.abort();
+        this.resetUploaderReferences(file.id, { abort: !!upload.url });
+        resolve(`upload ${targetFileID} was removed`);
+      });
+      eventManager.onPause(file.id, (isPaused) => {
+        queuedRequest.abort();
+        if (isPaused) {
+          upload.abort();
+        } else {
+          queuedRequest = this.requests.run(qRequest);
+        }
+      });
+      eventManager.onPauseAll(file.id, () => {
+        queuedRequest.abort();
+        upload.abort();
+      });
+      eventManager.onCancelAll(file.id, () => {
+        queuedRequest.abort();
+        this.resetUploaderReferences(file.id, { abort: !!upload.url });
+        resolve(`upload ${file.id} was canceled`);
+      });
+      eventManager.onResumeAll(file.id, () => {
+        queuedRequest.abort();
+        if (file.error) {
+          upload.abort();
+        }
+        queuedRequest = this.requests.run(qRequest);
+      });
+    }).catch((err) => {
+      this.uppy.emit("upload-error", file, err);
+      throw err;
+    });
+  };
+  getCompanionClientArgs_fn2 = function(file) {
+    const opts = { ...this.opts };
+    if (file.tus) {
+      Object.assign(opts, file.tus);
+    }
+    if (typeof opts.headers === "function") {
+      opts.headers = opts.headers(file);
+    }
+    return {
+      ..."remote" in file && file.remote.body,
+      endpoint: opts.endpoint,
+      uploadUrl: opts.uploadUrl,
+      protocol: "tus",
+      size: file.data.size,
+      headers: opts.headers,
+      metadata: file.meta
+    };
+  };
+  uploadFiles_fn2 = async function(files) {
+    const filesFiltered = filterFilesToUpload(files);
+    const filesToEmit = filterFilesToEmitUploadStarted(filesFiltered);
+    this.uppy.emit("upload-start", filesToEmit);
+    await Promise.allSettled(filesFiltered.map((file) => {
+      if (file.isRemote) {
+        const getQueue = () => this.requests;
+        const controller = new AbortController();
+        const removedHandler = (removedFile) => {
+          if (removedFile.id === file.id)
+            controller.abort();
+        };
+        this.uppy.on("file-removed", removedHandler);
+        const uploadPromise = this.uppy.getRequestClientForFile(file).uploadRemoteFile(file, __privateMethod(this, _Tus_instances, getCompanionClientArgs_fn2).call(this, file), {
+          signal: controller.signal,
+          getQueue
+        });
+        this.requests.wrapSyncFunction(() => {
+          this.uppy.off("file-removed", removedHandler);
+        }, { priority: -1 })();
+        return uploadPromise;
+      }
+      return __privateMethod(this, _Tus_instances, uploadLocalFile_fn2).call(this, file);
+    }));
+  };
+  _handleUpload2 = new WeakMap();
+  __publicField(Tus, "VERSION", package_default8.version);
+
+  // node_modules/@uppy/image-editor/package.json
+  var package_default9 = {
     name: "@uppy/image-editor",
     description: "Image editor and cropping UI",
     version: "4.1.0",
@@ -13965,7 +17490,7 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
     cropWidescreen: true,
     cropWidescreenVertical: true
   };
-  var defaultOptions6 = {
+  var defaultOptions9 = {
     // `quality: 1` increases the image size by orders of magnitude - 0.8 seems to be the sweet spot.
     // see https://github.com/fengyuanchen/cropperjs/issues/538#issuecomment-1776279427
     quality: 0.8,
@@ -13975,7 +17500,7 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
   var ImageEditor = class extends UIPlugin_default {
     constructor(uppy, opts) {
       super(uppy, {
-        ...defaultOptions6,
+        ...defaultOptions9,
         ...opts,
         actions: {
           ...defaultActions,
@@ -14065,7 +17590,7 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
       return u2(Editor, { currentImage, storeCropperInstance: this.storeCropperInstance, save: this.save, opts: this.opts, i18n: this.i18n });
     }
   };
-  __publicField(ImageEditor, "VERSION", package_default8.version);
+  __publicField(ImageEditor, "VERSION", package_default9.version);
 
   // node_modules/@uppy/locales/lib/de_DE.js
   var de_DE = {
@@ -14302,6 +17827,8 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
     config.resize_height = uppyConfig.resize_height || 2e3;
     config.resize_quality = uppyConfig.resize_quality || 85;
     config.fix_exif_orientation = uppyConfig.fix_exif_orientation !== false;
+    config.enable_chunks = uppyConfig.enable_chunks !== false;
+    config.chunk_size = (uppyConfig.chunk_size || 5) * 1024 * 1024;
     loadMetadataFields(config.apiToken).then(function(metaFields) {
       const uppy = new Uppy_default({
         id: "uppy-" + Math.random().toString(36).substr(2, 9),
@@ -14419,35 +17946,50 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
         }
       });
     }
-    uppy.use(XHRUpload, {
-      endpoint: function(file) {
-        const currentCategoryId = parseInt(inputElement.dataset.categoryId) || 0;
-        const tokenParam = config.apiToken ? "&api_token=" + encodeURIComponent(config.apiToken) : "";
-        return window.location.origin + "/redaxo/index.php?rex-api-call=uppy_uploader&func=upload" + tokenParam + "&category_id=" + currentCategoryId;
-      },
-      formData: true,
-      fieldName: "file",
-      allowedMetaFields: true,
-      // WICHTIG: Alle Metadaten mitsenden
-      headers: {
-        "X-Requested-With": "XMLHttpRequest"
-      },
-      getResponseData: function(responseText, response) {
-        try {
-          return JSON.parse(responseText);
-        } catch (e4) {
-          return { success: false, message: "Invalid response" };
+    if (config.enable_chunks) {
+      uppy.use(Tus, {
+        endpoint: function() {
+          const currentCategoryId = parseInt(inputElement.dataset.categoryId) || 0;
+          const tokenParam = config.apiToken ? "&api_token=" + encodeURIComponent(config.apiToken) : "";
+          return window.location.origin + "/redaxo/index.php?rex-api-call=uppy_uploader&func=chunk" + tokenParam + "&category_id=" + currentCategoryId;
+        },
+        chunkSize: config.chunk_size,
+        retryDelays: [0, 1e3, 3e3, 5e3],
+        withCredentials: true,
+        headers: {
+          "X-Requested-With": "XMLHttpRequest"
         }
-      },
-      getResponseError: function(responseText) {
-        try {
-          const response = JSON.parse(responseText);
-          return response.error || response.message || "Upload failed";
-        } catch (e4) {
-          return responseText;
+      });
+    } else {
+      uppy.use(XHRUpload, {
+        endpoint: function(file) {
+          const currentCategoryId = parseInt(inputElement.dataset.categoryId) || 0;
+          const tokenParam = config.apiToken ? "&api_token=" + encodeURIComponent(config.apiToken) : "";
+          return window.location.origin + "/redaxo/index.php?rex-api-call=uppy_uploader&func=upload" + tokenParam + "&category_id=" + currentCategoryId;
+        },
+        formData: true,
+        fieldName: "file",
+        allowedMetaFields: true,
+        headers: {
+          "X-Requested-With": "XMLHttpRequest"
+        },
+        getResponseData: function(responseText, response) {
+          try {
+            return JSON.parse(responseText);
+          } catch (e4) {
+            return { success: false, message: "Invalid response" };
+          }
+        },
+        getResponseError: function(responseText) {
+          try {
+            const response = JSON.parse(responseText);
+            return response.error || response.message || "Upload failed";
+          } catch (e4) {
+            return responseText;
+          }
         }
-      }
-    });
+      });
+    }
     setupEventHandlers(uppy, config, inputElement, metaFields);
   }
   function initializeUppyFallback(container, config, inputElement) {
@@ -15024,5 +18566,9 @@ cropperjs/dist/cropper.js:
    * @param phrase that needs interpolation, with placeholders
    * @param options with values that will be used to replace placeholders
    *)
+
+tus-js-client/lib.esm/upload.js:
+tus-js-client/lib.esm/browser/fileReader.js:
+  (*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/facebook/regenerator/blob/main/LICENSE *)
 */
 //# sourceMappingURL=uppy-backend-bundle.js.map

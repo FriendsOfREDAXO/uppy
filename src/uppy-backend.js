@@ -6,6 +6,7 @@ import Uppy from '@uppy/core';
 import Dashboard from '@uppy/dashboard';
 import Webcam from '@uppy/webcam';
 import XHRUpload from '@uppy/xhr-upload';
+import Tus from '@uppy/tus';
 import ImageEditor from '@uppy/image-editor';
 import German from '@uppy/locales/lib/de_DE';
 
@@ -63,6 +64,8 @@ function initializeUppyWidget(inputElement) {
     config.resize_height = uppyConfig.resize_height || 2000;
     config.resize_quality = uppyConfig.resize_quality || 85;
     config.fix_exif_orientation = uppyConfig.fix_exif_orientation !== false;
+    config.enable_chunks = uppyConfig.enable_chunks !== false;
+    config.chunk_size = (uppyConfig.chunk_size || 5) * 1024 * 1024; // MB in Bytes
     
     // Metadaten-Felder laden
     loadMetadataFields(config.apiToken).then(function(metaFields) {
@@ -215,38 +218,53 @@ function initializeUppyPlugins(uppy, config, inputElement, metaFields) {
         });
     }
     
-    // XHR Upload mit dynamischem Endpoint und Metadaten
-    uppy.use(XHRUpload, {
-        endpoint: function(file) {
-            // Category-ID dynamisch aus dem data-Attribut lesen (aktualisiert bei Select-Change)
-            const currentCategoryId = parseInt(inputElement.dataset.categoryId) || 0;
-            
-            // Im Backend ist Token optional
-            const tokenParam = config.apiToken ? '&api_token=' + encodeURIComponent(config.apiToken) : '';
-            return window.location.origin + '/redaxo/index.php?rex-api-call=uppy_uploader&func=upload' + tokenParam + '&category_id=' + currentCategoryId;
-        },
-        formData: true,
-        fieldName: 'file',
-        allowedMetaFields: true, // WICHTIG: Alle Metadaten mitsenden
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest'
-        },
-        getResponseData: function(responseText, response) {
-            try {
-                return JSON.parse(responseText);
-            } catch (e) {
-                return { success: false, message: 'Invalid response' };
+    // Upload Plugin: TUS für Chunked Upload oder XHR für kleine Dateien
+    if (config.enable_chunks) {
+        // TUS Protocol für Chunked Uploads
+        uppy.use(Tus, {
+            endpoint: function() {
+                const currentCategoryId = parseInt(inputElement.dataset.categoryId) || 0;
+                const tokenParam = config.apiToken ? '&api_token=' + encodeURIComponent(config.apiToken) : '';
+                return window.location.origin + '/redaxo/index.php?rex-api-call=uppy_uploader&func=chunk' + tokenParam + '&category_id=' + currentCategoryId;
+            },
+            chunkSize: config.chunk_size,
+            retryDelays: [0, 1000, 3000, 5000],
+            withCredentials: true,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
             }
-        },
-        getResponseError: function(responseText) {
-            try {
-                const response = JSON.parse(responseText);
-                return response.error || response.message || 'Upload failed';
-            } catch (e) {
-                return responseText;
+        });
+    } else {
+        // XHR Upload für Standard-Uploads
+        uppy.use(XHRUpload, {
+            endpoint: function(file) {
+                const currentCategoryId = parseInt(inputElement.dataset.categoryId) || 0;
+                const tokenParam = config.apiToken ? '&api_token=' + encodeURIComponent(config.apiToken) : '';
+                return window.location.origin + '/redaxo/index.php?rex-api-call=uppy_uploader&func=upload' + tokenParam + '&category_id=' + currentCategoryId;
+            },
+            formData: true,
+            fieldName: 'file',
+            allowedMetaFields: true,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            getResponseData: function(responseText, response) {
+                try {
+                    return JSON.parse(responseText);
+                } catch (e) {
+                    return { success: false, message: 'Invalid response' };
+                }
+            },
+            getResponseError: function(responseText) {
+                try {
+                    const response = JSON.parse(responseText);
+                    return response.error || response.message || 'Upload failed';
+                } catch (e) {
+                    return responseText;
+                }
             }
-        }
-    });
+        });
+    }
     
     // Event-Handler
     setupEventHandlers(uppy, config, inputElement, metaFields);

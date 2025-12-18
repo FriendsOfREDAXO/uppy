@@ -14,6 +14,7 @@
     "@uppy/dashboard": "^5.0.0",
     "@uppy/image-editor": "^4.1.0",
     "@uppy/locales": "^5.0.0",
+    "@uppy/tus": "^5.1.0",
     "@uppy/webcam": "^5.0.0",
     "@uppy/xhr-upload": "^5.0.0"
   },
