@@ -1,6 +1,8 @@
 uppy_title = Uppy
 uppy_upload = Upload
+uppy_demo = Demo
 uppy_settings = Einstellungen
+uppy_demo_title = Image Editor Demo
 
 # Settings
 uppy_settings_title = Uppy Einstellungen

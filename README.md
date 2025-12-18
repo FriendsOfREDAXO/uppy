@@ -7,6 +7,7 @@ Ein modernes File-Upload-AddOn für REDAXO CMS, basierend auf [Uppy 5.0](https:/
 - ✅ Moderne, responsive File-Upload-Oberfläche mit Drag & Drop
 - ✅ **Chunk-Upload** für große Dateien (konfigurierbar)
 - ✅ **Client-seitige Bildoptimierung** (Resize, EXIF-Korrektur)
+- ✅ **Image Editor** (optional) - Bildbearbeitung mit festen Seitenverhältnissen
 - ✅ **Webcam-Integration** für direkte Foto-Aufnahme
 - ✅ **Metadaten-Verwaltung** mit MetaInfo-Integration
 - ✅ **Mehrsprachige Metafelder** (metainfo_lang_fields Support)
@@ -61,6 +62,11 @@ Gehe zu **Uppy → Einstellungen** im Backend:
   - Maximale Breite/Höhe
   - JPEG-Qualität (1-100)
   - EXIF-Orientierung korrigieren
+- **Image Editor** (optional): Bildbearbeitung mit Zuschneiden, Drehen, Spiegeln
+  - Feste Seitenverhältnisse: 1:1, 16:9, 4:3, 3:2, free
+  - Perfekt für Avatare (1:1), Header (16:9) usw.
+  - Basiert auf Cropper.js
+  - Siehe [Demo-Seite](index.php?page=uppy/demo) für Beispiele
 - **Webcam**: Aktivieren für Foto-Aufnahme
 - **Mediapool ersetzen**: Standard-Upload-Seite durch Uppy ersetzen
 
@@ -355,7 +361,13 @@ MIT License 2.0.0-beta1 (2024-12-18)
 
 ## Changelog
 
-### Version 1.0.0
+### Version 2.0.1 (upcoming)
+
+- ✅ **Image Editor** - Bildbearbeitung mit festen Seitenverhältnissen (1:1, 16:9, 4:3, 3:2, free)
+- ✅ Demo-Seite für Image Editor Features
+- ⚠️ Audio Plugin noch nicht verfügbar (wartet auf Uppy 5.x Kompatibilität)
+
+### Version 2.0.0-beta1
 
 - ✅ Uppy 5.0 Integration mit lokalem Build
 - ✅ Chunk-Upload für große Dateien

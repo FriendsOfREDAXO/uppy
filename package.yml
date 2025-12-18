@@ -15,6 +15,10 @@ page:
             title: 'translate:uppy_upload',
             perm: uppy[upload]
         }
+        demo: { 
+            title: 'translate:uppy_demo',
+            perm: uppy[upload]
+        }
         settings: { 
             title: 'translate:uppy_settings',
             perm: admin
@@ -41,4 +45,6 @@ default_config:
     resize_quality: 85
     fix_exif_orientation: true
     enable_webcam: false
+    enable_image_editor: false
+    crop_ratios: '1:1,16:9,4:3,3:2,free'
     required_metadata_fields: ''

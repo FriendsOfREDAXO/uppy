@@ -6,6 +6,7 @@ import Uppy from '@uppy/core';
 import Dashboard from '@uppy/dashboard';
 import Webcam from '@uppy/webcam';
 import XHRUpload from '@uppy/xhr-upload';
+import ImageEditor from '@uppy/image-editor';
 import German from '@uppy/locales/lib/de_DE';
 
 // DEBUG: Sofort beim Laden ausgeben
@@ -128,6 +129,51 @@ function initializeUppyPlugins(uppy, config, inputElement) {
     // Webcam Plugin nur laden wenn aktiviert
     const globalConfig = window.rex?.uppy_config || {};
     const enableWebcam = globalConfig.enable_webcam || false;
+    const enableImageEditor = globalConfig.enable_image_editor || false;
+    const cropRatios = globalConfig.crop_ratios || '1:1,16:9,4:3,3:2,free';
+    
+    // Image Editor Plugin (optional)
+    if (enableImageEditor) {
+        const ratios = cropRatios.split(',').map(ratio => {
+            if (ratio === 'free') return null;
+            const parts = ratio.split(':').map(Number);
+            return parts.length === 2 ? parts[0] / parts[1] : null;
+        }).filter(r => r !== null);
+        
+        uppy.use(ImageEditor, {
+            quality: config.resize_quality / 100, // 85 -> 0.85
+            cropperOptions: {
+                viewMode: 1,
+                background: false,
+                autoCropArea: 1,
+                responsive: true,
+                aspectRatio: ratios.length > 0 ? ratios[0] : null, // Erstes Ratio als Default
+            },
+            actions: {
+                revert: true,
+                rotate: true,
+                granularRotate: true,
+                flip: true,
+                zoomIn: true,
+                zoomOut: true,
+                cropSquare: cropRatios.includes('1:1'),
+                cropWidescreen: cropRatios.includes('16:9'),
+                cropWidescreenVertical: cropRatios.includes('9:16'),
+            },
+            locale: {
+                strings: {
+                    revert: 'Zurücksetzen',
+                    rotate: 'Drehen',
+                    zoomIn: 'Vergrößern',
+                    zoomOut: 'Verkleinern',
+                    flipHorizontal: 'Horizontal spiegeln',
+                    aspectRatioSquare: '1:1',
+                    aspectRatioLandscape: '16:9',
+                    aspectRatioPortrait: '9:16',
+                }
+            }
+        });
+    }
     
     if (enableWebcam) {
         uppy.use(Webcam, {

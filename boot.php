@@ -20,10 +20,11 @@ if (rex::isBackend() && rex::getUser()) {
     static $uppyScriptsLoaded = false;
     
     if (!$uppyScriptsLoaded) {
-        // CSS - Core, Dashboard und Webcam (Uppy 5.0)
+        // CSS - Core, Dashboard, Webcam und Image Editor (Uppy 5.0)
         rex_view::addCssFile($this->getAssetsUrl('uppy-core.min.css'));
         rex_view::addCssFile($this->getAssetsUrl('uppy-dashboard.min.css'));
         rex_view::addCssFile($this->getAssetsUrl('uppy-webcam.min.css'));
+        rex_view::addCssFile($this->getAssetsUrl('uppy-image-editor.min.css'));
         rex_view::addCssFile($this->getAssetsUrl('uppy-dark-overrides.css'));
         rex_view::addCssFile($this->getAssetsUrl('uppy-custom.css'));
         
@@ -34,7 +35,9 @@ if (rex::isBackend() && rex::getUser()) {
             'resize_height' => rex_config::get('uppy', 'resize_height', 2000),
             'resize_quality' => rex_config::get('uppy', 'resize_quality', 85),
             'fix_exif_orientation' => rex_config::get('uppy', 'fix_exif_orientation', true),
-            'enable_webcam' => rex_config::get('uppy', 'enable_webcam', false)
+            'enable_webcam' => rex_config::get('uppy', 'enable_webcam', false),
+            'enable_image_editor' => rex_config::get('uppy', 'enable_image_editor', false),
+            'crop_ratios' => rex_config::get('uppy', 'crop_ratios', '1:1,16:9,4:3,3:2,free')
         ]);
         
         // JavaScript Bundle (lokal gebaut mit esbuild)
