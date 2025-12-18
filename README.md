@@ -58,8 +58,11 @@ Gehe zu **Uppy → Einstellungen** im Backend:
 - **Maximale Dateigröße**: In MB (Standard: 200 MB)
 - **Maximale Anzahl Dateien**: Pro Upload-Session
 - **Standard-Kategorie**: Mediapool-Kategorie für Uploads
-- **Chunk-Upload**: Aktivieren für große Dateien (empfohlen)
-- **Chunk-Größe**: In MB (Standard: 5 MB)
+- **Chunk-Upload**: Aktivieren für große Dateien - **TUS Protocol** (empfohlen!)
+  - Umgeht PHP `upload_max_filesize` Limits
+  - Automatisches Resume bei Unterbrechungen
+  - Geringerer Memory-Verbrauch
+- **Chunk-Größe**: In MB (Standard: 5 MB) - nur aktiv wenn Chunk-Upload aktiviert
 - **Bildoptimierung**: Client-seitige Resize-Funktion
   - Maximale Breite/Höhe
   - JPEG-Qualität (1-100)
@@ -400,20 +403,16 @@ MIT License 2.0.0-beta1 (2024-12-18)
 ### Version 2.0.0-beta1 (2024-12-18)
 
 **Neue Features:**
-
-- ✅ Uppy 5.0 Integration mit lokalem Build
-- ✅ Chunk-Upload für große Dateien
-- ✅ Client-seitige Bildoptimierung
-- ✅ Webcam-Support
-- ✅ MetaInfo-Integration mit mehrsprachigen Feldern
-- ✅ Dark Theme Support
-- ✅ YForm-Integration
-- ✅ Backend- und Frontend-Unterstützung
-
+- ✅ **Echte Chunked Uploads mit TUS Protocol** (@uppy/tus)
+  - Umgeht PHP `upload_max_filesize` Limits komplett
+  - Automatisches Resume bei Unterbrechungen
+  - Konfigurierbare Chunk-Größe (Standard: 5MB)
+  - Retry-Mechanismus bei Fehlern
+  - Geringerer Server-Memory-Verbrauch
 - ✅ **Image Editor Integration** - Bildbearbeitung mit Cropper.js
   - Aktivierung per Feld via `data-enable-image-editor="true"`
   - Feste Seitenverhältnisse: 1:1, 16:9, 4:3, 3:2, free
-  - Automatisches Öffnen bei Einzel-Uploads
+  - Automatisches Öffnen bei Einzel-Uploads (maxFiles=1)
   - Zuschneiden, Drehen, Spiegeln, Zoomen
 - ✅ **Demo-Seite** für Image Editor Features
 - ✅ **Dynamische UI-Höhen** - Dashboard passt sich Dateianzahl an
@@ -424,11 +423,13 @@ MIT License 2.0.0-beta1 (2024-12-18)
 - ✅ Dynamische Anzeige "Dateien hochladen (max. X)" aus `data-max-files`
 - ✅ Console-Logs reduziert (nur kritische Fehler)
 - ✅ Verbesserte Benutzerführung bei Bildbearbeitung
+- ✅ XHR Upload Fallback wenn Chunking deaktiviert
 
 **Technisch:**
-- Uppy 5.2.0 mit @uppy/image-editor@4.1.0
-- Cropper.js Integration
-- ESBuild lokaler Build
+- Uppy 5.2.0 mit @uppy/tus@5.0.0 (Chunked Uploads)
+- @uppy/image-editor@4.1.0 mit Cropper.js
+- @uppy/xhr-upload@5.0.0 (Fallback)
+- ESBuild lokaler Build (keine CDN-Abhängigkeiten)
 
 
 ## Credits
