@@ -93,6 +93,36 @@ Uppy wird automatisch im Backend geladen. Verwende data-Attribute für Input-Fel
 - `data-max-filesize="200"` - Max. Größe in MB (optional)
 - `data-allowed-types="..."` - Erlaubte MIME-Types (optional)
 - `data-enable-webcam="true"` - Webcam aktivieren (optional)
+- `data-enable-image-editor="true"` - Image Editor aktivieren (optional)
+
+### Image Editor
+
+Der Image Editor ermöglicht die Bildbearbeitung direkt im Browser **vor** dem Upload:
+
+```html
+<input type="file" 
+       data-widget="uppy" 
+       data-category-id="1"
+       data-max-files="1"
+       data-allowed-types="image/*"
+       data-enable-image-editor="true">
+```
+
+**Features:**
+- ✅ Zuschneiden mit festen Seitenverhältnissen (1:1, 16:9, 4:3, 3:2, free)
+- ✅ Drehen (90° Schritte + freies Drehen)
+- ✅ Spiegeln (horizontal/vertikal)
+- ✅ Zoom In/Out
+- ✅ Automatisches Öffnen bei Einzel-Uploads (maxFiles=1)
+- ✅ Edit-Button bei Multi-Uploads
+- ✅ Basiert auf Cropper.js (MIT License)
+
+**Anwendungsfälle:**
+- **Avatar-Uploads**: `data-max-files="1"` + `data-enable-image-editor="true"` für quadratische Bilder (1:1)
+- **Header-Bilder**: Erzwingt 16:9 Format für einheitliche Website-Header
+- **Produkt-Fotos**: Einheitliche Seitenverhältnisse für Shop-Kataloge
+
+**Siehe Demo:** **Uppy → Demo** im Backend für Live-Beispiele
 
 ### Mediapool Widget-Integration
 
@@ -359,15 +389,36 @@ MIT License 2.0.0-beta1 (2024-12-18)
 - **Diskussionen**: https://github.com/FriendsOfREDAXO/uppy/discussions
 - **Slack**: https://friendsofredaxo.slack.com
 
-## Changelog
-
-### Version 2.0.1 (upcoming)
-
 - ✅ **Image Editor** - Bildbearbeitung mit festen Seitenverhältnissen (1:1, 16:9, 4:3, 3:2, free)
 - ✅ Demo-Seite für Image Editor Features
 - ⚠️ Audio Plugin noch nicht verfügbar (wartet auf Uppy 5.x Kompatibilität)
 
-### Version 2.0.0-beta1
+## Changelog
+
+### Version 2.0.0-beta1 (2024-12-18)
+
+**Neue Features:**
+- ✅ **Image Editor Integration** - Bildbearbeitung mit Cropper.js
+  - Aktivierung per Feld via `data-enable-image-editor="true"`
+  - Feste Seitenverhältnisse: 1:1, 16:9, 4:3, 3:2, free
+  - Automatisches Öffnen bei Einzel-Uploads
+  - Zuschneiden, Drehen, Spiegeln, Zoomen
+- ✅ **Demo-Seite** für Image Editor Features
+- ✅ **Dynamische UI-Höhen** - Dashboard passt sich Dateianzahl an
+- ✅ **Optimierte Preview-Bilder** - Max. 80px Höhe in FileCards
+
+**Verbesserungen:**
+- ✅ Image Editor wird pro Feld konfiguriert (nicht global)
+- ✅ Dynamische Anzeige "Dateien hochladen (max. X)" aus `data-max-files`
+- ✅ Console-Logs reduziert (nur kritische Fehler)
+- ✅ Verbesserte Benutzerführung bei Bildbearbeitung
+
+**Technisch:**
+- Uppy 5.2.0 mit @uppy/image-editor@4.1.0
+- Cropper.js Integration
+- ESBuild lokaler Build
+
+### Version 1.0.0 (vorherige Releases)
 
 - ✅ Uppy 5.0 Integration mit lokalem Build
 - ✅ Chunk-Upload für große Dateien
@@ -377,3 +428,28 @@ MIT License 2.0.0-beta1 (2024-12-18)
 - ✅ Dark Theme Support
 - ✅ YForm-Integration
 - ✅ Backend- und Frontend-Unterstützung
+
+## Credits
+
+**Uppy Uploader AddOn für REDAXO**
+
+- **Autor:** [Friends Of REDAXO](https://github.com/FriendsOfREDAXO)
+- **Haupt-Entwickler:** [Thomas Skerbis](https://github.com/skerbis)
+- **Basiert auf:** [Uppy](https://uppy.io/) by Transloadit (MIT License)
+- **Image Editor:** [Cropper.js](https://fengyuanchen.github.io/cropperjs/) (MIT License)
+
+**Besonderer Dank an:**
+- Das REDAXO Core-Team für das ausgezeichnete CMS
+- Transloadit für Uppy - eines der besten Upload-Frameworks
+- Die REDAXO Community für Feedback und Testing
+
+**Support & Community:**
+- GitHub Issues: https://github.com/FriendsOfREDAXO/uppy/issues
+- REDAXO Slack: https://friendsofredaxo.slack.com
+- Forum: https://redaxo.org/forum/
+
+**Lizenz:** MIT License
+
+---
+
+Made with ❤️ for the REDAXO Community
