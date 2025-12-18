@@ -189,7 +189,10 @@ jQuery(document).ready(function() {
         if (window.uppyInstances && window.uppyInstances.length > 0) {
             window.uppyInstances.forEach(function(uppy, index) {
                 console.log('Instanz ' + index + ':', uppy.getID());
-                console.log('  - Plugins:', Object.keys(uppy.getPlugins()));
+                console.log('  - State:', uppy.getState());
+                // Prüfe ob ImageEditor Plugin geladen ist
+                var plugins = uppy.getState().plugins || {};
+                console.log('  - Geladene Plugins:', Object.keys(plugins));
             });
         }
     }, 2000);
