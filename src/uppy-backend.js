@@ -10,6 +10,11 @@ import ImageEditor from '@uppy/image-editor';
 import German from '@uppy/locales/lib/de_DE';
 
 // DEBUG: Sofort beim Laden ausgeben
+console.log('=== UPPY BACKEND BUNDLE GELADEN ===');
+console.log('Uppy:', typeof Uppy);
+console.log('Dashboard:', typeof Dashboard);
+console.log('Webcam:', typeof Webcam);
+console.log('ImageEditor:', typeof ImageEditor);
 
 window.UPPY_BUNDLE_LOADED = true;
 
@@ -133,46 +138,63 @@ function initializeUppyPlugins(uppy, config, inputElement) {
     const cropRatios = globalConfig.crop_ratios || '1:1,16:9,4:3,3:2,free';
     
     // Image Editor Plugin (optional)
+    console.log('Image Editor Config:', {
+        enableImageEditor,
+        cropRatios,
+        typeof_ImageEditor: typeof ImageEditor
+    });
+    
     if (enableImageEditor) {
+        console.log('AKTIVIERE Image Editor Plugin...');
+        
         const ratios = cropRatios.split(',').map(ratio => {
             if (ratio === 'free') return null;
             const parts = ratio.split(':').map(Number);
             return parts.length === 2 ? parts[0] / parts[1] : null;
         }).filter(r => r !== null);
         
-        uppy.use(ImageEditor, {
-            quality: config.resize_quality / 100, // 85 -> 0.85
-            cropperOptions: {
-                viewMode: 1,
-                background: false,
-                autoCropArea: 1,
-                responsive: true,
-                aspectRatio: ratios.length > 0 ? ratios[0] : null, // Erstes Ratio als Default
-            },
-            actions: {
-                revert: true,
-                rotate: true,
-                granularRotate: true,
-                flip: true,
-                zoomIn: true,
-                zoomOut: true,
-                cropSquare: cropRatios.includes('1:1'),
-                cropWidescreen: cropRatios.includes('16:9'),
-                cropWidescreenVertical: cropRatios.includes('9:16'),
-            },
-            locale: {
-                strings: {
-                    revert: 'Zurücksetzen',
-                    rotate: 'Drehen',
-                    zoomIn: 'Vergrößern',
-                    zoomOut: 'Verkleinern',
-                    flipHorizontal: 'Horizontal spiegeln',
-                    aspectRatioSquare: '1:1',
-                    aspectRatioLandscape: '16:9',
-                    aspectRatioPortrait: '9:16',
+        console.log('Verfügbare Crop Ratios:', ratios);
+        
+        try {
+            uppy.use(ImageEditor, {
+                quality: config.resize_quality / 100, // 85 -> 0.85
+                cropperOptions: {
+                    viewMode: 1,
+                    background: false,
+                    autoCropArea: 1,
+                    responsive: true,
+                    aspectRatio: ratios.length > 0 ? ratios[0] : null, // Erstes Ratio als Default
+                },
+                actions: {
+                    revert: true,
+                    rotate: true,
+                    granularRotate: true,
+                    flip: true,
+                    zoomIn: true,
+                    zoomOut: true,
+                    cropSquare: cropRatios.includes('1:1'),
+                    cropWidescreen: cropRatios.includes('16:9'),
+                    cropWidescreenVertical: cropRatios.includes('9:16'),
+                },
+                locale: {
+                    strings: {
+                        revert: 'Zurücksetzen',
+                        rotate: 'Drehen',
+                        zoomIn: 'Vergrößern',
+                        zoomOut: 'Verkleinern',
+                        flipHorizontal: 'Horizontal spiegeln',
+                        aspectRatioSquare: '1:1',
+                        aspectRatioLandscape: '16:9',
+                        aspectRatioPortrait: '9:16',
+                    }
                 }
-            }
-        });
+            });
+            console.log('Image Editor Plugin erfolgreich registriert');
+        } catch (error) {
+            console.error('Fehler beim Registrieren von Image Editor:', error);
+        }
+    } else {
+        console.log('Image Editor ist deaktiviert (enable_image_editor = false)');
     }
     
     if (enableWebcam) {

@@ -40,8 +40,9 @@ if (rex::isBackend() && rex::getUser()) {
             'crop_ratios' => rex_config::get('uppy', 'crop_ratios', '1:1,16:9,4:3,3:2,free')
         ]);
         
-        // JavaScript Bundle (lokal gebaut mit esbuild)
-        rex_view::addJsFile($this->getAssetsUrl('uppy-backend-bundle.js?v=' . $this->getVersion()));
+        // JavaScript Bundle (lokal gebaut mit esbuild) - mit Timestamp für Cache-Busting
+        $version = $this->getVersion() . '.' . filemtime($this->getPath('assets/uppy-backend-bundle.js'));
+        rex_view::addJsFile($this->getAssetsUrl('uppy-backend-bundle.js?v=' . $version));
         
         $uppyScriptsLoaded = true;
     }

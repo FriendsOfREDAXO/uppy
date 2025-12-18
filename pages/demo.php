@@ -28,11 +28,23 @@ $content = '
                     <li><strong>Free</strong> - Freies Zuschneiden ohne Beschränkung</li>
                 </ul>
                 
-                <div class="alert alert-info">
-                    <strong>Hinweis:</strong> Um den Image Editor zu aktivieren, gehen Sie zu 
-                    <a href="index.php?page=uppy/settings">Einstellungen</a> und aktivieren Sie 
-                    <code>enable_image_editor</code>.
+                <?php if (!rex_config::get('uppy', 'enable_image_editor', false)): ?>
+                <div class="alert alert-warning">
+                    <h4><i class="rex-icon fa-exclamation-triangle"></i> Image Editor ist deaktiviert!</h4>
+                    <p>Um die Bildbearbeitung zu nutzen, aktivieren Sie bitte:</p>
+                    <ol>
+                        <li>Gehen Sie zu <a href="index.php?page=uppy/settings" class="alert-link"><strong>Einstellungen</strong></a></li>
+                        <li>Aktivieren Sie die Checkbox <strong>"Image Editor aktivieren"</strong></li>
+                        <li>Klicken Sie auf <strong>"Speichern"</strong></li>
+                        <li>Laden Sie diese Seite neu</li>
+                    </ol>
                 </div>
+                <?php else: ?>
+                <div class="alert alert-success">
+                    <i class="rex-icon fa-check"></i> <strong>Image Editor ist aktiviert!</strong> 
+                    Sie können jetzt Bilder hochladen und bearbeiten.
+                </div>
+                <?php endif; ?>
                 
                 <h4>Beispiel 1: Avatar Upload (1:1)</h4>
                 <p>Perfekt für Benutzerprofile - erzwingt quadratisches Format:</p>
@@ -97,13 +109,17 @@ $content = '
                 
                 <hr>
                 
-                <h3>Konfiguration</h3>
+                <h3>Konfiguration & Debug</h3>
                 <p>Aktuelle Einstellungen:</p>
                 <table class="table table-striped">
                     <tbody>
                         <tr>
                             <th>Image Editor aktiviert:</th>
                             <td>' . (rex_config::get('uppy', 'enable_image_editor', false) ? '<span class="label label-success">Ja</span>' : '<span class="label label-default">Nein</span>') . '</td>
+                        </tr>
+                        <tr>
+                            <th>API Token gesetzt:</th>
+                            <td>' . (rex_config::get('uppy', 'api_token', '') !== '' ? '<span class="label label-success">Ja</span>' : '<span class="label label-danger">Nein - bitte in install.php generieren</span>') . '</td>
                         </tr>
                         <tr>
                             <th>Verfügbare Seitenverhältnisse:</th>
@@ -148,4 +164,29 @@ $content = '
 ';
 
 echo $content;
+
+?>
+<script>
+// Debug: Konfiguration prüfen
+jQuery(document).ready(function() {
+    console.log('=== DEMO-SEITE DEBUG ===');
+    console.log('rex.uppy_config:', window.rex?.uppy_config);
+    console.log('enable_image_editor:', window.rex?.uppy_config?.enable_image_editor);
+    console.log('crop_ratios:', window.rex?.uppy_config?.crop_ratios);
+    console.log('UPPY_BUNDLE_LOADED:', window.UPPY_BUNDLE_LOADED);
+    
+    // Nach 2 Sekunden prüfen ob Uppy-Instanzen existieren
+    setTimeout(function() {
+        console.log('=== UPPY INSTANZEN CHECK ===');
+        console.log('Anzahl Instanzen:', window.uppyInstances?.length || 0);
+        if (window.uppyInstances && window.uppyInstances.length > 0) {
+            window.uppyInstances.forEach(function(uppy, index) {
+                console.log('Instanz ' + index + ':', uppy.getID());
+                console.log('  - Plugins:', Object.keys(uppy.getPlugins()));
+            });
+        }
+    }, 2000);
+});
+</script>
+<?php
 

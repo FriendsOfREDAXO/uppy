@@ -14265,6 +14265,11 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
   var de_DE_default = de_DE;
 
   // src/uppy-backend.js
+  console.log("=== UPPY BACKEND BUNDLE GELADEN ===");
+  console.log("Uppy:", typeof Uppy_default);
+  console.log("Dashboard:", typeof Dashboard2);
+  console.log("Webcam:", typeof Webcam);
+  console.log("ImageEditor:", typeof ImageEditor);
   window.UPPY_BUNDLE_LOADED = true;
   function initUppyWidgets() {
     const widgets = document.querySelectorAll('input[data-widget="uppy"]:not([data-uppy-initialized])');
@@ -14344,47 +14349,61 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
     const enableWebcam = globalConfig.enable_webcam || false;
     const enableImageEditor = globalConfig.enable_image_editor || false;
     const cropRatios = globalConfig.crop_ratios || "1:1,16:9,4:3,3:2,free";
+    console.log("Image Editor Config:", {
+      enableImageEditor,
+      cropRatios,
+      typeof_ImageEditor: typeof ImageEditor
+    });
     if (enableImageEditor) {
+      console.log("AKTIVIERE Image Editor Plugin...");
       const ratios = cropRatios.split(",").map((ratio) => {
         if (ratio === "free") return null;
         const parts = ratio.split(":").map(Number);
         return parts.length === 2 ? parts[0] / parts[1] : null;
       }).filter((r4) => r4 !== null);
-      uppy.use(ImageEditor, {
-        quality: config.resize_quality / 100,
-        // 85 -> 0.85
-        cropperOptions: {
-          viewMode: 1,
-          background: false,
-          autoCropArea: 1,
-          responsive: true,
-          aspectRatio: ratios.length > 0 ? ratios[0] : null
-          // Erstes Ratio als Default
-        },
-        actions: {
-          revert: true,
-          rotate: true,
-          granularRotate: true,
-          flip: true,
-          zoomIn: true,
-          zoomOut: true,
-          cropSquare: cropRatios.includes("1:1"),
-          cropWidescreen: cropRatios.includes("16:9"),
-          cropWidescreenVertical: cropRatios.includes("9:16")
-        },
-        locale: {
-          strings: {
-            revert: "Zur\xFCcksetzen",
-            rotate: "Drehen",
-            zoomIn: "Vergr\xF6\xDFern",
-            zoomOut: "Verkleinern",
-            flipHorizontal: "Horizontal spiegeln",
-            aspectRatioSquare: "1:1",
-            aspectRatioLandscape: "16:9",
-            aspectRatioPortrait: "9:16"
+      console.log("Verf\xFCgbare Crop Ratios:", ratios);
+      try {
+        uppy.use(ImageEditor, {
+          quality: config.resize_quality / 100,
+          // 85 -> 0.85
+          cropperOptions: {
+            viewMode: 1,
+            background: false,
+            autoCropArea: 1,
+            responsive: true,
+            aspectRatio: ratios.length > 0 ? ratios[0] : null
+            // Erstes Ratio als Default
+          },
+          actions: {
+            revert: true,
+            rotate: true,
+            granularRotate: true,
+            flip: true,
+            zoomIn: true,
+            zoomOut: true,
+            cropSquare: cropRatios.includes("1:1"),
+            cropWidescreen: cropRatios.includes("16:9"),
+            cropWidescreenVertical: cropRatios.includes("9:16")
+          },
+          locale: {
+            strings: {
+              revert: "Zur\xFCcksetzen",
+              rotate: "Drehen",
+              zoomIn: "Vergr\xF6\xDFern",
+              zoomOut: "Verkleinern",
+              flipHorizontal: "Horizontal spiegeln",
+              aspectRatioSquare: "1:1",
+              aspectRatioLandscape: "16:9",
+              aspectRatioPortrait: "9:16"
+            }
           }
-        }
-      });
+        });
+        console.log("Image Editor Plugin erfolgreich registriert");
+      } catch (error) {
+        console.error("Fehler beim Registrieren von Image Editor:", error);
+      }
+    } else {
+      console.log("Image Editor ist deaktiviert (enable_image_editor = false)");
     }
     if (enableWebcam) {
       uppy.use(Webcam, {
