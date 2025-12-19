@@ -217,8 +217,22 @@ export class UppyCustomWidget {
 
         // XHR Upload
         const tokenParam = config.apiToken ? encodeURIComponent(config.apiToken) : '';
+        
+        // Signatur-Parameter vorbereiten
+        let signatureParams = '';
+        const signature = this.input.dataset.uppySignature;
+        
+        if (signature) {
+            const allowedTypes = this.input.dataset.allowedTypes || '';
+            const maxFilesize = this.input.dataset.maxFilesize || '';
+            
+            signatureParams = `&uppy_signature=${encodeURIComponent(signature)}` +
+                              `&uppy_allowed_types=${encodeURIComponent(allowedTypes)}` +
+                              `&uppy_max_filesize=${encodeURIComponent(maxFilesize)}`;
+        }
+
         this.uppy.use(XHRUpload, {
-            endpoint: window.location.origin + '/redaxo/index.php?rex-api-call=uppy_uploader&func=upload&api_token=' + tokenParam + '&category_id=' + config.categoryId,
+            endpoint: window.location.origin + '/redaxo/index.php?rex-api-call=uppy_uploader&func=upload&api_token=' + tokenParam + '&category_id=' + config.categoryId + signatureParams,
             formData: true,
             fieldName: 'file',
             headers: {

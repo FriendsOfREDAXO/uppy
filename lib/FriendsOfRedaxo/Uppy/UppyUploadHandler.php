@@ -407,7 +407,67 @@ class UppyUploadHandler extends rex_api_function
      */
     protected function processUploadedFile(array $file, int $categoryId, array $metadata): string
     {
-        // Validierung
+        // 1. Signatur-Prüfung (Manipulationsschutz)
+        $signature = rex_request('uppy_signature', 'string', '');
+        
+        if ($signature) {
+            // Parameter sammeln, die signiert sein müssen
+            $params = [
+                'category_id' => $categoryId,
+                'allowed_types' => rex_request('uppy_allowed_types', 'string', ''),
+                'max_filesize' => rex_request('uppy_max_filesize', 'string', ''),
+            ];
+            
+            // Signatur prüfen
+            if (!Signature::verify($params, $signature)) {
+                rex_logger::logError('UPPY_SECURITY', 'Invalid signature for upload. Params: ' . json_encode($params));
+                throw new rex_api_exception('Security violation: Invalid signature');
+            }
+            
+            // 2. Erweiterte Validierung basierend auf signierten Parametern
+            
+            // Dateigröße prüfen
+            if (!empty($params['max_filesize'])) {
+                $maxSize = (int) $params['max_filesize'];
+                if ($file['size'] > $maxSize) {
+                    throw new rex_api_exception('File too large (Max: ' . rex_formatter::bytes($maxSize) . ')');
+                }
+            }
+            
+            // Dateityp prüfen
+            if (!empty($params['allowed_types'])) {
+                $allowedTypes = explode(',', $params['allowed_types']);
+                $fileType = $file['type'];
+                $fileExt = '.' . pathinfo($file['name'], PATHINFO_EXTENSION);
+                
+                $isValid = false;
+                foreach ($allowedTypes as $type) {
+                    $type = trim($type);
+                    // MIME-Type Match (z.B. image/* oder image/jpeg)
+                    if (str_ends_with($type, '/*')) {
+                        $baseType = substr($type, 0, -2);
+                        if (str_starts_with($fileType, $baseType)) {
+                            $isValid = true;
+                            break;
+                        }
+                    } elseif ($type === $fileType) {
+                        $isValid = true;
+                        break;
+                    }
+                    // Extension Match (z.B. .jpg)
+                    elseif (str_starts_with($type, '.') && strcasecmp($type, $fileExt) === 0) {
+                        $isValid = true;
+                        break;
+                    }
+                }
+                
+                if (!$isValid) {
+                    throw new rex_api_exception('File type not allowed');
+                }
+            }
+        }
+
+        // 3. Standard-Validierung (Global)
         $maxSize = rex_config::get('uppy', 'max_filesize', 200) * 1024 * 1024;
         if ($file['size'] > $maxSize) {
             throw new rex_api_exception('File too large');

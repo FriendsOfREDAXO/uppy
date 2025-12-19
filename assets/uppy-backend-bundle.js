@@ -14265,6 +14265,9 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
   var de_DE_default = de_DE;
 
   // src/uppy-custom-widget.js
+  if (de_DE_default && de_DE_default.strings) {
+    de_DE_default.strings.help = "Hilfe";
+  }
   var UppyCustomWidget = class {
     constructor(inputElement, options = {}) {
       this.input = inputElement;
@@ -14291,7 +14294,9 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
         maxFileSize: (parseInt(this.input.dataset.maxFilesize) || parseInt(globalConfig.max_file_size) || 200) * 1024 * 1024,
         allowedTypes: this.input.dataset.allowedTypes ? this.input.dataset.allowedTypes.split(",").map((t4) => t4.trim()) : globalConfig.allowed_types ? globalConfig.allowed_types.split(",").map((t4) => t4.trim()) : [],
         categoryId: parseInt(this.input.dataset.categoryId) || 0,
-        locale: this.input.dataset.locale || "de-DE",
+        locale: this.input.dataset.locale || this.input.dataset.lang || "de-DE",
+        enableImageEditor: this.input.dataset.enableImageEditor === "true",
+        enableWebcam: this.input.dataset.enableWebcam === "true",
         ...this.options
       };
     }
@@ -14419,9 +14424,30 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
         closeAfterFinish: false,
         disablePageScrollWhenModalOpen: false
       });
+      if (config.enableImageEditor) {
+        this.uppy.use(ImageEditor, {
+          target: Dashboard2,
+          quality: 0.8
+        });
+      }
+      if (config.enableWebcam) {
+        this.uppy.use(Webcam, {
+          target: Dashboard2,
+          modes: ["picture"],
+          mirror: true,
+          facingMode: "user"
+        });
+      }
       const tokenParam = config.apiToken ? encodeURIComponent(config.apiToken) : "";
+      let signatureParams = "";
+      const signature = this.input.dataset.uppySignature;
+      if (signature) {
+        const allowedTypes = this.input.dataset.allowedTypes || "";
+        const maxFilesize = this.input.dataset.maxFilesize || "";
+        signatureParams = `&uppy_signature=${encodeURIComponent(signature)}&uppy_allowed_types=${encodeURIComponent(allowedTypes)}&uppy_max_filesize=${encodeURIComponent(maxFilesize)}`;
+      }
       this.uppy.use(XHRUpload, {
-        endpoint: window.location.origin + "/redaxo/index.php?rex-api-call=uppy_uploader&func=upload&api_token=" + tokenParam + "&category_id=" + config.categoryId,
+        endpoint: window.location.origin + "/redaxo/index.php?rex-api-call=uppy_uploader&func=upload&api_token=" + tokenParam + "&category_id=" + config.categoryId + signatureParams,
         formData: true,
         fieldName: "file",
         headers: {
@@ -14663,6 +14689,9 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
   };
 
   // src/uppy-backend.js
+  if (de_DE_default && de_DE_default.strings) {
+    de_DE_default.strings.help = "Hilfe";
+  }
   window.UPPY_BUNDLE_LOADED = true;
   var ChunkUploader = class {
     constructor(uppy, opts) {
@@ -14734,7 +14763,7 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
       formData.append("fileId", fileId);
       formData.append("fileName", file.name);
       formData.append("fieldName", "file");
-      const url = `${window.location.origin}/redaxo/index.php?rex-api-call=uppy_uploader&func=prepare&api_token=${this.opts.apiToken}`;
+      const url = `${this.opts.endpoint}&func=prepare&api_token=${this.opts.apiToken}`;
       const response = await fetch(url, {
         method: "POST",
         body: formData,
@@ -14756,7 +14785,7 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
         formData.append("chunkIndex", chunkIndex);
         formData.append("totalChunks", totalChunks);
         formData.append("fieldName", "file");
-        const url = `${window.location.origin}/redaxo/index.php?rex-api-call=uppy_uploader&func=chunk&category_id=${this.opts.categoryId}&api_token=${this.opts.apiToken}`;
+        const url = `${this.opts.endpoint}&func=chunk&category_id=${this.opts.categoryId}&api_token=${this.opts.apiToken}`;
         const xhr = new XMLHttpRequest();
         xhr.open("POST", url, true);
         xhr.withCredentials = true;
@@ -14799,7 +14828,7 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
       formData.append("fileName", file.name);
       formData.append("totalChunks", totalChunks);
       formData.append("fieldName", "file");
-      const url = `${window.location.origin}/redaxo/index.php?rex-api-call=uppy_uploader&func=finalize&category_id=${this.opts.categoryId}&api_token=${this.opts.apiToken}`;
+      const url = `${this.opts.endpoint}&func=finalize&category_id=${this.opts.categoryId}&api_token=${this.opts.apiToken}`;
       const response = await fetch(url, {
         method: "POST",
         body: formData,
@@ -14901,6 +14930,14 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
       if (enableImageEditor) {
         registerImageEditor(uppy, config, globalConfig);
       }
+      let dashboardMetaFields = metaFields.filter((f5) => !f5.is_multilang);
+      if (dashboardMetaFields.length === 0 && metaFields.length > 0 && !enableImageEditor) {
+        dashboardMetaFields = [{
+          id: "meta_hint",
+          name: "Metadaten",
+          placeholder: "Klicken zum Bearbeiten der Metadaten"
+        }];
+      }
       const dashboardOptions = {
         inline: true,
         target: container,
@@ -14911,7 +14948,7 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
         note: getTranslation(config.locale, "note", config.maxFiles),
         disablePageScrollWhenModalOpen: false,
         // metaFields MÜSSEN angegeben werden, sonst gibt es keinen Edit-Button
-        metaFields: metaFields.length > 0 ? metaFields : void 0
+        metaFields: dashboardMetaFields.length > 0 ? dashboardMetaFields : void 0
       };
       if (enableImageEditor && config.maxFiles === 1) {
         dashboardOptions.autoOpen = "imageEditor";
@@ -14998,9 +15035,16 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
     }
     const currentCategoryId = parseInt(inputElement.dataset.categoryId) || 0;
     const tokenParam = config.apiToken ? encodeURIComponent(config.apiToken) : "";
+    let signatureParams = "";
+    const signature = inputElement.dataset.uppySignature;
+    if (signature) {
+      const allowedTypes = inputElement.dataset.allowedTypes || "";
+      const maxFilesize = inputElement.dataset.maxFilesize || "";
+      signatureParams = `&uppy_signature=${encodeURIComponent(signature)}&uppy_allowed_types=${encodeURIComponent(allowedTypes)}&uppy_max_filesize=${encodeURIComponent(maxFilesize)}`;
+    }
     if (config.enable_chunks) {
       const chunkUploader = new ChunkUploader(uppy, {
-        endpoint: window.location.origin + "/redaxo/index.php?rex-api-call=uppy_uploader",
+        endpoint: window.location.origin + "/redaxo/index.php?rex-api-call=uppy_uploader" + signatureParams,
         chunkSize: config.chunk_size,
         categoryId: currentCategoryId,
         apiToken: tokenParam
@@ -15008,7 +15052,7 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
       chunkUploader.install();
     } else {
       uppy.use(XHRUpload, {
-        endpoint: window.location.origin + "/redaxo/index.php?rex-api-call=uppy_uploader&func=upload&api_token=" + tokenParam + "&category_id=" + currentCategoryId,
+        endpoint: window.location.origin + "/redaxo/index.php?rex-api-call=uppy_uploader&func=upload&api_token=" + tokenParam + "&category_id=" + currentCategoryId + signatureParams,
         formData: true,
         fieldName: "file",
         allowedMetaFields: true,
@@ -15326,66 +15370,41 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
       return;
     }
     console.log("Image Editor inaktiv - Edit-Button wird f\xFCr Metadata-Modal verwendet");
-    const observeFileItems = function() {
-      const filesContainer = document.querySelector(".uppy-Dashboard-filesInner");
-      if (!filesContainer) {
-        console.log("Warte auf Dashboard Container...");
-        setTimeout(observeFileItems, 100);
+    const installDelegation = function() {
+      const dashboard = uppy.getPlugin("Dashboard");
+      if (!dashboard) {
+        setTimeout(installDelegation, 100);
         return;
       }
-      console.log("Dashboard Container gefunden, starte Observer");
-      const processFileItem = function(fileItem) {
-        const fileId = fileItem.id;
-        let editBtn = null;
-        const allActions = fileItem.querySelectorAll(".uppy-Dashboard-Item-action");
-        allActions.forEach((btn) => {
-          if (btn.classList.contains("uppy-Dashboard-Item-action--edit")) {
-            editBtn = btn;
-          }
-        });
-        if (!editBtn) {
-          console.log("Kein Edit-Button gefunden f\xFCr:", fileId);
-          return;
-        }
-        if (editBtn.hasAttribute("data-uppy-custom-handler")) {
-          console.log("Handler bereits registriert f\xFCr:", fileId);
-          return;
-        }
-        console.log("Registriere Click-Handler f\xFCr:", fileId);
-        editBtn.setAttribute("data-uppy-custom-handler", "true");
-        editBtn.addEventListener("click", function(e4) {
-          console.log("Edit-Button geklickt f\xFCr:", fileId);
+      const dashboardEl = dashboard.el;
+      if (!dashboardEl) {
+        console.log("Warte auf Dashboard Element...");
+        setTimeout(installDelegation, 100);
+        return;
+      }
+      console.log("Installiere Event Delegation auf Dashboard Element");
+      dashboardEl.addEventListener("click", function(e4) {
+        const editBtn = e4.target.closest(".uppy-Dashboard-Item-action--edit");
+        if (editBtn) {
+          console.log("Edit-Button geklickt (Delegation)");
           e4.preventDefault();
           e4.stopPropagation();
-          const files = uppy.getFiles();
-          const file = files.find((f5) => fileItem.id.includes(f5.id));
-          if (file) {
-            console.log("\xD6ffne Metadata Modal f\xFCr:", file.name);
-            showMetadataModal(uppy, file, metaFields);
-          } else {
-            console.error("Datei nicht gefunden in Uppy:", fileId);
-          }
-        }, true);
-      };
-      const existingItems = filesContainer.querySelectorAll(".uppy-Dashboard-Item");
-      console.log("Verarbeite", existingItems.length, "existierende Items");
-      existingItems.forEach(processFileItem);
-      const observer = new MutationObserver(function(mutations) {
-        mutations.forEach(function(mutation) {
-          mutation.addedNodes.forEach(function(node) {
-            if (node.nodeType === Node.ELEMENT_NODE && node.classList && node.classList.contains("uppy-Dashboard-Item")) {
-              processFileItem(node);
+          e4.stopImmediatePropagation();
+          const fileItem = editBtn.closest(".uppy-Dashboard-Item");
+          if (fileItem) {
+            const files = uppy.getFiles();
+            const file = files.find((f5) => fileItem.id.includes(f5.id));
+            if (file) {
+              console.log("\xD6ffne Metadata Modal f\xFCr:", file.name);
+              showMetadataModal(uppy, file, metaFields);
+            } else {
+              console.error("Datei nicht gefunden in Uppy f\xFCr Item:", fileItem.id);
             }
-          });
-        });
-      });
-      observer.observe(filesContainer, {
-        childList: true,
-        subtree: true
-      });
-      console.log("MutationObserver gestartet");
+          }
+        }
+      }, true);
     };
-    setTimeout(observeFileItems, 200);
+    installDelegation();
   }
   function showMetadataModal(uppy, file, metaFields) {
     const modalHTML = `

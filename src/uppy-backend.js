@@ -113,7 +113,8 @@ class ChunkUploader {
         formData.append('fileName', file.name);
         formData.append('fieldName', 'file');
         
-        const url = `${window.location.origin}/redaxo/index.php?rex-api-call=uppy_uploader&func=prepare&api_token=${this.opts.apiToken}`;
+        // Endpoint URL enthält bereits Signatur-Parameter (siehe Constructor)
+        const url = `${this.opts.endpoint}&func=prepare&api_token=${this.opts.apiToken}`;
         
         const response = await fetch(url, {
             method: 'POST',
@@ -140,7 +141,8 @@ class ChunkUploader {
             formData.append('totalChunks', totalChunks);
             formData.append('fieldName', 'file');
             
-            const url = `${window.location.origin}/redaxo/index.php?rex-api-call=uppy_uploader&func=chunk&category_id=${this.opts.categoryId}&api_token=${this.opts.apiToken}`;
+            // Endpoint URL enthält bereits Signatur-Parameter
+            const url = `${this.opts.endpoint}&func=chunk&category_id=${this.opts.categoryId}&api_token=${this.opts.apiToken}`;
             
             const xhr = new XMLHttpRequest();
             xhr.open('POST', url, true);
@@ -195,7 +197,8 @@ class ChunkUploader {
         formData.append('totalChunks', totalChunks);
         formData.append('fieldName', 'file');
         
-        const url = `${window.location.origin}/redaxo/index.php?rex-api-call=uppy_uploader&func=finalize&category_id=${this.opts.categoryId}&api_token=${this.opts.apiToken}`;
+        // Endpoint URL enthält bereits Signatur-Parameter
+        const url = `${this.opts.endpoint}&func=finalize&category_id=${this.opts.categoryId}&api_token=${this.opts.apiToken}`;
         
         const response = await fetch(url, {
             method: 'POST',
@@ -341,6 +344,21 @@ function initializeUppyWidget(inputElement) {
         if (enableImageEditor) {
             registerImageEditor(uppy, config, globalConfig);
         }
+
+        // Filter metaFields for Dashboard (exclude multilang fields)
+        // Das Standard-Dashboard kann keine komplexen Mehrsprachigkeits-Felder darstellen
+        let dashboardMetaFields = metaFields.filter(f => !f.is_multilang);
+        
+        // Wenn keine Felder übrig bleiben, aber wir welche hatten (nur multilang),
+        // und kein Image Editor aktiv ist (der den Button eh erzwingt),
+        // fügen wir ein Dummy-Feld hinzu, damit der Edit-Button erscheint.
+        if (dashboardMetaFields.length === 0 && metaFields.length > 0 && !enableImageEditor) {
+            dashboardMetaFields = [{ 
+                id: 'meta_hint', 
+                name: 'Metadaten', 
+                placeholder: 'Klicken zum Bearbeiten der Metadaten' 
+            }];
+        }
         
         // Dashboard Plugin - MIT metaFields damit Edit-Button erscheint
         const dashboardOptions = {
@@ -353,7 +371,7 @@ function initializeUppyWidget(inputElement) {
             note: getTranslation(config.locale, 'note', config.maxFiles),
             disablePageScrollWhenModalOpen: false,
             // metaFields MÜSSEN angegeben werden, sonst gibt es keinen Edit-Button
-            metaFields: metaFields.length > 0 ? metaFields : undefined
+            metaFields: dashboardMetaFields.length > 0 ? dashboardMetaFields : undefined
         };
         
         // Wenn Image Editor aktiv ist, automatisch öffnen bei Bild-Upload (nur Einzel-Uploads)
@@ -465,10 +483,25 @@ function initializeUppyPlugins(uppy, config, inputElement, metaFields, valueInpu
     const currentCategoryId = parseInt(inputElement.dataset.categoryId) || 0;
     const tokenParam = config.apiToken ? encodeURIComponent(config.apiToken) : '';
     
+    // Signatur-Parameter vorbereiten
+    let signatureParams = '';
+    const signature = inputElement.dataset.uppySignature;
+    
+    if (signature) {
+        // Wenn Signatur vorhanden, müssen wir die signierten Parameter mitsenden
+        // Die Werte holen wir direkt aus dem DOM, da sie dort signiert wurden
+        const allowedTypes = inputElement.dataset.allowedTypes || '';
+        const maxFilesize = inputElement.dataset.maxFilesize || '';
+        
+        signatureParams = `&uppy_signature=${encodeURIComponent(signature)}` +
+                          `&uppy_allowed_types=${encodeURIComponent(allowedTypes)}` +
+                          `&uppy_max_filesize=${encodeURIComponent(maxFilesize)}`;
+    }
+
     if (config.enable_chunks) {
         // Custom Chunk Uploader für große Dateien
         const chunkUploader = new ChunkUploader(uppy, {
-            endpoint: window.location.origin + '/redaxo/index.php?rex-api-call=uppy_uploader',
+            endpoint: window.location.origin + '/redaxo/index.php?rex-api-call=uppy_uploader' + signatureParams,
             chunkSize: config.chunk_size,
             categoryId: currentCategoryId,
             apiToken: tokenParam
@@ -477,7 +510,7 @@ function initializeUppyPlugins(uppy, config, inputElement, metaFields, valueInpu
     } else {
         // Standard XHR Upload
         uppy.use(XHRUpload, {
-            endpoint: window.location.origin + '/redaxo/index.php?rex-api-call=uppy_uploader&func=upload&api_token=' + tokenParam + '&category_id=' + currentCategoryId,
+            endpoint: window.location.origin + '/redaxo/index.php?rex-api-call=uppy_uploader&func=upload&api_token=' + tokenParam + '&category_id=' + currentCategoryId + signatureParams,
             formData: true,
             fieldName: 'file',
             allowedMetaFields: true,
@@ -985,93 +1018,52 @@ function setupMetadataModal(uppy, metaFields) {
     // Nur wenn KEIN Image Editor: Edit-Button für Metadata-Modal abfangen
     console.log('Image Editor inaktiv - Edit-Button wird für Metadata-Modal verwendet');
 
-    // MutationObserver für File-Items
-    const observeFileItems = function() {
-        const filesContainer = document.querySelector('.uppy-Dashboard-filesInner');
-        if (!filesContainer) {
-            console.log('Warte auf Dashboard Container...');
-            setTimeout(observeFileItems, 100);
+    // Event Delegation statt direkter Listener
+    // Dies ist robuster gegen DOM-Updates (z.B. beim Löschen von Dateien)
+    const installDelegation = function() {
+        const dashboard = uppy.getPlugin('Dashboard');
+        if (!dashboard) {
+            setTimeout(installDelegation, 100);
             return;
         }
         
-        console.log('Dashboard Container gefunden, starte Observer');
-
-        const processFileItem = function(fileItem) {
-            const fileId = fileItem.id;
+        const dashboardEl = dashboard.el;
+        if (!dashboardEl) {
+            console.log('Warte auf Dashboard Element...');
+            setTimeout(installDelegation, 100);
+            return;
+        }
+        
+        console.log('Installiere Event Delegation auf Dashboard Element');
+        
+        // Capture Phase nutzen, um vor Uppy zu sein
+        dashboardEl.addEventListener('click', function(e) {
+            const editBtn = e.target.closest('.uppy-Dashboard-Item-action--edit');
             
-            // Standard Edit-Button finden
-            let editBtn = null;
-            const allActions = fileItem.querySelectorAll('.uppy-Dashboard-Item-action');
-            allActions.forEach(btn => {
-                if (btn.classList.contains('uppy-Dashboard-Item-action--edit')) {
-                    editBtn = btn;
-                }
-            });
-            
-            if (!editBtn) {
-                console.log('Kein Edit-Button gefunden für:', fileId);
-                return;
-            }
-            
-            // Prüfen ob Handler bereits registriert
-            if (editBtn.hasAttribute('data-uppy-custom-handler')) {
-                console.log('Handler bereits registriert für:', fileId);
-                return;
-            }
-
-            console.log('Registriere Click-Handler für:', fileId);
-            
-            // Markiere als verarbeitet
-            editBtn.setAttribute('data-uppy-custom-handler', 'true');
-            
-            // Click-Event abfangen und unser Modal öffnen
-            editBtn.addEventListener('click', function(e) {
-                console.log('Edit-Button geklickt für:', fileId);
+            if (editBtn) {
+                console.log('Edit-Button geklickt (Delegation)');
                 e.preventDefault();
                 e.stopPropagation();
+                e.stopImmediatePropagation();
                 
-                // File-Objekt aus Uppy holen
-                const files = uppy.getFiles();
-                const file = files.find(f => fileItem.id.includes(f.id));
-                
-                if (file) {
-                    console.log('Öffne Metadata Modal für:', file.name);
-                    showMetadataModal(uppy, file, metaFields);
-                } else {
-                    console.error('Datei nicht gefunden in Uppy:', fileId);
-                }
-            }, true);
-        };
-        
-        // Bereits vorhandene File-Items verarbeiten
-        const existingItems = filesContainer.querySelectorAll('.uppy-Dashboard-Item');
-        console.log('Verarbeite', existingItems.length, 'existierende Items');
-        existingItems.forEach(processFileItem);
-        
-        // Observer für neue Items
-        const observer = new MutationObserver(function(mutations) {
-            mutations.forEach(function(mutation) {
-                mutation.addedNodes.forEach(function(node) {
-                    if (node.nodeType === Node.ELEMENT_NODE && 
-                        node.classList && 
-                        node.classList.contains('uppy-Dashboard-Item')) {
-
-                        processFileItem(node);
+                const fileItem = editBtn.closest('.uppy-Dashboard-Item');
+                if (fileItem) {
+                    const files = uppy.getFiles();
+                    // ID-Matching: Uppy IDs sind im DOM-ID enthalten
+                    const file = files.find(f => fileItem.id.includes(f.id));
+                    
+                    if (file) {
+                        console.log('Öffne Metadata Modal für:', file.name);
+                        showMetadataModal(uppy, file, metaFields);
+                    } else {
+                        console.error('Datei nicht gefunden in Uppy für Item:', fileItem.id);
                     }
-                });
-            });
-        });
-        
-        observer.observe(filesContainer, {
-            childList: true,
-            subtree: true
-        });
-        
-        console.log('MutationObserver gestartet');
+                }
+            }
+        }, true);
     };
     
-    // Start nach kurzer Verzögerung
-    setTimeout(observeFileItems, 200);
+    installDelegation();
 }
 
 /**

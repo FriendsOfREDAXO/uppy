@@ -85,7 +85,50 @@ In YForm können Sie das Uppy-Widget einfach über das Feld "Attribute" konfigur
 }
 ```
 
-### Demo Seite
+## Sicherheit: Manipulationsschutz (Signierte Uploads)
+
+Standardmäßig werden Einschränkungen wie `data-max-filesize` oder `data-allowed-types` nur client-seitig im Browser geprüft. Ein versierter Nutzer könnte diese Werte über die Entwicklertools manipulieren.
+
+Um dies zu verhindern, können Sie die Parameter serverseitig signieren. Dabei wird ein Hash über die erlaubten Werte generiert. Der Server prüft beim Upload, ob die Signatur zu den gesendeten Parametern passt.
+
+### Funktionsweise
+1. Sie definieren die Parameter in PHP.
+2. Die Klasse `FriendsOfRedaxo\Uppy\Signature` erstellt einen Hash (HMAC-SHA256) mit einem geheimen Schlüssel.
+3. Sie übergeben die Signatur im Attribut `data-uppy-signature`.
+4. Das Widget sendet die Signatur und die Parameter beim Upload mit.
+5. Der Server validiert die Signatur und lehnt den Upload ab, wenn die Regeln verletzt wurden.
+
+### Beispiel
+
+```php
+<?php
+use FriendsOfRedaxo\Uppy\Signature;
+
+// Parameter definieren
+$params = [
+    'category_id' => 1,
+    'allowed_types' => 'image/jpeg,image/png',
+    'max_filesize' => 500 * 1024 // 500 KB in Bytes
+];
+
+// Signatur erstellen
+$signature = Signature::create($params);
+?>
+
+<!-- Widget mit Signatur ausgeben -->
+<input type="hidden" 
+       name="REX_INPUT_VALUE[1]" 
+       value="REX_VALUE[1]"
+       data-widget="uppy" 
+       data-category-id="<?= $params['category_id'] ?>"
+       data-allowed-types="<?= $params['allowed_types'] ?>"
+       data-max-filesize="<?= $params['max_filesize'] ?>"
+       data-uppy-signature="<?= $signature ?>">
+```
+
+> **Hinweis:** Wenn eine Signatur vorhanden ist, werden die signierten Parameter (`category_id`, `allowed_types`, `max_filesize`) serverseitig strikt durchgesetzt.
+
+## Demo Seite
 
 Eine ausführliche Demo mit Live-Beispielen und Quellcode finden Sie im Backend unter **Uppy → Demo**.
 
@@ -107,6 +150,17 @@ Das Projekt nutzt `esbuild` für das Bundling der Assets.
 npm install
 npm run build
 ```
+
+## Autor
+
+**Friends Of REDAXO**
+
+* http://www.redaxo.org
+* https://github.com/FriendsOfREDAXO
+
+**Projektleitung**
+
+[Thomas Skerbis](https://github.com/skerbis)
 
 ## Lizenz
 MIT

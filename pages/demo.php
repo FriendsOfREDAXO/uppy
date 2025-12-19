@@ -6,6 +6,14 @@
 
 $package = rex_addon::get('uppy');
 
+// Signatur für Demo erstellen
+$signedParams = [
+    'category_id' => 0,
+    'allowed_types' => 'image/jpeg,image/png',
+    'max_filesize' => 500 * 1024 // 500 KB
+];
+$signature = FriendsOfRedaxo\Uppy\Signature::create($signedParams);
+
 // Fragment für Tabs erstellen
 $fragment = new rex_fragment();
 $fragment->setVar('title', 'Uppy Widget Demo', false);
@@ -118,6 +126,50 @@ $content = '
 /&gt;</code></pre>
                 </div>
             </div>
+
+            <hr>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>Beispiel: Signiert (Manipulationssicher)</label>
+                        <p class="help-block">Auch das Custom Widget unterstützt signierte Parameter.</p>
+                        <input 
+                            type="hidden" 
+                            class="uppy-upload-widget"
+                            name="demo_custom_signed" 
+                            value=""
+                            data-category-id="'.$signedParams['category_id'].'"
+                            data-allowed-types="'.$signedParams['allowed_types'].'"
+                            data-max-filesize="'.$signedParams['max_filesize'].'"
+                            data-uppy-signature="'.$signature.'"
+                        />
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <h4>Code (Signiert)</h4>
+                    <pre><code class="language-php">&lt;?php
+use FriendsOfRedaxo\Uppy\Signature;
+
+$params = [
+    \'category_id\' => 0,
+    \'allowed_types\' => \'image/jpeg,image/png\',
+    \'max_filesize\' => 500 * 1024 // 500 KB
+];
+$sig = Signature::create($params);
+?&gt;</code></pre>
+                    <pre><code class="language-html">&lt;input 
+    type="hidden" 
+    class="uppy-upload-widget"
+    name="rex_input_value_signed" 
+    value=""
+    data-category-id="&lt;?= $params[\'category_id\'] ?&gt;"
+    data-allowed-types="&lt;?= $params[\'allowed_types\'] ?&gt;"
+    data-max-filesize="&lt;?= $params[\'max_filesize\'] ?&gt;"
+    data-uppy-signature="&lt;?= $sig ?&gt;"
+/&gt;</code></pre>
+                </div>
+            </div>
         </div>
 
         <!-- Tab 3: Image Editor -->
@@ -150,11 +202,42 @@ $content = '
 /&gt;</code></pre>
                 </div>
             </div>
+
+            <hr>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>Beispiel: Auto-Open (Einzelbild)</label>
+                        <p class="help-block">Wenn <code>data-max-files="1"</code> gesetzt ist, öffnet sich der Editor automatisch nach dem Upload.</p>
+                        <input 
+                            type="hidden" 
+                            name="demo_editor_auto" 
+                            value=""
+                            data-widget="uppy"
+                            data-category-id="0"
+                            data-enable-image-editor="true"
+                            data-max-files="1"
+                        />
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <h4>Code</h4>
+                    <pre><code class="language-html">&lt;input 
+    type="hidden" 
+    name="rex_input_value" 
+    value=""
+    data-widget="uppy"
+    data-enable-image-editor="true"
+    data-max-files="1"
+/&gt;</code></pre>
+                </div>
+            </div>
         </div>
 
         <!-- Tab 4: Restrictions -->
         <div class="tab-pane" id="tab_restricted">
-            <h3>Einschränkungen</h3>
+            <h3>Einschränkungen & Sicherheit</h3>
             <p>Begrenzung auf bestimmte Dateitypen (z.B. nur Bilder) und Anzahl.</p>
             
             <div class="row">
@@ -181,6 +264,52 @@ $content = '
     data-widget="uppy"
     data-allowed-types="image/*"
     data-max-files="3" 
+/&gt;</code></pre>
+                </div>
+            </div>
+
+            <hr>
+
+            <h3>Manipulationssicherer Upload (Signiert)</h3>
+            <p>Um zu verhindern, dass Nutzer die Einschränkungen im Browser manipulieren (z.B. via Inspektor), können die Parameter serverseitig signiert werden.</p>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>Beispiel (Nur JPG/PNG, max 500KB, signiert):</label>
+                        <input 
+                            type="hidden" 
+                            name="demo_signed" 
+                            value=""
+                            data-widget="uppy"
+                            data-category-id="'.$signedParams['category_id'].'"
+                            data-allowed-types="'.$signedParams['allowed_types'].'"
+                            data-max-filesize="'.$signedParams['max_filesize'].'"
+                            data-uppy-signature="'.$signature.'"
+                        />
+                        <p class="help-block">Versuchen Sie im Inspektor <code>data-max-filesize</code> zu erhöhen - der Upload wird fehlschlagen.</p>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <h4>PHP Code</h4>
+                    <pre><code class="language-php">&lt;?php
+use FriendsOfRedaxo\Uppy\Signature;
+
+$params = [
+    \'category_id\' => 0,
+    \'allowed_types\' => \'image/jpeg,image/png\',
+    \'max_filesize\' => 500 * 1024 // 500 KB
+];
+$sig = Signature::create($params);
+?&gt;
+
+&lt;input 
+    type="hidden" 
+    data-widget="uppy"
+    data-category-id="&lt;?= $params[\'category_id\'] ?&gt;"
+    data-allowed-types="&lt;?= $params[\'allowed_types\'] ?&gt;"
+    data-max-filesize="&lt;?= $params[\'max_filesize\'] ?&gt;"
+    data-uppy-signature="&lt;?= $sig ?&gt;"
 /&gt;</code></pre>
                 </div>
             </div>
