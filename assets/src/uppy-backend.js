@@ -9,6 +9,7 @@ import XHRUpload from '@uppy/xhr-upload';
 import ImageEditor from '@uppy/image-editor';
 import German from '@uppy/locales/lib/de_DE';
 import { UppyCustomWidget } from './uppy-custom-widget';
+import { ChunkUploader } from './chunk-uploader';
 
 // Patch missing translations in German locale
 if (German && German.strings) {
@@ -16,38 +17,6 @@ if (German && German.strings) {
 }
 
 window.UPPY_BUNDLE_LOADED = true;
-
-/**
- * Custom Chunk Uploader für große Dateien
- * Orientiert an filepond's chunk-upload Implementierung
- */
-class ChunkUploader {
-    constructor(uppy, opts) {
-        this.uppy = uppy;
-        this.id = 'ChunkUploader'; // ID für Uppy
-        this.type = 'uploader';    // Typ für Uppy
-        this.opts = Object.assign({
-            endpoint: '',
-            chunkSize: 5 * 1024 * 1024, // 5MB default
-            categoryId: 0,
-            apiToken: ''
-        }, opts);
-        
-        this.uploaders = new Map();
-    }
-
-    install() {
-        this.uppy.addUploader(this.uploadFile.bind(this));
-    }
-
-    uninstall() {
-        // Cleanup
-    }
-
-    async uploadFile(fileIDs) {
-        const promises = fileIDs.map(id => this.uploadSingleFile(id));
-        return Promise.all(promises);
-    }
 
     async uploadSingleFile(fileID) {
         const file = this.uppy.getFile(fileID);
@@ -104,131 +73,6 @@ class ChunkUploader {
             this.uppy.emit('upload-error', file, error);
             throw error;
         }
-    }
-
-    async prepareUpload(file) {
-        const fileId = 'uppy_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-        const formData = new FormData();
-        formData.append('fileId', fileId);
-        formData.append('fileName', file.name);
-        formData.append('fieldName', 'file');
-        
-        // Endpoint URL enthält bereits Signatur-Parameter (siehe Constructor)
-        const url = `${this.opts.endpoint}&func=prepare&api_token=${this.opts.apiToken}`;
-        
-        const response = await fetch(url, {
-            method: 'POST',
-            body: formData,
-            credentials: 'same-origin'
-        });
-        
-        if (!response.ok) {
-            const text = await response.text();
-            console.error('Prepare failed:', text);
-            throw new Error('Prepare failed: ' + response.status);
-        }
-        
-        const data = await response.json();
-        return data.fileId || fileId;
-    }
-
-    async uploadChunk(fileId, chunk, chunkIndex, totalChunks, file) {
-        return new Promise((resolve, reject) => {
-            const formData = new FormData();
-            formData.append('file', chunk, file.name);
-            formData.append('fileId', fileId);
-            formData.append('chunkIndex', chunkIndex);
-            formData.append('totalChunks', totalChunks);
-            formData.append('fieldName', 'file');
-            
-            // Endpoint URL enthält bereits Signatur-Parameter
-            const url = `${this.opts.endpoint}&func=chunk&category_id=${this.opts.categoryId}&api_token=${this.opts.apiToken}`;
-            
-            const xhr = new XMLHttpRequest();
-            xhr.open('POST', url, true);
-            xhr.withCredentials = true;
-            
-            // Upload Progress für diesen Chunk
-            xhr.upload.onprogress = (e) => {
-                if (e.lengthComputable) {
-                    const chunkSize = this.opts.chunkSize;
-                    const start = chunkIndex * chunkSize;
-                    const totalUploaded = start + e.loaded;
-                    
-                    // console.log(`Progress: ${totalUploaded} / ${file.data.size}`);
-
-                    // Progress an Uppy melden
-                    this.uppy.emit('upload-progress', file, {
-                        uploader: this,
-                        bytesUploaded: totalUploaded,
-                        bytesTotal: file.data.size
-                    });
-                }
-            };
-            
-            xhr.onload = () => {
-                if (xhr.status >= 200 && xhr.status < 300) {
-                    try {
-                        const response = JSON.parse(xhr.responseText);
-                        resolve(response);
-                    } catch (err) {
-                        console.error(`Chunk ${chunkIndex} JSON parse error:`, err);
-                        reject(new Error(`Chunk ${chunkIndex} invalid response`));
-                    }
-                } else {
-                    console.error(`Chunk ${chunkIndex} upload failed:`, xhr.statusText);
-                    reject(new Error(`Chunk ${chunkIndex} upload failed: ` + xhr.status));
-                }
-            };
-            
-            xhr.onerror = () => {
-                console.error(`Chunk ${chunkIndex} network error`);
-                reject(new Error(`Chunk ${chunkIndex} network error`));
-            };
-            
-            xhr.send(formData);
-        });
-    }
-
-    async finalizeUpload(fileId, file, totalChunks) {
-        const formData = new FormData();
-        formData.append('fileId', fileId);
-        formData.append('fileName', file.name);
-        formData.append('totalChunks', totalChunks);
-        formData.append('fieldName', 'file');
-        
-        // Endpoint URL enthält bereits Signatur-Parameter
-        const url = `${this.opts.endpoint}&func=finalize&category_id=${this.opts.categoryId}&api_token=${this.opts.apiToken}`;
-        
-        const response = await fetch(url, {
-            method: 'POST',
-            body: formData,
-            credentials: 'same-origin'
-        });
-        
-        if (!response.ok) {
-            const text = await response.text();
-            console.error('Finalize failed:', text);
-            throw new Error('Finalize failed: ' + response.status);
-        }
-        
-        const data = await response.json();
-        
-        // Uppy erwartet ein Response-Objekt mit status und body
-        // body muss die gleiche Struktur wie XHR-Upload haben
-        const result = {
-            status: response.status,
-            body: {
-                success: data.success || true,
-                data: {
-                    filename: data.data?.filename || data.filename,
-                    title: data.data?.title || ''
-                }
-            },
-            uploadURL: '' // Wichtig für Dashboard, auch wenn leer
-        };
-        
-        return result;
     }
 }
 

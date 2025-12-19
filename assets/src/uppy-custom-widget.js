@@ -4,6 +4,7 @@ import Webcam from '@uppy/webcam';
 import XHRUpload from '@uppy/xhr-upload';
 import ImageEditor from '@uppy/image-editor';
 import German from '@uppy/locales/lib/de_DE';
+import { ChunkUploader } from './chunk-uploader';
 
 // Patch missing translations in German locale
 if (German && German.strings) {
@@ -241,13 +242,44 @@ export class UppyCustomWidget {
                               `&uppy_max_filesize=${encodeURIComponent(maxFilesize)}`;
         }
 
-        this.uppy.use(XHRUpload, {
-            endpoint: window.location.origin + '/redaxo/index.php?rex-api-call=uppy_uploader&func=upload&api_token=' + tokenParam + '&category_id=' + config.categoryId + signatureParams,
-            formData: true,
-            fieldName: 'file',
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            },
+        // Upload-Methode wählen (Chunk oder XHR)
+        const globalConfig = window.rex?.uppy_config || {};
+        const enableChunks = globalConfig.enable_chunks === true;
+
+        if (enableChunks) {
+            const chunkUploader = new ChunkUploader(this.uppy, {
+                endpoint: window.location.origin + '/redaxo/index.php?rex-api-call=uppy_uploader' + signatureParams,
+                chunkSize: globalConfig.chunk_size || 5 * 1024 * 1024,
+                categoryId: config.categoryId,
+                apiToken: tokenParam
+            });
+            chunkUploader.install();
+        } else {
+            this.uppy.use(XHRUpload, {
+                endpoint: window.location.origin + '/redaxo/index.php?rex-api-call=uppy_uploader&func=upload&api_token=' + tokenParam + '&category_id=' + config.categoryId + signatureParams,
+                formData: true,
+                fieldName: 'file',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                limit: 5,
+                getResponseData: (responseText) => {
+                    try {
+                        return JSON.parse(responseText);
+                    } catch (e) {
+                        return { success: false, message: 'Invalid response' };
+                    }
+                },
+                getResponseError: (responseText) => {
+                    try {
+                        const response = JSON.parse(responseText);
+                        return response.error || response.message || 'Upload failed';
+                    } catch (e) {
+                        return responseText;
+                    }
+                }
+            });
+        }
             getResponseData: (responseText, response) => {
                 let rawText = responseText;
                 if (typeof responseText === 'object' && responseText !== null) {
