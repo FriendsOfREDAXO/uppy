@@ -18,64 +18,6 @@ if (German && German.strings) {
 
 window.UPPY_BUNDLE_LOADED = true;
 
-    async uploadSingleFile(fileID) {
-        const file = this.uppy.getFile(fileID);
-        const chunkSize = this.opts.chunkSize;
-        const totalSize = file.data.size;
-        const totalChunks = Math.ceil(totalSize / chunkSize);
-        
-        console.log(`ChunkUpload Start: ${file.name}, Size: ${totalSize}, Chunks: ${totalChunks}`);
-        
-        try {
-            // Prepare: Get fileId from server
-            const fileId = await this.prepareUpload(file);
-            console.log(`Prepare erfolgreich, fileId: ${fileId}`);
-            
-            this.uppy.emit('upload-progress', file, {
-                uploader: this,
-                bytesUploaded: 0,
-                bytesTotal: totalSize
-            });
-
-            // Upload chunks sequentially
-            for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
-                const start = chunkIndex * chunkSize;
-                const end = Math.min(start + chunkSize, totalSize);
-                const chunk = file.data.slice(start, end);
-                
-                console.log(`Uploading chunk ${chunkIndex + 1}/${totalChunks}`);
-                await this.uploadChunk(fileId, chunk, chunkIndex, totalChunks, file);
-                
-                // Progress update (wird auch im uploadChunk gemacht, aber hier zur Sicherheit nochmal für 100% des Chunks)
-                this.uppy.emit('upload-progress', file, {
-                    uploader: this,
-                    bytesUploaded: end,
-                    bytesTotal: totalSize
-                });
-            }
-
-            console.log('Alle Chunks hochgeladen, starte Finalize...');
-            // Finalize: Merge chunks and add to mediapool
-            const result = await this.finalizeUpload(fileId, file, totalChunks);
-            
-            console.log('Finalize erfolgreich:', result);
-            
-            try {
-                this.uppy.emit('upload-success', file, result);
-            } catch (emitError) {
-                console.error('Fehler beim Emitten von upload-success:', emitError);
-                // Wir werfen den Fehler nicht weiter, da der Upload eigentlich erfolgreich war
-            }
-            
-            return result;
-        } catch (error) {
-            console.error('ChunkUpload Fehler:', error);
-            this.uppy.emit('upload-error', file, error);
-            throw error;
-        }
-    }
-}
-
 /**
  * Initialisiert alle Uppy-Widgets auf der Seite
  */

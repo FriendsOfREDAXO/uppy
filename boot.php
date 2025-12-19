@@ -7,6 +7,8 @@
  * @author Friends Of REDAXO
  */
 
+$addon = rex_addon::get('uppy');
+
 // API-Klassen explizit registrieren (ab REDAXO 5.17)
 rex_api_function::register('uppy_uploader', FriendsOfRedaxo\Uppy\UppyUploadHandler::class);
 rex_api_function::register('uppy_metadata', FriendsOfRedaxo\Uppy\UppyMetadataHandler::class);
@@ -18,13 +20,14 @@ if (rex::isBackend() && rex::getUser()) {
     
     if (!$uppyScriptsLoaded) {
         // CSS - Core, Dashboard, Webcam und Image Editor (Uppy 5.0)
-        rex_view::addCssFile($this->getAssetsUrl('css/uppy-core.min.css'));
-        rex_view::addCssFile($this->getAssetsUrl('css/uppy-dashboard.min.css'));
-        rex_view::addCssFile($this->getAssetsUrl('css/uppy-webcam.min.css'));
-        rex_view::addCssFile($this->getAssetsUrl('css/uppy-image-editor.min.css'));
-        rex_view::addCssFile($this->getAssetsUrl('css/uppy-dark-overrides.css'));
-        rex_view::addCssFile($this->getAssetsUrl('css/uppy-custom.css'));
-        rex_view::addCssFile($this->getAssetsUrl('css/uppy-custom-widget.css'));
+        rex_view::addCssFile($addon->getAssetsUrl('css/uppy-core.min.css'));
+        rex_view::addCssFile($addon->getAssetsUrl('css/uppy-dashboard.min.css'));
+        rex_view::addCssFile($addon->getAssetsUrl('css/uppy-webcam.min.css'));
+        rex_view::addCssFile($addon->getAssetsUrl('css/uppy-image-editor.min.css'));
+        rex_view::addCssFile($addon->getAssetsUrl('css/uppy-dark-overrides.css'));
+        rex_view::addCssFile($addon->getAssetsUrl('css/uppy-custom.css'));
+        rex_view::addCssFile($addon->getAssetsUrl('css/uppy-custom-widget.css'));
+        rex_view::addCssFile($addon->getAssetsUrl('uppy-dashboard-styles.css'));
         
         // Konfiguration als JSON für JavaScript verfügbar machen
         rex_view::setJsProperty('uppy_config', [
@@ -41,8 +44,8 @@ if (rex::isBackend() && rex::getUser()) {
         ]);
         
         // JavaScript Bundle (lokal gebaut mit esbuild) - mit Timestamp für Cache-Busting
-        $version = $this->getVersion() . '.' . filemtime($this->getPath('assets/dist/uppy-backend-bundle.js'));
-        rex_view::addJsFile($this->getAssetsUrl('dist/uppy-backend-bundle.js?v=' . $version));
+        $version = $addon->getVersion() . '.' . filemtime($addon->getPath('assets/dist/uppy-backend-bundle.js'));
+        rex_view::addJsFile($addon->getAssetsUrl('dist/uppy-backend-bundle.js?v=' . $version));
         
         $uppyScriptsLoaded = true;
     }

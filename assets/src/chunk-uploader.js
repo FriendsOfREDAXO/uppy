@@ -38,6 +38,17 @@ export class ChunkUploader {
         
         console.log(`ChunkUpload Start: ${file.name}, Size: ${totalSize}, Chunks: ${totalChunks}`);
         
+        // Set file state to uploading (wichtig für Dashboard UI)
+        this.uppy.setFileState(fileID, {
+            progress: {
+                uploadStarted: Date.now(),
+                uploadComplete: false,
+                percentage: 0,
+                bytesUploaded: 0,
+                bytesTotal: totalSize
+            }
+        });
+        
         try {
             // Prepare: Get fileId from server
             const fileId = await this.prepareUpload(file);
@@ -67,13 +78,32 @@ export class ChunkUploader {
             }
 
             console.log('Alle Chunks hochgeladen, starte Finalize...');
+            
             // Finalize: Merge chunks and add to mediapool
             const result = await this.finalizeUpload(fileId, file, totalChunks);
             
             console.log('Finalize erfolgreich:', result);
             
             try {
-                this.uppy.emit('upload-success', this.uppy.getFile(fileID), result);
+                const currentFile = this.uppy.getFile(fileID);
+                console.log('Emitting upload-success for file:', currentFile ? currentFile.name : 'FILE NOT FOUND');
+                
+                if (currentFile) {
+                    // Mark file as complete so it won't be uploaded again
+                    this.uppy.setFileState(fileID, {
+                        progress: {
+                            uploadComplete: true,
+                            uploadStarted: Date.now()
+                        }
+                    });
+                    
+                    this.uppy.emit('upload-success', currentFile, result);
+                    
+                    // Also emit complete event
+                    this.uppy.emit('complete', { successful: [currentFile], failed: [] });
+                } else {
+                    console.error('File not found in Uppy state:', fileID);
+                }
             } catch (emitError) {
                 console.error('Fehler beim Emitten von upload-success:', emitError);
             }

@@ -1,0 +1,58 @@
+/**
+ * Custom styles for Uppy Dashboard during uploads
+ * Blue pulsing glow effect for uploading items
+ * Gilt für Standard Dashboard und Custom Widget
+ */
+
+/* Blue glow effect for items being uploaded */
+.uppy-Dashboard-Item.is-inprogress,
+.uppy-file-uploading {
+    position: relative;
+    animation: dashboard-box-glow 2s ease-in-out infinite;
+}
+
+/* Animated blue border glow */
+.uppy-Dashboard-Item.is-inprogress::before,
+.uppy-file-uploading::before {
+    content: '';
+    position: absolute;
+    top: -3px;
+    left: -3px;
+    right: -3px;
+    bottom: -3px;
+    background: linear-gradient(135deg, #4d99d3, #5ba3db, #4d99d3);
+    background-size: 200% 200%;
+    border-radius: 4px;
+    z-index: -1;
+    animation: dashboard-gradient-shift 3s ease infinite, dashboard-pulse-opacity 2s ease-in-out infinite;
+}
+
+/* Gradient animation */
+@keyframes dashboard-gradient-shift {
+    0%, 100% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+}
+
+/* Pulsing opacity */
+@keyframes dashboard-pulse-opacity {
+    0%, 100% {
+        opacity: 0.4;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}
+
+/* Blue box shadow glow */
+@keyframes dashboard-box-glow {
+    0%, 100% {
+        box-shadow: 0 0 10px rgba(77, 153, 211, 0.4);
+    }
+    50% {
+        box-shadow: 0 0 25px rgba(77, 153, 211, 0.7), 0 0 35px rgba(91, 163, 219, 0.5);
+    }
+}

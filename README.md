@@ -211,9 +211,11 @@ Die Assets sind strikt nach Quelle und Ziel getrennt, um die Entwicklung übersi
 
 ```text
 assets/
-├── src/                  # JavaScript Quellcode (ES Modules)
+├── src/                  # JavaScript Quellcode (ES Modules) & CSS
 │   ├── uppy-backend.js       # Hauptlogik für das Backend
-│   └── uppy-custom-widget.js # Logik für das Custom Widget (Frontend & Backend)
+│   ├── uppy-custom-widget.js # Logik für das Custom Widget (Frontend & Backend)
+│   ├── chunk-uploader.js     # Custom Chunk-Upload Implementierung
+│   └── uppy-dashboard-styles.css # Custom Upload-Animations
 │
 ├── dist/                 # Kompilierte, minifizierte Bundles (Production)
 │   ├── uppy-backend-bundle.js
@@ -224,10 +226,12 @@ assets/
 │   ├── uppy-custom.css
 │   └── ...
 │
+├── uppy-dashboard-styles.css  # Custom Upload-Animations (kopiert via build.js)
+│
 └── locales/              # Sprachdateien
 ```
 
-Der Build-Prozess (`build.js`) nimmt die Dateien aus `assets/src/`, bündelt sie mit `esbuild` und speichert das Ergebnis in `assets/dist/`. CSS-Dateien werden aus `node_modules` nach `assets/css/` kopiert.
+Der Build-Prozess (`build.js`) nimmt die Dateien aus `assets/src/`, bündelt sie mit `esbuild` und speichert das Ergebnis in `assets/dist/`. CSS-Dateien werden aus `node_modules` nach `assets/css/` kopiert. Custom CSS-Dateien wie `uppy-dashboard-styles.css` werden automatisch von `src/` nach `assets/` kopiert.
 ```
 
 ## Autor

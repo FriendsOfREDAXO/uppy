@@ -51,6 +51,42 @@ body.rex-theme-dark {
     border-bottom: none;
 }
 
+/* Uploading State */
+.uppy-custom-widget .uppy-file-item.uppy-file-uploading {
+    background: linear-gradient(90deg, rgba(77, 144, 254, 0.1) 0%, rgba(77, 144, 254, 0.05) 100%);
+    border-left: 3px solid var(--uppy-widget-primary);
+    animation: pulse-uploading 2s ease-in-out infinite;
+}
+
+@keyframes pulse-uploading {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}
+
+.uppy-custom-widget .uppy-icon-uploading {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.uppy-custom-widget .uppy-upload-status {
+    font-size: 0.85em;
+    color: var(--uppy-widget-primary);
+    font-weight: 500;
+    margin-top: 4px;
+}
+
 .uppy-custom-widget .uppy-file-preview {
     display: flex;
     align-items: center;

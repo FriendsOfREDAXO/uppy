@@ -34,6 +34,9 @@ export class UppyCustomWidget {
         // Mutation Observer für dynamisch nachgeladene Felder (z.B. YForm)
         this.setupMutationObserver();
         this.initListeners();
+        
+        // Track uploading files for visual feedback
+        this.uploadingFiles = new Map(); // fileId -> filename
     }
 
     setupMutationObserver() {
@@ -101,7 +104,7 @@ export class UppyCustomWidget {
         this.listContainer.innerHTML = '';
         const files = this.getFiles();
         
-        if (files.length === 0) {
+        if (files.length === 0 && this.uploadingFiles.size === 0) {
             const emptyState = document.createElement('li');
             emptyState.className = 'uppy-empty-state';
             emptyState.textContent = 'Keine Dateien ausgewählt';
@@ -109,7 +112,37 @@ export class UppyCustomWidget {
             return;
         }
         
+        // Show uploading files first
+        if (this.uploadingFiles.size > 0) {
+            this.uploadingFiles.forEach((filename, fileId) => {
+                const li = document.createElement('li');
+                li.className = 'uppy-file-item uppy-file-uploading';
+                li.dataset.fileId = fileId;
+                
+                li.innerHTML = `
+                    <div class="uppy-file-preview">
+                        <div class="uppy-file-icon uppy-icon-uploading">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="uppy-spinner">
+                                <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                            </svg>
+                        </div>
+                        <div class="uppy-file-info">
+                            <span class="uppy-filename" title="${filename}">${filename}</span>
+                            <span class="uppy-upload-status">Wird hochgeladen...</span>
+                        </div>
+                    </div>
+                `;
+                
+                this.listContainer.appendChild(li);
+            });
+        }
+        
         files.forEach((filename, index) => {
+            // Skip files that are currently uploading
+            if (Array.from(this.uploadingFiles.values()).includes(filename)) {
+                return;
+            }
+            
             const li = document.createElement('li');
             li.className = 'uppy-file-item';
             
@@ -280,26 +313,47 @@ export class UppyCustomWidget {
                 }
             });
         }
-            getResponseData: (responseText, response) => {
-                let rawText = responseText;
-                if (typeof responseText === 'object' && responseText !== null) {
-                     if (typeof responseText.responseText === 'string') rawText = responseText.responseText;
-                     else if (typeof responseText.response === 'string') rawText = responseText.response;
-                     else return responseText;
-                }
-                try { return JSON.parse(rawText); } 
-                catch (e) { return { success: false, message: 'Invalid response' }; }
-            }
-        });
 
         this.uppy.on('upload-success', (file, response) => {
+            console.log('Uppy upload-success event:', file.name, response);
+            
+            // Remove from uploading list
+            this.uploadingFiles.delete(file.id);
+            
             if (response.body && (response.body.success || response.body.status === 'ok')) {
                 const responseData = response.body.data || response.body;
                 this.addFile(responseData.filename);
                 
+                // Re-render to show final list without uploading state
+                this.renderList();
+                
                 // Optional: Open metadata modal after upload
                 // this.openMetadataModal(responseData.filename);
+            } else {
+                console.warn('Upload success event but invalid response body:', response);
+                this.renderList();
             }
+        });
+        
+        // Track upload start
+        this.uppy.on('upload', (data) => {
+            console.log('Upload started:', data);
+            if (data.fileIDs) {
+                data.fileIDs.forEach(fileID => {
+                    const file = this.uppy.getFile(fileID);
+                    if (file) {
+                        this.uploadingFiles.set(file.id, file.name);
+                    }
+                });
+                this.renderList();
+            }
+        });
+        
+        // Handle upload errors
+        this.uppy.on('upload-error', (file, error) => {
+            console.error('Upload error:', file.name, error);
+            this.uploadingFiles.delete(file.id);
+            this.renderList();
         });
     }
 
