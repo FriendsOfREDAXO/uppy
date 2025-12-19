@@ -18,19 +18,6 @@ await esbuild.build({
     sourcemap: true,
 });
 
-// Frontend Bundle
-await esbuild.build({
-    entryPoints: ['assets/src/uppy-frontend.js'],
-    bundle: true,
-    outfile: 'assets/dist/uppy-frontend-bundle.js',
-    format: 'iife',
-    globalName: 'UppyFrontend',
-    platform: 'browser',
-    target: ['es2020'],
-    minify: true,
-    sourcemap: true,
-});
-
 // Custom Widget Bundle
 await esbuild.build({
     entryPoints: ['assets/src/uppy-custom-widget.js'],

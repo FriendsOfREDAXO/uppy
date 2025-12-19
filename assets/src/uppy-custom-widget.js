@@ -30,6 +30,16 @@ export class UppyCustomWidget {
         this.initUppy();
         this.renderList();
         
+        // Mutation Observer für dynamisch nachgeladene Felder (z.B. YForm)
+        this.setupMutationObserver();
+        this.initListeners();
+    }
+
+    setupMutationObserver() {
+        // ... (wird später implementiert falls nötig)
+    }
+        
+    initListeners() {
         // Listen for external changes to the input
         this.input.addEventListener('change', () => this.renderList());
     }
@@ -543,3 +553,15 @@ export class UppyCustomWidget {
         });
     }
 }
+
+// Auto-Initialization
+document.addEventListener('DOMContentLoaded', () => {
+    const customWidgets = document.querySelectorAll('.uppy-upload-widget:not([data-uppy-initialized])');
+    if (customWidgets.length > 0) {
+        console.log('Uppy Custom Widget: Initializing ' + customWidgets.length + ' widget(s)');
+        customWidgets.forEach(inputElement => {
+            new UppyCustomWidget(inputElement);
+        });
+    }
+});
+

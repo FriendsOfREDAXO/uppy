@@ -85,6 +85,38 @@ In YForm können Sie das Uppy-Widget einfach über das Feld "Attribute" konfigur
 }
 ```
 
+### Frontend Integration
+
+Für die Verwendung im Frontend (z.B. in eigenen Formularen) steht das **Custom Widget** zur Verfügung. Es ist leichtgewichtig und initialisiert sich automatisch.
+
+1. **Assets einbinden:**
+   Laden Sie das CSS und JS Bundle in Ihrem Template oder Modul.
+
+   ```php
+   $uppy = rex_addon::get('uppy');
+   
+   // CSS
+   echo '<link rel="stylesheet" href="'. $uppy->getAssetsUrl('css/uppy-custom-widget.css') .'">';
+   
+   // JS (am Ende des Body)
+   echo '<script src="'. $uppy->getAssetsUrl('dist/uppy-custom-widget-bundle.js') .'"></script>';
+   ```
+
+2. **HTML Markup:**
+   Verwenden Sie ein `input type="hidden"` mit der Klasse `uppy-upload-widget`. Das Skript erkennt diese Klasse automatisch.
+
+   ```html
+   <input 
+       type="hidden" 
+       class="uppy-upload-widget"
+       name="my_upload_field" 
+       value=""
+       data-category-id="1"
+       data-max-files="5"
+       data-allowed-types="image/jpeg,image/png"
+   >
+   ```
+
 ## Sicherheit: Manipulationsschutz (Signierte Uploads)
 
 Standardmäßig werden Einschränkungen wie `data-max-filesize` oder `data-allowed-types` nur client-seitig im Browser geprüft. Ein versierter Nutzer könnte diese Werte über die Entwicklertools manipulieren.
