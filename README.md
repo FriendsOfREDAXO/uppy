@@ -213,12 +213,10 @@ Die Assets sind strikt nach Quelle und Ziel getrennt, um die Entwicklung übersi
 assets/
 ├── src/                  # JavaScript Quellcode (ES Modules)
 │   ├── uppy-backend.js       # Hauptlogik für das Backend
-│   ├── uppy-frontend.js      # Logik für Frontend-Ausgabe
-│   └── uppy-custom-widget.js # Logik für das Custom Widget
+│   └── uppy-custom-widget.js # Logik für das Custom Widget (Frontend & Backend)
 │
 ├── dist/                 # Kompilierte, minifizierte Bundles (Production)
 │   ├── uppy-backend-bundle.js
-│   ├── uppy-frontend-bundle.js
 │   └── uppy-custom-widget-bundle.js
 │
 ├── css/                  # Stylesheets (Uppy Core + Plugins + Custom)
