@@ -36,8 +36,6 @@ export class ChunkUploader {
         const totalSize = file.data.size;
         const totalChunks = Math.ceil(totalSize / chunkSize);
         
-        console.log(`ChunkUpload Start: ${file.name}, Size: ${totalSize}, Chunks: ${totalChunks}`);
-        
         // Set file state to uploading (wichtig für Dashboard UI)
         this.uppy.setFileState(fileID, {
             progress: {
@@ -52,7 +50,6 @@ export class ChunkUploader {
         try {
             // Prepare: Get fileId from server
             const fileId = await this.prepareUpload(file);
-            console.log(`Prepare erfolgreich, fileId: ${fileId}`);
             
             this.uppy.emit('upload-progress', this.uppy.getFile(fileID), {
                 uploader: this,
@@ -66,7 +63,6 @@ export class ChunkUploader {
                 const end = Math.min(start + chunkSize, totalSize);
                 const chunk = file.data.slice(start, end);
                 
-                console.log(`Uploading chunk ${chunkIndex + 1}/${totalChunks}`);
                 await this.uploadChunk(fileId, chunk, chunkIndex, totalChunks, file);
                 
                 // Progress update (wird auch im uploadChunk gemacht, aber hier zur Sicherheit nochmal für 100% des Chunks)
@@ -77,16 +73,11 @@ export class ChunkUploader {
                 });
             }
 
-            console.log('Alle Chunks hochgeladen, starte Finalize...');
-            
             // Finalize: Merge chunks and add to mediapool
             const result = await this.finalizeUpload(fileId, file, totalChunks);
             
-            console.log('Finalize erfolgreich:', result);
-            
             try {
                 const currentFile = this.uppy.getFile(fileID);
-                console.log('Emitting upload-success for file:', currentFile ? currentFile.name : 'FILE NOT FOUND');
                 
                 if (currentFile) {
                     // Mark file as complete so it won't be uploaded again

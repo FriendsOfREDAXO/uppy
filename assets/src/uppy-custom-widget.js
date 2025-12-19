@@ -315,7 +315,6 @@ export class UppyCustomWidget {
         }
 
         this.uppy.on('upload-success', (file, response) => {
-            console.log('Uppy upload-success event:', file.name, response);
             
             // Remove from uploading list
             this.uploadingFiles.delete(file.id);
@@ -337,7 +336,6 @@ export class UppyCustomWidget {
         
         // Track upload start
         this.uppy.on('upload', (data) => {
-            console.log('Upload started:', data);
             if (data.fileIDs) {
                 data.fileIDs.forEach(fileID => {
                     const file = this.uppy.getFile(fileID);
@@ -644,7 +642,6 @@ export class UppyCustomWidget {
 document.addEventListener('DOMContentLoaded', () => {
     const customWidgets = document.querySelectorAll('.uppy-upload-widget:not([data-uppy-initialized])');
     if (customWidgets.length > 0) {
-        console.log('Uppy Custom Widget: Initializing ' + customWidgets.length + ' widget(s)');
         customWidgets.forEach(inputElement => {
             new UppyCustomWidget(inputElement);
         });

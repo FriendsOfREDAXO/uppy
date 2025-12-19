@@ -97,8 +97,6 @@ function initializeUppyWidget(inputElement) {
     config.enable_chunks = uppyConfig.enable_chunks !== false;
     config.chunk_size = (uppyConfig.chunk_size || 5) * 1024 * 1024; // MB in Bytes
     
-    console.log('DEBUG: Uppy Config', config);
-    
     // Metadaten-Felder laden
     loadMetadataFields(config.apiToken).then(function(metaFields) {
 
@@ -323,24 +321,6 @@ function initializeUppyPlugins(uppy, config, inputElement, metaFields, valueInpu
         });
     }
     
-    // DEBUG: Log file additions to check MIME type
-    uppy.on('file-added', (file) => {
-        console.log('DEBUG: File added', {
-            name: file.name,
-            type: file.type,
-            extension: file.extension,
-            meta: file.meta,
-            data: file.data
-        });
-    });
-    
-    uppy.on('upload-request', (file) => {
-         console.log('DEBUG: Upload request', {
-            name: file.name,
-            type: file.type
-         });
-    });
-
     // Event-Handler
     setupEventHandlers(uppy, config, inputElement, metaFields, valueInput);
 }
@@ -616,16 +596,13 @@ function loadMetadataFields(apiToken) {
     
     return fetch(url)
         .then(function(response) {
-            console.log('Metadata API Response Status:', response.status);
             if (!response.ok) {
                 throw new Error('HTTP ' + response.status);
             }
             return response.json();
         })
         .then(function(data) {
-            console.log('Metadata API Response:', data);
             if (data.success && data.data) {
-                console.log('API data.data:', data.data.length, 'Felder geladen');
                 return data.data.map(function(field) {
                     const mappedField = {
                         id: field.id,
@@ -788,21 +765,17 @@ function setupMutationObserver() {
  * Eigenes Modal für Metadaten nach Upload
  */
 function setupMetadataModal(uppy, metaFields) {
-    console.log('setupMetadataModal aufgerufen mit', metaFields.length, 'Feldern');
     
     const globalConfig = window.rex?.uppy_config || {};
     const enableImageEditor = globalConfig.enable_image_editor || false;
     
     if (enableImageEditor) {
-        console.log('Image Editor ist aktiv - Edit-Button wird NICHT überschrieben');
-        console.log('Metadaten-Modal öffnet sich automatisch nach Upload');
         // Wenn Image Editor aktiv ist, Edit-Button nicht abfangen
         // Metadata-Modal wird über upload-success Event geöffnet
         return;
     }
 
     // Nur wenn KEIN Image Editor: Edit-Button für Metadata-Modal abfangen
-    console.log('Image Editor inaktiv - Edit-Button wird für Metadata-Modal verwendet');
 
     // Event Delegation statt direkter Listener
     // Dies ist robuster gegen DOM-Updates (z.B. beim Löschen von Dateien)
@@ -815,19 +788,15 @@ function setupMetadataModal(uppy, metaFields) {
         
         const dashboardEl = dashboard.el;
         if (!dashboardEl) {
-            console.log('Warte auf Dashboard Element...');
             setTimeout(installDelegation, 100);
             return;
         }
-        
-        console.log('Installiere Event Delegation auf Dashboard Element');
         
         // Capture Phase nutzen, um vor Uppy zu sein
         dashboardEl.addEventListener('click', function(e) {
             const editBtn = e.target.closest('.uppy-Dashboard-Item-action--edit');
             
             if (editBtn) {
-                console.log('Edit-Button geklickt (Delegation)');
                 e.preventDefault();
                 e.stopPropagation();
                 e.stopImmediatePropagation();
@@ -839,7 +808,6 @@ function setupMetadataModal(uppy, metaFields) {
                     const file = files.find(f => fileItem.id.includes(f.id));
                     
                     if (file) {
-                        console.log('Öffne Metadata Modal für:', file.name);
                         showMetadataModal(uppy, file, metaFields);
                     } else {
                         console.error('Datei nicht gefunden in Uppy für Item:', fileItem.id);
