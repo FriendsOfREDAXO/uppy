@@ -7,27 +7,40 @@ const __dirname = path.dirname(__filename);
 
 // Backend Bundle
 await esbuild.build({
-    entryPoints: ['src/uppy-backend.js'],
+    entryPoints: ['assets/src/uppy-backend.js'],
     bundle: true,
-    outfile: 'assets/uppy-backend-bundle.js',
+    outfile: 'assets/dist/uppy-backend-bundle.js',
     format: 'iife',
     globalName: 'UppyBackend',
     platform: 'browser',
     target: ['es2020'],
-    minify: false,
+    minify: true,
     sourcemap: true,
 });
 
 // Frontend Bundle
 await esbuild.build({
-    entryPoints: ['src/uppy-frontend.js'],
+    entryPoints: ['assets/src/uppy-frontend.js'],
     bundle: true,
-    outfile: 'assets/uppy-frontend-bundle.js',
+    outfile: 'assets/dist/uppy-frontend-bundle.js',
     format: 'iife',
     globalName: 'UppyFrontend',
     platform: 'browser',
     target: ['es2020'],
-    minify: false,
+    minify: true,
+    sourcemap: true,
+});
+
+// Custom Widget Bundle
+await esbuild.build({
+    entryPoints: ['assets/src/uppy-custom-widget.js'],
+    bundle: true,
+    outfile: 'assets/dist/uppy-custom-widget-bundle.js',
+    format: 'iife',
+    globalName: 'UppyCustomWidget',
+    platform: 'browser',
+    target: ['es2020'],
+    minify: true,
     sourcemap: true,
 });
 

@@ -147,8 +147,57 @@ SVG-Dateien werden automatisch vom client-seitigen Resizing ausgeschlossen, um e
 ### Build
 Das Projekt nutzt `esbuild` für das Bundling der Assets.
 ```bash
+## Entwicklung & Build-Prozess
+
+Das AddOn verwendet moderne Frontend-Tools, um JavaScript und CSS zu bündeln. Es werden keine externen CDNs verwendet (DSGVO-konform).
+
+### Voraussetzungen
+- Node.js (>= 18)
+- NPM
+
+### Installation der Abhängigkeiten
+```bash
+cd redaxo/src/addons/uppy
 npm install
+```
+
+### Build-Befehle
+```bash
+# Kompletten Build ausführen (JS & CSS)
 npm run build
+
+# Nur JavaScript bauen (via esbuild)
+npm run build:js
+
+# Nur CSS kopieren und bereitstellen
+npm run build:css
+```
+
+### Ordnerstruktur
+
+Die Assets sind strikt nach Quelle und Ziel getrennt, um die Entwicklung übersichtlich zu halten:
+
+```text
+assets/
+├── src/                  # JavaScript Quellcode (ES Modules)
+│   ├── uppy-backend.js       # Hauptlogik für das Backend
+│   ├── uppy-frontend.js      # Logik für Frontend-Ausgabe
+│   └── uppy-custom-widget.js # Logik für das Custom Widget
+│
+├── dist/                 # Kompilierte, minifizierte Bundles (Production)
+│   ├── uppy-backend-bundle.js
+│   ├── uppy-frontend-bundle.js
+│   └── uppy-custom-widget-bundle.js
+│
+├── css/                  # Stylesheets (Uppy Core + Plugins + Custom)
+│   ├── uppy-core.min.css
+│   ├── uppy-custom.css
+│   └── ...
+│
+└── locales/              # Sprachdateien
+```
+
+Der Build-Prozess (`build.js`) nimmt die Dateien aus `assets/src/`, bündelt sie mit `esbuild` und speichert das Ergebnis in `assets/dist/`. CSS-Dateien werden aus `node_modules` nach `assets/css/` kopiert.
 ```
 
 ## Autor

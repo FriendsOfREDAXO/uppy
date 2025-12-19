@@ -7,7 +7,7 @@
   "scripts": {
     "build": "npm run build:js && npm run build:css",
     "build:js": "node build.js",
-    "build:css": "cp node_modules/@uppy/core/dist/style.min.css assets/uppy-core.min.css && cp node_modules/@uppy/dashboard/dist/style.min.css assets/uppy-dashboard.min.css && cp node_modules/@uppy/webcam/dist/style.min.css assets/uppy-webcam.min.css"
+    "build:css": "cp node_modules/@uppy/core/dist/style.min.css assets/css/uppy-core.min.css && cp node_modules/@uppy/dashboard/dist/style.min.css assets/css/uppy-dashboard.min.css && cp node_modules/@uppy/webcam/dist/style.min.css assets/css/uppy-webcam.min.css && cp node_modules/@uppy/image-editor/dist/style.min.css assets/css/uppy-image-editor.min.css"
   },
   "dependencies": {
     "@uppy/core": "^5.2.0",

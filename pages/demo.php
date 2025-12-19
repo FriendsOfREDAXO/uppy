@@ -29,7 +29,7 @@ $content = '
         <li><a href="#tab_yform" data-toggle="tab" aria-expanded="false">YForm</a></li>
         <li><a href="#tab_docs" data-toggle="tab" aria-expanded="false">Doku & API</a></li>
     </ul>
-    <div class="tab-content">
+    <div class="tab-content" style="padding-top: 20px;">
         
         <!-- Tab 1: Standard -->
         <div class="tab-pane active" id="tab_standard">
@@ -66,6 +66,10 @@ $content = '
         <div class="tab-pane" id="tab_custom">
             <h3>Custom Widget (Minimal UI)</h3>
             <p>Eine minimalistische Darstellung als Liste. Das Dashboard öffnet sich erst beim Klick auf "Dateien hinzufügen". Ideal für YForm oder schmale Spalten.</p>
+            
+            <!-- Custom Widget JS/CSS laden -->
+            <script src="' . $package->getAssetsUrl('dist/uppy-custom-widget-bundle.js') . '"></script>
+            <link rel="stylesheet" href="' . $package->getAssetsUrl('css/uppy-custom-widget.css') . '">
             
             <div class="row">
                 <div class="col-md-6">

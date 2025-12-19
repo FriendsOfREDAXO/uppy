@@ -53,7 +53,7 @@ jobs:
             
             This PR includes:
             - Updated `package.json` and `package-lock.json`
-            - Rebuilt assets in `assets/` folder
+            - Rebuilt assets in `assets/dist/` and `assets/css/` folders
             
             Please verify the changes and test the upload functionality.
           labels: |
