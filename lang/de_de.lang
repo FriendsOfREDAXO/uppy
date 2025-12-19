@@ -44,6 +44,7 @@ uppy_metadata_title = Titel
 uppy_metadata_alt = Alt-Text
 uppy_metadata_copyright = Copyright
 uppy_metadata_description = Beschreibung
+uppy_metadata_saved = Metadaten erfolgreich gespeichert
 
 # Errors
 uppy_error_no_file = Keine Datei ausgewählt

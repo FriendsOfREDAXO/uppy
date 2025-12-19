@@ -7,6 +7,7 @@ import Uppy from '@uppy/core';
 import Dashboard from '@uppy/dashboard';
 import XHRUpload from '@uppy/xhr-upload';
 import German from '@uppy/locales/lib/de_DE';
+import { UppyCustomWidget } from './uppy-custom-widget';
 
 // Frontend ist nur im Frontend verfügbar, daher sofort initialisieren
 document.addEventListener('DOMContentLoaded', function() {
@@ -15,17 +16,23 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function initUppyWidgets() {
+    // Standard Dashboard Widgets
     const widgets = document.querySelectorAll('input[data-widget="uppy"]:not([data-uppy-initialized])');
-    
-    if (widgets.length === 0) {
-        return;
+    if (widgets.length > 0) {
+        console.log('Uppy Frontend: Initialisiere ' + widgets.length + ' Dashboard Widget(s)');
+        widgets.forEach(function(inputElement) {
+            initializeUppyWidget(inputElement);
+        });
     }
-    
-    console.log('Uppy Frontend: Initialisiere ' + widgets.length + ' Widget(s)');
-    
-    widgets.forEach(function(inputElement) {
-        initializeUppyWidget(inputElement);
-    });
+
+    // Custom Widgets (.uppy-upload-widget)
+    const customWidgets = document.querySelectorAll('.uppy-upload-widget:not([data-uppy-initialized])');
+    if (customWidgets.length > 0) {
+        console.log('Uppy Frontend: Initialisiere ' + customWidgets.length + ' Custom Widget(s)');
+        customWidgets.forEach(function(inputElement) {
+            new UppyCustomWidget(inputElement);
+        });
+    }
 }
 
 function initializeUppyWidget(inputElement) {

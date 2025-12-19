@@ -8,6 +8,7 @@ import Webcam from '@uppy/webcam';
 import XHRUpload from '@uppy/xhr-upload';
 import ImageEditor from '@uppy/image-editor';
 import German from '@uppy/locales/lib/de_DE';
+import { UppyCustomWidget } from './uppy-custom-widget';
 
 window.UPPY_BUNDLE_LOADED = true;
 
@@ -227,15 +228,21 @@ class ChunkUploader {
  * Initialisiert alle Uppy-Widgets auf der Seite
  */
 function initUppyWidgets() {
+    // Standard Dashboard Widgets
     const widgets = document.querySelectorAll('input[data-widget="uppy"]:not([data-uppy-initialized])');
-    
-    if (widgets.length === 0) {
-        return;
+    if (widgets.length > 0) {
+        widgets.forEach(function(inputElement) {
+            initializeUppyWidget(inputElement);
+        });
     }
 
-    widgets.forEach(function(inputElement) {
-        initializeUppyWidget(inputElement);
-    });
+    // Custom Widgets (.uppy-upload-widget)
+    const customWidgets = document.querySelectorAll('.uppy-upload-widget:not([data-uppy-initialized])');
+    if (customWidgets.length > 0) {
+        customWidgets.forEach(function(inputElement) {
+            new UppyCustomWidget(inputElement);
+        });
+    }
 }
 
 /**

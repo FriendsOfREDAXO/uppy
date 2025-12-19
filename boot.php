@@ -27,6 +27,7 @@ if (rex::isBackend() && rex::getUser()) {
         rex_view::addCssFile($this->getAssetsUrl('uppy-image-editor.min.css'));
         rex_view::addCssFile($this->getAssetsUrl('uppy-dark-overrides.css'));
         rex_view::addCssFile($this->getAssetsUrl('uppy-custom.css'));
+        rex_view::addCssFile($this->getAssetsUrl('uppy-custom-widget.css'));
         
         // Konfiguration als JSON für JavaScript verfügbar machen
         rex_view::setJsProperty('uppy_config', [

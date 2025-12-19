@@ -95,10 +95,6 @@ class UppyUploadHandler extends rex_api_function
                     $result = $this->handleFinalizeUpload($categoryId);
                     $this->sendResponse($result);
 
-                case 'delete':
-                    $result = $this->handleDelete();
-                    $this->sendResponse($result);
-
                 default:
                     throw new rex_api_exception('Invalid function: ' . $func);
             }
@@ -404,29 +400,7 @@ class UppyUploadHandler extends rex_api_function
         }
     }
 
-    /**
-     * Datei löschen
-     */
-    protected function handleDelete(): array
-    {
-        $filename = rex_request('filename', 'string', '');
-        
-        if (empty($filename)) {
-            throw new rex_api_exception('Missing filename');
-        }
 
-        $media = rex_media::get($filename);
-        if ($media) {
-            if (rex_media_service::deleteMedia($filename)) {
-                return [
-                    'success' => true,
-                    'data' => ['filename' => $filename]
-                ];
-            }
-        }
-
-        throw new rex_api_exception('Could not delete file');
-    }
 
     /**
      * Verarbeitet eine hochgeladene Datei und fügt sie zum Mediapool hinzu
@@ -508,6 +482,10 @@ class UppyUploadHandler extends rex_api_function
             rex_logger::logException($e);
         }
     }
+
+
+
+
 
     /**
      * Lädt Metadaten aus der Vorbereitungsphase

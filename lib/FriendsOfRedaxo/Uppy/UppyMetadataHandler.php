@@ -18,6 +18,7 @@ use rex_backend_login;
 use rex_ycom_auth;
 use rex_config;
 use rex_logger;
+use rex_media_cache;
 use rex_media_category;
 use rex_media_category_select;
 use Exception;
@@ -70,6 +71,10 @@ class UppyMetadataHandler extends rex_api_function
 
                 case 'load_metadata':
                     $this->loadMetadata();
+                    break;
+
+                case 'save_metadata':
+                    $this->saveMetadata();
                     break;
 
                 default:
@@ -295,6 +300,71 @@ class UppyMetadataHandler extends rex_api_function
             'success' => true,
             'metadata' => $metadata
         ]);
+    }
+
+    /**
+     * Speichert Metadaten für eine Datei
+     */
+    protected function saveMetadata(): void
+    {
+        $filename = rex_request('filename', 'string', '');
+        $metadataRaw = rex_request('metadata', 'string', '');
+        $metadata = json_decode($metadataRaw, true);
+
+        if (!is_array($metadata)) {
+            // Fallback: Versuche es als Array zu lesen (falls es doch als Array kommt)
+            $metadata = rex_request('metadata', 'array', []);
+        }
+
+        if (empty($filename)) {
+            throw new rex_api_exception('Missing filename parameter');
+        }
+
+        $media = rex_media::get($filename);
+        
+        if (!$media) {
+            throw new rex_api_exception('Media not found: ' . $filename);
+        }
+
+        // SQL Update vorbereiten
+        $sql = rex_sql::factory();
+        $sql->setTable(rex::getTable('media'));
+        $sql->setWhere(['filename' => $filename]);
+
+        // Titel ist Standardfeld
+        if (isset($metadata['title'])) {
+            $sql->setValue('title', $metadata['title']);
+        }
+
+        // Andere Felder durchgehen
+        $configuredFields = rex_config::get('uppy', 'metadata_fields', 'title,med_alt,med_copyright');
+        $fieldNames = array_filter(array_map('trim', explode(',', $configuredFields)));
+
+        foreach ($fieldNames as $fieldName) {
+            if ($fieldName === 'title') {
+                continue;
+            }
+            
+            if (isset($metadata[$fieldName])) {
+                $sql->setValue($fieldName, $metadata[$fieldName]);
+            }
+        }
+
+        // Update durchführen
+        try {
+            $sql->update();
+            
+            // Cache löschen für diese Datei
+            rex_media_cache::delete($filename);
+            
+            $this->sendResponse([
+                'success' => true,
+                'message' => rex_i18n::msg('uppy_metadata_saved')
+            ]);
+        } catch (rex_sql_exception $e) {
+            rex_logger::logException($e);
+            throw new rex_api_exception('Database error while saving metadata');
+        }
     }
 
     /**

@@ -146,6 +146,44 @@ $content .= '
                     Eine Version für Uppy 5.0 ist noch nicht erschienen. Wir beobachten die Entwicklung und werden 
                     das Feature ergänzen, sobald es verfügbar ist.
                 </div>
+
+                <hr>
+
+                <h3>Custom Widget (Standalone)</h3>
+                <p>Das Custom Widget bietet eine alternative, schlanke Darstellung ohne das große Dashboard-Modal als Standard-Ansicht. Es eignet sich besonders für Formulare, bei denen der Upload dezent integriert werden soll.</p>
+                
+                <div class="form-group">
+                    <label>Beispiel Custom Widget:</label>
+                    <input 
+                        type="text" 
+                        class="form-control uppy-upload-widget" 
+                        name="custom_widget_demo" 
+                        value=""
+                        data-max-files="5"
+                        data-allowed-types="image/*,application/pdf"
+                    />
+                </div>
+
+                <h4>Frontend Integration</h4>
+                <p>Um das Custom Widget (oder das Standard Dashboard) im Frontend zu nutzen, müssen die Assets manuell eingebunden werden:</p>
+                
+                <pre><code>&lt;!-- CSS einbinden --&gt;
+&lt;link rel="stylesheet" href="/assets/addons/uppy/uppy-core.min.css"&gt;
+&lt;link rel="stylesheet" href="/assets/addons/uppy/uppy-dashboard.min.css"&gt;
+&lt;link rel="stylesheet" href="/assets/addons/uppy/uppy-custom-widget.css"&gt;
+
+&lt;!-- JS einbinden --&gt;
+&lt;script src="/assets/addons/uppy/uppy-frontend-bundle.js"&gt;&lt;/script&gt;
+
+&lt;!-- Widget HTML --&gt;
+&lt;input type="text" 
+       class="form-control uppy-upload-widget" 
+       name="upload" 
+       data-api-token="OPTIONAL_API_TOKEN"&gt;</code></pre>
+
+                <div class="alert alert-info">
+                    <strong>Hinweis:</strong> Für den Upload im Frontend wird ggf. ein API-Token benötigt, falls der Zugriff nicht öffentlich erlaubt ist.
+                </div>
             </div>
         </div>
     </div>
