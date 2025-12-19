@@ -259,6 +259,54 @@ class UppyMetadataHandler extends rex_api_function
     }
 
     /**
+     * Gibt alle verfügbaren MetaInfo-Felder zurück
+     */
+    protected function getAvailableMetaFields(): array
+    {
+        $fields = [];
+        
+        if (!rex_addon::get('metainfo')->isAvailable()) {
+            return $fields;
+        }
+
+        try {
+            // Prüfe ob metainfo_lang_fields verfügbar ist und hole dessen type_ids
+            $hasLangFields = rex_addon::get('metainfo_lang_fields')->isAvailable();
+            
+            // Standard type_ids: 1 = Text, 2 = Textarea
+            $allowedTypeIds = [1, 2];
+            
+            // Wenn metainfo_lang_fields aktiv ist, hole die type_ids für lang_text_all und lang_textarea_all
+            if ($hasLangFields) {
+                $typeSql = rex_sql::factory();
+                $typeSql->setQuery(
+                    'SELECT id FROM ' . rex::getTable('metainfo_type') . 
+                    ' WHERE label IN ("lang_text_all", "lang_textarea_all")'
+                );
+                while ($typeSql->hasNext()) {
+                    $allowedTypeIds[] = (int) $typeSql->getValue('id');
+                    $typeSql->next();
+                }
+            }
+            
+            $sql = rex_sql::factory();
+            $sql->setQuery(
+                'SELECT name FROM ' . rex::getTable('metainfo_field') . 
+                ' WHERE name LIKE "med_%" AND type_id IN (' . implode(',', $allowedTypeIds) . ') ORDER BY priority'
+            );
+
+            while ($sql->hasNext()) {
+                $fields[] = $sql->getValue('name');
+                $sql->next();
+            }
+        } catch (rex_sql_exception $e) {
+            rex_logger::logException($e);
+        }
+
+        return $fields;
+    }
+
+    /**
      * Lädt vorhandene Metadaten für eine Datei
      */
     protected function loadMetadata(): void
@@ -279,13 +327,12 @@ class UppyMetadataHandler extends rex_api_function
             'title' => $media->getTitle(),
         ];
 
-        // MetaInfo-Felder laden
-        $configuredFields = rex_config::get('uppy', 'metadata_fields', 'title,med_alt,med_copyright');
-        $fieldNames = array_filter(array_map('trim', explode(',', $configuredFields)));
+        // Alle verfügbaren MetaInfo-Felder laden
+        $fieldNames = $this->getAvailableMetaFields();
 
         foreach ($fieldNames as $fieldName) {
             if ($fieldName === 'title') {
-                continue; // Bereits oben gesetzt
+                continue;
             }
 
             if (method_exists($media, 'getValue')) {
@@ -336,9 +383,8 @@ class UppyMetadataHandler extends rex_api_function
             $sql->setValue('title', $metadata['title']);
         }
 
-        // Andere Felder durchgehen
-        $configuredFields = rex_config::get('uppy', 'metadata_fields', 'title,med_alt,med_copyright');
-        $fieldNames = array_filter(array_map('trim', explode(',', $configuredFields)));
+        // Alle verfügbaren MetaInfo-Felder durchgehen
+        $fieldNames = $this->getAvailableMetaFields();
 
         foreach ($fieldNames as $fieldName) {
             if ($fieldName === 'title') {
@@ -346,7 +392,21 @@ class UppyMetadataHandler extends rex_api_function
             }
             
             if (isset($metadata[$fieldName])) {
-                $sql->setValue($fieldName, $metadata[$fieldName]);
+                $value = $metadata[$fieldName];
+                
+                // Wenn Array, dann ist es ein mehrsprachiges Feld -> in JSON konvertieren
+                if (is_array($value)) {
+                    $jsonValue = [];
+                    foreach ($value as $clangId => $val) {
+                        $jsonValue[] = [
+                            'clang_id' => (int) $clangId,
+                            'value' => $val
+                        ];
+                    }
+                    $sql->setValue($fieldName, json_encode($jsonValue));
+                } else {
+                    $sql->setValue($fieldName, $value);
+                }
             }
         }
 

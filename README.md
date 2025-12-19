@@ -11,7 +11,6 @@ Multiuploader für REDAXO basierend auf [Uppy 5.0](https://uppy.io/).
 - ✅ **Image Editor**: Integrierte Bildbearbeitung (Zuschneiden, Drehen, Spiegeln) mit festen Seitenverhältnissen
 - ✅ **Webcam-Integration**: Direkte Foto-Aufnahme im Browser
 - ✅ **Metadaten-Verwaltung**: Automatische Erkennung und Editor für MetaInfo-Felder (inkl. Mehrsprachigkeit)
-- ✅ **REDAXO Integration**: Volle Unterstützung für `REX_MEDIA`, `REX_MEDIALIST` und YForm
 - ✅ **Dark Theme**: Automatische Erkennung und manuelle Umschaltung
 - ✅ **Lokaler Build**: Keine externen CDN-Abhängigkeiten (DSGVO-konform)
 
@@ -42,10 +41,12 @@ Die globalen Einstellungen finden Sie unter **Uppy → Einstellungen**:
 
 ### Im Backend (Module / AddOns)
 
-Uppy kann einfach über `data`-Attribute in jedem File-Input aktiviert werden:
+Uppy kann einfach über `data`-Attribute in einem `hidden` Input-Feld aktiviert werden. Das Widget kümmert sich um die Darstellung und das Speichern der Dateinamen.
 
 ```html
-<input type="file" 
+<input type="hidden" 
+       name="REX_INPUT_VALUE[1]" 
+       value="REX_VALUE[1]"
        data-widget="uppy" 
        data-category-id="1"
        data-max-files="10"
@@ -55,34 +56,44 @@ Uppy kann einfach über `data`-Attribute in jedem File-Input aktiviert werden:
 
 **Verfügbare Attribute:**
 - `data-widget="uppy"`: Aktiviert das Widget
-- `data-category-id="1"`: Ziel-Kategorie ID
+- `data-category-id="1"`: Ziel-Kategorie ID im Mediapool
 - `data-max-files="5"`: Maximale Anzahl Dateien
-- `data-allowed-types="image/*"`: Erlaubte Typen
+- `data-allowed-types="image/*"`: Erlaubte Typen (MIME-Types oder Extensions)
 - `data-enable-image-editor="true"`: Image Editor aktivieren
-
-### Mediapool Widgets
-
-Das AddOn klinkt sich automatisch in die Standard-Widgets ein:
-
-- **REX_MEDIA**: Öffnet Uppy im Popup. Nach Upload "Übernehmen" klicken.
-- **REX_MEDIALIST**: Ermöglicht den Upload mehrerer Dateien und deren Übernahme in die Liste ("Alle übernehmen").
+- `data-lang="de_DE"`: Sprache erzwingen (optional)
 
 ### YForm Integration
 
-Nutzen Sie den Feldtyp `uppy_uploader` (falls verfügbar) oder ein Textfeld mit Custom-Attributen.
+In YForm können Sie das Uppy-Widget einfach über das Feld "Attribute" konfigurieren. Hierzu wird ein JSON-Objekt verwendet.
 
-```php
-$yform->setValueField('text', [
-    'name' => 'dateien',
-    'label' => 'Dateien',
-    'attributes' => [
-        'data-widget' => 'uppy',
-        'data-max-files' => 5
-    ]
-]);
+**Beispiel 1: Standard Dashboard**
+```json
+{
+    "data-widget": "uppy",
+    "data-category-id": "1",
+    "data-max-files": "10"
+}
 ```
 
+**Beispiel 2: Custom Widget (Minimal UI)**
+```json
+{
+    "class": "uppy-upload-widget",
+    "data-category-id": "1",
+    "data-max-files": "5",
+    "data-allowed-types": "image/*"
+}
+```
+
+### Demo Seite
+
+Eine ausführliche Demo mit Live-Beispielen und Quellcode finden Sie im Backend unter **Uppy → Demo**.
+
 ## Technische Details
+
+### Metadaten & Mehrsprachigkeit
+Das AddOn unterstützt automatisch alle im System definierten Metainfo-Felder (`med_...`). 
+Mehrsprachige Felder werden erkannt und können direkt im Upload-Dialog für alle Sprachen gepflegt werden. Die Speicherung erfolgt als JSON-String in der Datenbank.
 
 ### Chunk Upload
 Der Chunk-Upload teilt große Dateien in kleine Blöcke (Standard: 5MB) und sendet diese sequenziell an den Server. Dies verhindert Timeouts und Memory-Limits bei großen Uploads.
@@ -98,9 +109,4 @@ npm run build
 ```
 
 ## Lizenz
-
-MIT License
-
----
-**Friends Of REDAXO**
-[GitHub](https://github.com/FriendsOfREDAXO/uppy)
+MIT

@@ -10606,22 +10606,86 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
         `;
       form.appendChild(titleGroup);
       fields.forEach((field) => {
+        if (field.id === "title") return;
         const group = document.createElement("div");
         group.className = "uppy-widget-form-group";
-        const value = metadata[field.name] || "";
-        const label = `<label class="uppy-widget-label">${field.label || field.name}</label>`;
-        let inputHtml = "";
-        if (field.type === "select") {
-          const options = (field.options || []).map(
-            (opt) => `<option value="${opt.value}" ${opt.value == value ? "selected" : ""}>${opt.label}</option>`
-          ).join("");
-          inputHtml = `<select name="${field.name}" class="uppy-widget-select">${options}</select>`;
-        } else if (field.type === "textarea") {
-          inputHtml = `<textarea name="${field.name}" class="uppy-widget-textarea" rows="3">${value}</textarea>`;
+        const label = `<label class="uppy-widget-label">${field.name}</label>`;
+        group.innerHTML = label;
+        if (field.is_multilang && field.languages && field.languages.length > 0) {
+          let values = {};
+          try {
+            const raw = metadata[field.id];
+            if (raw) {
+              let parsed;
+              try {
+                parsed = JSON.parse(raw);
+              } catch (e4) {
+                parsed = null;
+              }
+              if (Array.isArray(parsed)) {
+                parsed.forEach((item) => values[item.clang_id] = item.value);
+              } else if (typeof raw === "string") {
+                values[field.languages[0].clang_id] = raw;
+              }
+            }
+          } catch (e4) {
+            console.warn("Error parsing metadata value", e4);
+          }
+          const firstLang = field.languages[0];
+          const firstVal = values[firstLang.clang_id] || "";
+          const firstInputName = `${field.id}[${firstLang.clang_id}]`;
+          let firstInputHtml = "";
+          if (field.type === "textarea") {
+            firstInputHtml = `<textarea name="${firstInputName}" class="uppy-widget-textarea" data-clang-id="${firstLang.clang_id}" rows="3" placeholder="${firstLang.clang_name}...">${firstVal}</textarea>`;
+          } else {
+            firstInputHtml = `<input type="text" name="${firstInputName}" class="uppy-widget-input" data-clang-id="${firstLang.clang_id}" value="${firstVal}" placeholder="${firstLang.clang_name}...">`;
+          }
+          group.innerHTML += firstInputHtml;
+          if (field.languages.length > 1) {
+            const collapseBtn = document.createElement("button");
+            collapseBtn.type = "button";
+            collapseBtn.className = "uppy-widget-collapse-btn";
+            collapseBtn.innerHTML = `<span>\u{1F310}</span> Weitere Sprachen (${field.languages.length - 1})`;
+            const collapseContent = document.createElement("div");
+            collapseContent.className = "uppy-widget-collapse-content";
+            field.languages.slice(1).forEach((lang) => {
+              const val = values[lang.clang_id] || "";
+              const inputName = `${field.id}[${lang.clang_id}]`;
+              const langLabel = document.createElement("label");
+              langLabel.className = "uppy-widget-lang-label";
+              langLabel.textContent = `${lang.clang_name} (${lang.clang_code})`;
+              let inputHtml = "";
+              if (field.type === "textarea") {
+                inputHtml = `<textarea name="${inputName}" class="uppy-widget-textarea" data-clang-id="${lang.clang_id}" rows="2" placeholder="${lang.clang_name}...">${val}</textarea>`;
+              } else {
+                inputHtml = `<input type="text" name="${inputName}" class="uppy-widget-input" data-clang-id="${lang.clang_id}" value="${val}" placeholder="${lang.clang_name}...">`;
+              }
+              const wrapper = document.createElement("div");
+              wrapper.appendChild(langLabel);
+              wrapper.innerHTML += inputHtml;
+              collapseContent.appendChild(wrapper);
+            });
+            collapseBtn.onclick = () => {
+              collapseContent.classList.toggle("is-open");
+            };
+            group.appendChild(collapseBtn);
+            group.appendChild(collapseContent);
+          }
         } else {
-          inputHtml = `<input type="text" name="${field.name}" class="uppy-widget-input" value="${value}">`;
+          const value = metadata[field.id] || "";
+          let inputHtml = "";
+          if (field.type === "select") {
+            const options = (field.options || []).map(
+              (opt) => `<option value="${opt.value}" ${opt.value == value ? "selected" : ""}>${opt.label}</option>`
+            ).join("");
+            inputHtml = `<select name="${field.id}" class="uppy-widget-select">${options}</select>`;
+          } else if (field.type === "textarea") {
+            inputHtml = `<textarea name="${field.id}" class="uppy-widget-textarea" rows="3">${value}</textarea>`;
+          } else {
+            inputHtml = `<input type="text" name="${field.id}" class="uppy-widget-input" value="${value}">`;
+          }
+          group.innerHTML += inputHtml;
         }
-        group.innerHTML = label + inputHtml;
         form.appendChild(group);
       });
       body.appendChild(form);
@@ -10644,11 +10708,34 @@ this.ifd0Offset: ${this.ifd0Offset}, file.byteLength: ${e4.byteLength}`), e4.tif
       backdrop.querySelector(".uppy-widget-modal-close").addEventListener("click", close);
       backdrop.querySelector(".uppy-widget-modal-cancel").addEventListener("click", close);
       backdrop.querySelector(".uppy-widget-modal-save").addEventListener("click", async () => {
-        const formData = new FormData(form);
         const newMetadata = {};
-        for (const [key, value] of formData.entries()) {
-          newMetadata[key] = value;
+        const titleInput = form.querySelector('input[name="title"]');
+        if (titleInput) {
+          newMetadata["title"] = titleInput.value;
         }
+        fields.forEach((field) => {
+          if (field.id === "title") return;
+          if (field.is_multilang) {
+            const inputs = form.querySelectorAll(`[name^="${field.id}["]`);
+            const langData = [];
+            inputs.forEach((input) => {
+              const clangId = parseInt(input.dataset.clangId);
+              const val = input.value;
+              if (val && !isNaN(clangId)) {
+                langData.push({
+                  clang_id: clangId,
+                  value: val
+                });
+              }
+            });
+            newMetadata[field.id] = JSON.stringify(langData);
+          } else {
+            const input = form.querySelector(`[name="${field.id}"]`);
+            if (input) {
+              newMetadata[field.id] = input.value;
+            }
+          }
+        });
         const success = await this.saveMetadata(filename, newMetadata);
         if (success) {
           close();

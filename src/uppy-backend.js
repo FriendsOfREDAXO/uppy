@@ -10,6 +10,11 @@ import ImageEditor from '@uppy/image-editor';
 import German from '@uppy/locales/lib/de_DE';
 import { UppyCustomWidget } from './uppy-custom-widget';
 
+// Patch missing translations in German locale
+if (German && German.strings) {
+    German.strings.help = 'Hilfe';
+}
+
 window.UPPY_BUNDLE_LOADED = true;
 
 /**

@@ -1,5 +1,5 @@
 package: uppy
-version: '2.0.0-beta1'
+version: '2.0.0-beta2'
 author: 'Friends Of REDAXO'
 supportpage: https://github.com/FriendsOfREDAXO/uppy
 requires:
@@ -24,7 +24,7 @@ page:
             perm: admin
         }
         help: { 
-            title: 'translate:help', 
+            title: 'translate:uppy_help', 
             subPath: README.md, 
             itemClass: 'pull-right' 
         }

@@ -11,9 +11,6 @@
 rex_api_function::register('uppy_uploader', FriendsOfRedaxo\Uppy\UppyUploadHandler::class);
 rex_api_function::register('uppy_metadata', FriendsOfRedaxo\Uppy\UppyMetadataHandler::class);
 
-// YForm Template-Pfad hinzufügen
-rex_yform::addTemplatePath($this->getPath('ytemplates'));
-
 // Backend-Integration
 if (rex::isBackend() && rex::getUser()) {
     // Assets nur einmalig laden

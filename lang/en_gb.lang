@@ -1,6 +1,8 @@
 uppy_title = Uppy Uploader
 uppy_upload = Upload
 uppy_settings = Settings
+uppy_help = Readme
+
 
 # Settings
 uppy_settings_title = Uppy Settings

@@ -320,3 +320,47 @@ body.rex-theme-dark {
 .uppy-widget-collapse-content.is-open {
     display: block;
 }
+/* Collapse / Multilang */
+.uppy-widget-collapse-btn {
+    background: none;
+    border: 1px solid var(--uppy-widget-border);
+    border-radius: var(--uppy-widget-radius);
+    padding: 5px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    margin-top: 5px;
+    margin-bottom: 5px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--uppy-widget-text);
+}
+
+.uppy-widget-collapse-btn:hover {
+    background: rgba(0,0,0,0.05);
+}
+
+.uppy-widget-collapse-content {
+    display: none;
+    padding: 10px;
+    background: var(--uppy-widget-item-bg);
+    border: 1px solid var(--uppy-widget-item-border);
+    border-radius: var(--uppy-widget-radius);
+    margin-top: 5px;
+}
+
+.uppy-widget-collapse-content.is-open {
+    display: block;
+}
+
+.uppy-widget-lang-label {
+    display: block;
+    font-size: 11px;
+    color: #888;
+    margin-bottom: 2px;
+    margin-top: 8px;
+}
+
+.uppy-widget-lang-label:first-child {
+    margin-top: 0;
+}
