@@ -178,11 +178,11 @@ $select->setSelected(rex_config::get('uppy', 'category_id', 0));
 $n['field'] = $select->get();
 $formElements[] = $n;
 
-// Chunk-Upload (TUS Protocol - aktuell deaktiviert wegen fehlender Backend-Implementierung)
+// Chunk-Upload (TUS Protocol)
 $n = [];
 $n['label'] = '<label for="uppy-enable-chunks">' . $addon->i18n('uppy_enable_chunks') . '</label>';
-$n['field'] = '<input type="checkbox" id="uppy-enable-chunks" name="config[enable_chunks]" value="1" disabled ' . (rex_config::get('uppy', 'enable_chunks', false) ? 'checked' : '') . ' />';
-$n['note'] = '<span class="text-muted">Chunked Upload ist aktuell deaktiviert. Verwenden Sie PHP upload_max_filesize für große Dateien.</span>';
+$n['field'] = '<input type="checkbox" id="uppy-enable-chunks" name="config[enable_chunks]" value="1" ' . (rex_config::get('uppy', 'enable_chunks', true) ? 'checked' : '') . ' />';
+$n['note'] = '<span class="text-muted">Ermöglicht den Upload sehr großer Dateien durch Aufteilung in kleine Pakete (Chunks). Umgeht das PHP upload_max_filesize Limit.</span>';
 $formElements[] = $n;
 
 // Bildoptimierung
