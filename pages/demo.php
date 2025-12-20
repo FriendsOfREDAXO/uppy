@@ -10,7 +10,7 @@ $package = rex_addon::get('uppy');
 $signedParams = [
     'category_id' => 0,
     'allowed_types' => 'image/jpeg,image/png',
-    'max_filesize' => 500 * 1024 // 500 KB
+    'max_filesize' => 0.5 // 0.5 MB = 500 KB
 ];
 $signature = FriendsOfRedaxo\Uppy\Signature::create($signedParams);
 
@@ -27,7 +27,6 @@ $content = '
         <li><a href="#tab_editor" data-toggle="tab" aria-expanded="false">Image Editor</a></li>
         <li><a href="#tab_restricted" data-toggle="tab" aria-expanded="false">Restriktionen</a></li>
         <li><a href="#tab_yform" data-toggle="tab" aria-expanded="false">YForm</a></li>
-        <li><a href="#tab_docs" data-toggle="tab" aria-expanded="false">Doku & API</a></li>
     </ul>
     <div class="tab-content" style="padding-top: 20px;">
         
@@ -158,7 +157,7 @@ use FriendsOfRedaxo\Uppy\Signature;
 $params = [
     \'category_id\' => 0,
     \'allowed_types\' => \'image/jpeg,image/png\',
-    \'max_filesize\' => 500 * 1024 // 500 KB
+    \'max_filesize\' => 0.5 // 0.5 MB
 ];
 $sig = Signature::create($params);
 ?&gt;</code></pre>
@@ -367,62 +366,6 @@ $sig = Signature::create($params);
     "data-enable-image-editor": "true",
     "data-category-id": "1"
 }</code></pre>
-        </div>
-
-        <!-- Tab 6: Docs -->
-        <div class="tab-pane" id="tab_docs">
-            <h3>Verfügbare Data-Attribute</h3>
-            <table class="table table-striped">
-                <thead>
-                    <tr>
-                        <th>Attribut</th>
-                        <th>Beschreibung</th>
-                        <th>Standard</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td><code>data-widget="uppy"</code></td>
-                        <td>Aktiviert das Standard Dashboard Widget</td>
-                        <td>-</td>
-                    </tr>
-                    <tr>
-                        <td><code>class="uppy-upload-widget"</code></td>
-                        <td>Aktiviert das Custom Widget (Minimal UI)</td>
-                        <td>-</td>
-                    </tr>
-                    <tr>
-                        <td><code>data-category-id</code></td>
-                        <td>ID der Mediapool-Kategorie für Uploads</td>
-                        <td>0</td>
-                    </tr>
-                    <tr>
-                        <td><code>data-max-files</code></td>
-                        <td>Maximale Anzahl an Dateien</td>
-                        <td>10</td>
-                    </tr>
-                    <tr>
-                        <td><code>data-max-filesize</code></td>
-                        <td>Maximale Dateigröße in Megabyte</td>
-                        <td>200</td>
-                    </tr>
-                    <tr>
-                        <td><code>data-allowed-types</code></td>
-                        <td>Erlaubte Dateitypen (MIME-Types oder Extensions), kommagetrennt</td>
-                        <td>(alle)</td>
-                    </tr>
-                    <tr>
-                        <td><code>data-enable-image-editor</code></td>
-                        <td>Aktiviert den Bild-Editor (true/false)</td>
-                        <td>false</td>
-                    </tr>
-                    <tr>
-                        <td><code>data-lang</code></td>
-                        <td>Sprache des Widgets (de_DE, en_US)</td>
-                        <td>de_DE</td>
-                    </tr>
-                </tbody>
-            </table>
         </div>
     </div>
 </div>

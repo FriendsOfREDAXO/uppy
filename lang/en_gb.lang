@@ -2,6 +2,7 @@ uppy_title = Uppy Uploader
 uppy_upload = Upload
 uppy_settings = Settings
 uppy_help = Readme
+uppy_api = API Documentation
 
 
 # Settings

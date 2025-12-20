@@ -17,7 +17,7 @@ page:
         }
         demo: { 
             title: 'translate:uppy_demo',
-            perm: uppy[upload]
+            perm: admin
         }
         settings: { 
             title: 'translate:uppy_settings',
@@ -26,6 +26,11 @@ page:
         help: { 
             title: 'translate:uppy_help', 
             subPath: README.md, 
+            itemClass: 'pull-right' 
+        }
+        api: { 
+            title: 'translate:uppy_api', 
+            subPath: API.md, 
             itemClass: 'pull-right' 
         }
 default_config:

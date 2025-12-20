@@ -2,8 +2,12 @@
     --uppy-widget-bg: #fff;
     --uppy-widget-border: #dfe1e5;
     --uppy-widget-text: #333;
+    --uppy-widget-text-muted: #888;
+    --uppy-widget-text-secondary: #666;
     --uppy-widget-item-bg: #f9f9f9;
     --uppy-widget-item-border: #eee;
+    --uppy-widget-icon-bg: #eee;
+    --uppy-widget-hover-bg: rgba(0,0,0,0.05);
     --uppy-widget-primary: #4d90fe;
     --uppy-widget-primary-hover: #357ae8;
     --uppy-widget-danger: #d9534f;
@@ -17,8 +21,26 @@ body.rex-theme-dark {
     --uppy-widget-bg: #2b3035;
     --uppy-widget-border: #434a54;
     --uppy-widget-text: #dfe1e5;
+    --uppy-widget-text-muted: #8a9199;
+    --uppy-widget-text-secondary: #a0a6af;
     --uppy-widget-item-bg: #32383e;
     --uppy-widget-item-border: #434a54;
+    --uppy-widget-icon-bg: #3c4248;
+    --uppy-widget-hover-bg: rgba(255,255,255,0.05);
+}
+
+@media (prefers-color-scheme: dark) {
+    body:not(.rex-theme-light) {
+        --uppy-widget-bg: #2b3035;
+        --uppy-widget-border: #434a54;
+        --uppy-widget-text: #dfe1e5;
+        --uppy-widget-text-muted: #8a9199;
+        --uppy-widget-text-secondary: #a0a6af;
+        --uppy-widget-item-bg: #32383e;
+        --uppy-widget-item-border: #434a54;
+        --uppy-widget-icon-bg: #3c4248;
+        --uppy-widget-hover-bg: rgba(255,255,255,0.05);
+    }
 }
 
 .uppy-custom-widget {
@@ -100,7 +122,7 @@ body.rex-theme-dark {
     height: 48px;
     object-fit: cover;
     border-radius: var(--uppy-widget-radius);
-    background-color: #eee;
+    background-color: var(--uppy-widget-icon-bg);
     flex-shrink: 0;
 }
 
@@ -110,10 +132,10 @@ body.rex-theme-dark {
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: #eee;
+    background-color: var(--uppy-widget-icon-bg);
     border-radius: var(--uppy-widget-radius);
     font-size: 24px;
-    color: #666;
+    color: var(--uppy-widget-text-secondary);
     flex-shrink: 0;
 }
 
@@ -132,7 +154,7 @@ body.rex-theme-dark {
 
 .uppy-custom-widget .uppy-file-meta {
     font-size: 0.85em;
-    color: #888;
+    color: var(--uppy-widget-text-muted);
 }
 
 .uppy-custom-widget .uppy-actions {
@@ -155,24 +177,29 @@ body.rex-theme-dark {
 }
 
 .uppy-custom-widget .uppy-btn:hover {
-    background-color: rgba(0,0,0,0.05);
+    background-color: var(--uppy-widget-hover-bg);
 }
 
 .uppy-custom-widget .uppy-btn-primary {
-    background-color: var(--uppy-widget-primary) !important;
-    color: #ffffff !important;
-    border-color: var(--uppy-widget-primary) !important;
+    background-color: transparent !important;
+    color: var(--uppy-widget-primary) !important;
+    border: 2px solid var(--uppy-widget-primary) !important;
+    padding: 5px 15px !important;
 }
 
 .uppy-custom-widget .uppy-btn-primary:hover,
 .uppy-custom-widget .uppy-btn-primary:focus,
 .uppy-custom-widget .uppy-btn-primary:active {
-    background-color: var(--uppy-widget-primary-hover) !important;
+    background-color: var(--uppy-widget-primary) !important;
     color: #ffffff !important;
-    border-color: var(--uppy-widget-primary-hover) !important;
+    border-color: var(--uppy-widget-primary) !important;
 }
 
 .uppy-custom-widget .uppy-btn-primary svg {
+    stroke: var(--uppy-widget-primary) !important;
+}
+
+.uppy-custom-widget .uppy-btn-primary:hover svg {
     stroke: #ffffff !important;
 }
 
@@ -190,10 +217,11 @@ body.rex-theme-dark {
 .uppy-custom-widget .uppy-empty-state {
     padding: 20px;
     text-align: center;
-    color: #888;
+    color: var(--uppy-widget-text-muted);
     border: 1px dashed var(--uppy-widget-border);
     border-radius: var(--uppy-widget-radius);
     margin-bottom: var(--uppy-widget-spacing);
+    background: var(--uppy-widget-bg);
 }
 
 /* Metadata Modal */
@@ -251,7 +279,7 @@ body.rex-theme-dark {
     font-size: 1.5rem;
     line-height: 1;
     cursor: pointer;
-    color: #888;
+    color: var(--uppy-widget-text-muted);
     padding: 0;
 }
 
@@ -329,7 +357,7 @@ body.rex-theme-dark {
 
 .uppy-widget-lang-label {
     font-size: 0.85em;
-    color: #666;
+    color: var(--uppy-widget-text-secondary);
     margin-bottom: 2px;
     display: block;
 }
@@ -373,7 +401,7 @@ body.rex-theme-dark {
 }
 
 .uppy-widget-collapse-btn:hover {
-    background: rgba(0,0,0,0.05);
+    background: var(--uppy-widget-hover-bg);
 }
 
 .uppy-widget-collapse-content {
@@ -392,7 +420,7 @@ body.rex-theme-dark {
 .uppy-widget-lang-label {
     display: block;
     font-size: 11px;
-    color: #888;
+    color: var(--uppy-widget-text-muted);
     margin-bottom: 2px;
     margin-top: 8px;
 }

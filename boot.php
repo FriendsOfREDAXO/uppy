@@ -19,15 +19,9 @@ if (rex::isBackend() && rex::getUser()) {
     static $uppyScriptsLoaded = false;
     
     if (!$uppyScriptsLoaded) {
-        // CSS - Core, Dashboard, Webcam und Image Editor (Uppy 5.0)
-        rex_view::addCssFile($addon->getAssetsUrl('css/uppy-core.min.css'));
-        rex_view::addCssFile($addon->getAssetsUrl('css/uppy-dashboard.min.css'));
-        rex_view::addCssFile($addon->getAssetsUrl('css/uppy-webcam.min.css'));
-        rex_view::addCssFile($addon->getAssetsUrl('css/uppy-image-editor.min.css'));
-        rex_view::addCssFile($addon->getAssetsUrl('css/uppy-dark-overrides.css'));
-        rex_view::addCssFile($addon->getAssetsUrl('css/uppy-custom.css'));
-        rex_view::addCssFile($addon->getAssetsUrl('css/uppy-custom-widget.css'));
-        rex_view::addCssFile($addon->getAssetsUrl('uppy-dashboard-styles.css'));
+        // CSS Bundle (Uppy 5.0 + Custom Styles)
+        $cssVersion = $addon->getVersion() . '.' . filemtime($addon->getPath('assets/dist/uppy-backend-bundle.css'));
+        rex_view::addCssFile($addon->getAssetsUrl('dist/uppy-backend-bundle.css?v=' . $cssVersion));
         
         // Konfiguration als JSON für JavaScript verfügbar machen
         rex_view::setJsProperty('uppy_config', [

@@ -4,6 +4,7 @@ uppy_demo = Demo
 uppy_settings = Einstellungen
 uppy_demo_title = Image Editor Demo
 uppy_help = Readme
+uppy_api = API-Dokumentation
 
 # Settings
 uppy_settings_title = Uppy Einstellungen

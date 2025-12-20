@@ -55,11 +55,13 @@ Uppy kann einfach über `data`-Attribute in einem `hidden` Input-Feld aktiviert 
 ```
 
 **Verfügbare Attribute:**
-- `data-widget="uppy"`: Aktiviert das Widget
+- `data-widget="uppy"`: Aktiviert das Dashboard Widget
 - `data-category-id="1"`: Ziel-Kategorie ID im Mediapool
 - `data-max-files="5"`: Maximale Anzahl Dateien
+- `data-max-filesize="200"`: Max. Dateigröße in MB (nicht Bytes!)
 - `data-allowed-types="image/*"`: Erlaubte Typen (MIME-Types oder Extensions)
-- `data-enable-image-editor="true"`: Image Editor aktivieren
+- `data-enable-image-editor="true"`: Image Editor aktivieren (optional)
+- `data-enable-webcam="true"`: Webcam-Integration aktivieren (optional)
 - `data-lang="de_DE"`: Sprache erzwingen (optional)
 
 ### YForm Integration
@@ -95,10 +97,10 @@ Für die Verwendung im Frontend (z.B. in eigenen Formularen) steht das **Custom 
    ```php
    $uppy = rex_addon::get('uppy');
    
-   // CSS
-   echo '<link rel="stylesheet" href="'. $uppy->getAssetsUrl('css/uppy-custom-widget.css') .'">';
+   // CSS Bundle (im <head>)
+   echo '<link rel="stylesheet" href="'. $uppy->getAssetsUrl('dist/uppy-frontend-bundle.css') .'">';
    
-   // JS (am Ende des Body)
+   // JS Bundle (am Ende des <body>)
    echo '<script src="'. $uppy->getAssetsUrl('dist/uppy-custom-widget-bundle.js') .'"></script>';
    ```
 
@@ -113,9 +115,18 @@ Für die Verwendung im Frontend (z.B. in eigenen Formularen) steht das **Custom 
        value=""
        data-category-id="1"
        data-max-files="5"
+       data-max-filesize="10"
        data-allowed-types="image/jpeg,image/png"
    >
    ```
+
+3. **Verfügbare Attribute (Frontend Widget):**
+   - `data-category-id="1"`: Ziel-Kategorie ID im Mediapool
+   - `data-max-files="5"`: Maximale Anzahl Dateien
+   - `data-max-filesize="10"`: Max. Dateigröße in MB
+   - `data-allowed-types="image/*"`: Erlaubte Typen (MIME-Types oder Extensions)
+   - `data-enable-image-editor="true"`: Image Editor aktivieren (optional)
+   - `data-enable-webcam="true"`: Webcam aktivieren (optional)
 
 ## Sicherheit: Manipulationsschutz (Signierte Uploads)
 
@@ -140,7 +151,7 @@ use FriendsOfRedaxo\Uppy\Signature;
 $params = [
     'category_id' => 1,
     'allowed_types' => 'image/jpeg,image/png',
-    'max_filesize' => 500 * 1024 // 500 KB in Bytes
+    'max_filesize' => 500 // in MB
 ];
 
 // Signatur erstellen
@@ -176,16 +187,13 @@ Der Chunk-Upload teilt große Dateien in kleine Blöcke (Standard: 5MB) und send
 ### SVG Support
 SVG-Dateien werden automatisch vom client-seitigen Resizing ausgeschlossen, um eine Rasterisierung (Umwandlung in PNG) zu verhindern. Sie bleiben als Vektorgrafiken erhalten.
 
-### Build
-Das Projekt nutzt `esbuild` für das Bundling der Assets.
-```bash
 ## Entwicklung & Build-Prozess
 
 Das AddOn verwendet moderne Frontend-Tools, um JavaScript und CSS zu bündeln. Es werden keine externen CDNs verwendet (DSGVO-konform).
 
 ### Voraussetzungen
 - Node.js (>= 18)
-- NPM
+- npm
 
 ### Installation der Abhängigkeiten
 ```bash
@@ -195,43 +203,53 @@ npm install
 
 ### Build-Befehle
 ```bash
-# Kompletten Build ausführen (JS & CSS)
+# Kompletten Build ausführen (JS & CSS Bundles)
 npm run build
 
-# Nur JavaScript bauen (via esbuild)
+# Nur JavaScript bauen
 npm run build:js
 
-# Nur CSS kopieren und bereitstellen
-npm run build:css
+# Nur CSS-Bundles erstellen
+node build.js  # erstellt uppy-backend-bundle.css & uppy-frontend-bundle.css
 ```
+
+### Was wird gebaut?
+
+Der Build-Prozess (`build.js`) erstellt folgende Bundles:
+
+**JavaScript:**
+- `assets/dist/uppy-backend-bundle.js` - Backend Dashboard Widget
+- `assets/dist/uppy-custom-widget-bundle.js` - Frontend Custom Widget
+
+**CSS:**
+- `assets/dist/uppy-backend-bundle.css` - Alle Backend Styles (8 Dateien kombiniert)
+- `assets/dist/uppy-frontend-bundle.css` - Minimales Frontend CSS
 
 ### Ordnerstruktur
 
-Die Assets sind strikt nach Quelle und Ziel getrennt, um die Entwicklung übersichtlich zu halten:
-
 ```text
 assets/
-├── src/                  # JavaScript Quellcode (ES Modules) & CSS
-│   ├── uppy-backend.js       # Hauptlogik für das Backend
-│   ├── uppy-custom-widget.js # Logik für das Custom Widget (Frontend & Backend)
-│   ├── chunk-uploader.js     # Custom Chunk-Upload Implementierung
-│   └── uppy-dashboard-styles.css # Custom Upload-Animations
+├── src/                  # JavaScript Quellcode (ES Modules)
+│   ├── uppy-backend.js       # Backend Dashboard Widget
+│   ├── uppy-custom-widget.js # Custom Widget (Frontend & Backend)
+│   ├── chunk-uploader.js     # Chunk-Upload Implementierung
+│   └── uppy-dashboard-styles.css # Custom Animations
 │
-├── dist/                 # Kompilierte, minifizierte Bundles (Production)
+├── dist/                 # Kompilierte Bundles (generiert via build.js)
 │   ├── uppy-backend-bundle.js
-│   └── uppy-custom-widget-bundle.js
+│   ├── uppy-backend-bundle.css
+│   ├── uppy-custom-widget-bundle.js
+│   └── uppy-frontend-bundle.css
 │
-├── css/                  # Stylesheets (Uppy Core + Plugins + Custom)
+├── css/                  # Uppy Core Styles (kopiert aus node_modules)
 │   ├── uppy-core.min.css
+│   ├── uppy-dashboard.min.css
 │   ├── uppy-custom.css
 │   └── ...
 │
-├── uppy-dashboard-styles.css  # Custom Upload-Animations (kopiert via build.js)
-│
-└── locales/              # Sprachdateien
-```
-
-Der Build-Prozess (`build.js`) nimmt die Dateien aus `assets/src/`, bündelt sie mit `esbuild` und speichert das Ergebnis in `assets/dist/`. CSS-Dateien werden aus `node_modules` nach `assets/css/` kopiert. Custom CSS-Dateien wie `uppy-dashboard-styles.css` werden automatisch von `src/` nach `assets/` kopiert.
+└── locales/              # Sprachdateien (kopiert aus node_modules)
+    ├── de_DE.min.js
+    └── en_US.min.js
 ```
 
 ## Autor
