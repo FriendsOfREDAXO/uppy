@@ -13,13 +13,14 @@ use rex_request;
 use rex_media;
 use rex_media_service;
 use rex_sql;
+use rex_formatter;
+use rex_logger;
 use rex_config;
 use rex_addon;
 use rex_plugin;
 use rex_media_cache;
 use rex_ycom_auth;
 use rex_backend_login;
-use rex_logger;
 use rex_sql_exception;
 use Exception;
 
@@ -420,7 +421,7 @@ class UppyUploadHandler extends rex_api_function
             
             // Signatur prüfen
             if (!Signature::verify($params, $signature)) {
-                rex_logger::logError('UPPY_SECURITY', 'Invalid signature for upload. Params: ' . json_encode($params));
+                rex_logger::logError('UPPY_SECURITY', 'Invalid signature for upload. Params: ' . json_encode($params), [], __FILE__);
                 throw new rex_api_exception('Security violation: Invalid signature');
             }
             
@@ -492,7 +493,7 @@ class UppyUploadHandler extends rex_api_function
             $error = is_array($return) && isset($return['message']) ? $return['message'] : 'Upload failed';
             
             // Log detailed error for debugging
-            rex_logger::logError('UPPY_UPLOAD_ERROR', 'Upload failed for file: ' . $file['name'] . '. Error: ' . $error);
+            rex_logger::logError('UPPY_UPLOAD_ERROR', 'Upload failed for file: ' . $file['name'] . '. Error: ' . $error, [], __FILE__);
             
             throw new rex_api_exception($error);
         }

@@ -58,3 +58,15 @@ uppy_error_unauthorized = Keine Berechtigung
 # YForm
 uppy_yform_label = Datei hochladen
 uppy_yform_notice = Maximale Dateigröße: {0} MB
+uppy_yform_media_in_use = Medium wird in folgenden YForm-Einträgen verwendet:
+
+# YForm Auto-Cleanup
+uppy_auto_cleanup_enabled = Automatisches Cleanup (YForm)
+uppy_auto_cleanup_enabled_label = Aktiviert
+uppy_auto_cleanup_disabled = Deaktiviert
+uppy_auto_cleanup_notice = Löscht nicht mehr verwendete Dateien automatisch und unwiderruflich aus dem Mediapool, wenn YForm-Einträge mit uppy_uploader-Feldern gespeichert werden.
+uppy_auto_cleanup_warning = Achtung:
+
+# Webcam
+uppy_enable_webcam = Webcam aktivieren
+uppy_enable_webcam_notice = Ermöglicht die Aufnahme von Fotos über die Webcam direkt im Uploader

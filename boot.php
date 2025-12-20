@@ -13,6 +13,16 @@ $addon = rex_addon::get('uppy');
 rex_api_function::register('uppy_uploader', FriendsOfRedaxo\Uppy\UppyUploadHandler::class);
 rex_api_function::register('uppy_metadata', FriendsOfRedaxo\Uppy\UppyMetadataHandler::class);
 
+// YForm Integration - registrieren wenn YForm verfügbar ist
+rex_extension::register('PACKAGES_INCLUDED', function() use ($addon) {
+    if (rex_addon::get('yform')->isAvailable()) {
+        rex_yform::addTemplatePath($addon->getPath('ytemplates'));
+        
+        // MEDIA_IS_IN_USE Extension registrieren (verhindert Löschen verwendeter Dateien)
+        FriendsOfRedaxo\Uppy\UppyMediaCleanup::register();
+    }
+});
+
 // Backend-Integration
 if (rex::isBackend() && rex::getUser()) {
     // Assets nur einmalig laden
@@ -37,9 +47,13 @@ if (rex::isBackend() && rex::getUser()) {
             'chunk_size' => rex_config::get('uppy', 'chunk_size', 5)
         ]);
         
-        // JavaScript Bundle (lokal gebaut mit esbuild) - mit Timestamp für Cache-Busting
+        // Backend Dashboard Bundle
         $version = $addon->getVersion() . '.' . filemtime($addon->getPath('assets/dist/uppy-backend-bundle.js'));
         rex_view::addJsFile($addon->getAssetsUrl('dist/uppy-backend-bundle.js?v=' . $version));
+        
+        // Custom Widget Bundle (für YForm und andere Verwendungen)
+        $customVersion = $addon->getVersion() . '.' . filemtime($addon->getPath('assets/dist/uppy-custom-widget-bundle.js'));
+        rex_view::addJsFile($addon->getAssetsUrl('dist/uppy-custom-widget-bundle.js?v=' . $customVersion));
         
         $uppyScriptsLoaded = true;
     }

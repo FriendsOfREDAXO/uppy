@@ -17,7 +17,8 @@ if (rex_post('config-submit', 'boolean')) {
         ['resize_height', 'int'],
         ['resize_quality', 'int'],
         ['fix_exif_orientation', 'bool'],
-        ['enable_webcam', 'bool']
+        ['enable_webcam', 'bool'],
+        ['auto_cleanup_enabled', 'bool']
     ]);
     
     foreach ($config as $key => $value) {
@@ -216,9 +217,9 @@ $formElements[] = $n;
 
 // Webcam aktivieren
 $n = [];
-$n['label'] = '<label for="uppy-enable-webcam">Webcam aktivieren</label>';
+$n['label'] = '<label for="uppy-enable-webcam">' . $addon->i18n('uppy_enable_webcam') . '</label>';
 $n['field'] = '<input type="checkbox" id="uppy-enable-webcam" name="config[enable_webcam]" value="1" ' . (rex_config::get('uppy', 'enable_webcam', false) ? 'checked' : '') . ' />';
-$n['note'] = 'Ermöglicht die Aufnahme von Fotos über die Webcam direkt im Uploader';
+$n['note'] = $addon->i18n('uppy_enable_webcam_notice');
 $formElements[] = $n;
 
 // Mediapool ersetzen
@@ -227,6 +228,24 @@ $n['label'] = '<label for="uppy-replace-mediapool">' . $addon->i18n('uppy_replac
 $n['field'] = '<input type="checkbox" id="uppy-replace-mediapool" name="config[replace_mediapool]" value="1" ' . (rex_config::get('uppy', 'replace_mediapool', false) ? 'checked' : '') . ' />';
 $n['note'] = $addon->i18n('uppy_replace_mediapool_notice');
 $formElements[] = $n;
+
+// YForm Auto-Cleanup (nur wenn YForm verfügbar)
+if (rex_addon::get('yform')->isAvailable()) {
+    $n = [];
+    $n['label'] = '<label for="uppy-auto-cleanup">' . $addon->i18n('uppy_auto_cleanup_enabled') . '</label>';
+    
+    $select = new rex_select();
+    $select->setId('uppy-auto-cleanup');
+    $select->setName('config[auto_cleanup_enabled]');
+    $select->setSize(1);
+    $select->addOption($addon->i18n('uppy_auto_cleanup_disabled'), '0');
+    $select->addOption($addon->i18n('uppy_auto_cleanup_enabled_label'), '1');
+    $select->setSelected(rex_config::get('uppy', 'auto_cleanup_enabled', 0));
+    
+    $n['field'] = $select->get();
+    $n['note'] = '<span class="text-warning"><i class="rex-icon fa-exclamation-triangle"></i> <strong>' . $addon->i18n('uppy_auto_cleanup_warning') . '</strong> ' . $addon->i18n('uppy_auto_cleanup_notice') . '</span>';
+    $formElements[] = $n;
+}
 
 // API-Token (nur anzeigen)
 $n = [];

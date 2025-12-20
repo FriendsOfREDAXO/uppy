@@ -57,3 +57,15 @@ uppy_error_unauthorized = Unauthorized
 # YForm
 uppy_yform_label = Upload File
 uppy_yform_notice = Maximum file size: {0} MB
+uppy_yform_media_in_use = Media is used in the following YForm entries:
+
+# YForm Auto-Cleanup
+uppy_auto_cleanup_enabled = Automatic Cleanup (YForm)
+uppy_auto_cleanup_enabled_label = Enabled
+uppy_auto_cleanup_disabled = Disabled
+uppy_auto_cleanup_notice = Automatically and permanently deletes unused files from the media pool when YForm entries with uppy_uploader fields are saved.
+uppy_auto_cleanup_warning = Warning:
+
+# Webcam
+uppy_enable_webcam = Enable Webcam
+uppy_enable_webcam_notice = Enables taking photos via webcam directly in the uploader

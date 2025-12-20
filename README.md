@@ -198,6 +198,44 @@ $signature = Signature::create($params);
 
 > **Hinweis:** Wenn eine Signatur vorhanden ist, werden die signierten Parameter (`category_id`, `allowed_types`, `max_filesize`) serverseitig strikt durchgesetzt.
 
+### In YForm
+
+Das AddOn stellt einen eigenen YForm-Value-Typ `uppy_uploader` bereit. Dieser kann in YForm-Tablemanager-Feldern verwendet werden:
+
+**Feld-Parameter:**
+- `category_id` - Ziel-Kategorie im Mediapool (optional, Standard aus Einstellungen)
+- `max_files` - Maximale Anzahl Dateien (optional, Standard aus Einstellungen)
+- `max_filesize` - Maximale Dateigröße in MB (optional, Standard aus Einstellungen)
+- `allowed_types` - Erlaubte Dateitypen als JSON (optional, Standard aus Einstellungen)
+- `enable_webcam` - Webcam aktivieren: `1` oder `0` (optional, Standard aus Einstellungen)
+- `enable_image_editor` - Image Editor aktivieren: `1` oder `0` (optional, Standard aus Einstellungen)
+
+**Beispiel:**
+```
+Field: uppy_uploader
+Name: gallery
+Label: Bildergalerie
+category_id: 5
+max_files: 10
+enable_image_editor: 1
+```
+
+Die hochgeladenen Dateien werden als komma-separierte Liste der Dateinamen gespeichert. In der Listenansicht werden Vorschaubilder angezeigt (bei Bildern).
+
+#### Automatisches Cleanup
+
+Optional kann das automatische Löschen nicht mehr verwendeter Dateien aktiviert werden (**Uppy → Einstellungen → Automatisches Cleanup**). 
+
+**Wichtig:** Diese Funktion löscht Dateien **automatisch und unwiderruflich** aus dem Mediapool, sobald YForm-Einträge gespeichert werden und Dateien aus `uppy_uploader`-Feldern entfernt wurden.
+
+**Sicherheitsmerkmale:**
+- Prüft vor dem Löschen, ob die Datei noch in anderen YForm-Feldern oder MetaInfo-Feldern verwendet wird
+- Ist standardmäßig **deaktiviert**
+- Protokolliert alle Löschvorgänge im REDAXO-Logger
+
+**Schutz vor versehentlichem Löschen:**
+Das AddOn verhindert auch das manuelle Löschen von Dateien im Mediapool, die noch in YForm-Feldern verwendet werden (via `MEDIA_IS_IN_USE` Extension Point).
+
 ## Demo Seite
 
 Eine ausführliche Demo mit Live-Beispielen und Quellcode befindet sich im Backend unter **Uppy → Demo**.
