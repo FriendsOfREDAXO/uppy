@@ -69,3 +69,7 @@ uppy_auto_cleanup_warning = Warning:
 # Webcam
 uppy_enable_webcam = Enable Webcam
 uppy_enable_webcam_notice = Enables taking photos via webcam directly in the uploader
+
+# Debug
+uppy_enable_debug_logging = Enable debug logging
+uppy_enable_debug_logging_notice = Enables detailed debug logs. Additionally requires REDAXO debug mode (System).

@@ -18,7 +18,8 @@ if (rex_post('config-submit', 'boolean')) {
         ['resize_quality', 'int'],
         ['fix_exif_orientation', 'bool'],
         ['enable_webcam', 'bool'],
-        ['auto_cleanup_enabled', 'bool']
+        ['auto_cleanup_enabled', 'bool'],
+        ['enable_debug_logging', 'bool']
     ]);
     
     foreach ($config as $key => $value) {
@@ -246,6 +247,13 @@ if (rex_addon::get('yform')->isAvailable()) {
     $n['note'] = '<span class="text-warning"><i class="rex-icon fa-exclamation-triangle"></i> <strong>' . $addon->i18n('uppy_auto_cleanup_warning') . '</strong> ' . $addon->i18n('uppy_auto_cleanup_notice') . '</span>';
     $formElements[] = $n;
 }
+
+// Debug-Logging aktivieren
+$n = [];
+$n['label'] = '<label>' . $addon->i18n('uppy_enable_debug_logging') . '</label>';
+$n['field'] = '<input type="checkbox" name="config[enable_debug_logging]" value="1" ' . (rex_config::get('uppy', 'enable_debug_logging', 0) ? 'checked="checked"' : '') . ' />';
+$n['note'] = $addon->i18n('uppy_enable_debug_logging_notice');
+$formElements[] = $n;
 
 // API-Token (nur anzeigen)
 $n = [];

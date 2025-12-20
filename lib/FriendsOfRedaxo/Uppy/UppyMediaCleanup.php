@@ -54,12 +54,14 @@ class UppyMediaCleanup
             $ignoreId = (int)($GLOBALS['uppy_cleanup_ignore']['id'] ?? 0);
             $ignoreField = $GLOBALS['uppy_cleanup_ignore']['field'] ?? '';
             
-            rex_logger::factory()->log('debug', sprintf(
-                'UppyMediaCleanup: Verwende globale ignore-Parameter (table: %s, id: %d, field: %s)',
-                $ignoreTable,
-                $ignoreId,
-                $ignoreField
-            ));
+            if (rex::isDebugMode() && rex_config::get('uppy', 'enable_debug_logging', false)) {
+                rex_logger::factory()->log('debug', sprintf(
+                    'UppyMediaCleanup: Verwende globale ignore-Parameter (table: %s, id: %d, field: %s)',
+                    $ignoreTable,
+                    $ignoreId,
+                    $ignoreField
+                ));
+            }
         }
         
         $sql = rex_sql::factory();

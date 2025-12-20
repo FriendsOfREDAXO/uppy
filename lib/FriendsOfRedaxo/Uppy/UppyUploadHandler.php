@@ -169,7 +169,9 @@ class UppyUploadHandler extends rex_api_function
      */
     protected function handleUpload(int $categoryId): array
     {
-        rex_logger::factory()->log('debug', 'handleUpload called. FILES: ' . print_r($_FILES, true));
+        if (rex::isDebugMode() && rex_config::get('uppy', 'enable_debug_logging', false)) {
+            rex_logger::factory()->log('debug', 'handleUpload called. FILES: ' . print_r($_FILES, true));
+        }
 
         if (!isset($_FILES['file'])) {
             rex_logger::factory()->log('error', 'No file uploaded in handleUpload');
@@ -190,7 +192,9 @@ class UppyUploadHandler extends rex_api_function
         }
         
         // Log zur Fehlersuche
-        rex_logger::factory()->log('debug', 'Uppy Upload - category_id: ' . $categoryId . ' (URL: ' . rex_request('category_id', 'int', 0) . ', POST: ' . ($postCategoryId ?? 'null') . ')');
+        if (rex::isDebugMode() && rex_config::get('uppy', 'enable_debug_logging', false)) {
+            rex_logger::factory()->log('debug', 'Uppy Upload - category_id: ' . $categoryId . ' (URL: ' . rex_request('category_id', 'int', 0) . ', POST: ' . ($postCategoryId ?? 'null') . ')');
+        }
         
         // Standard-Felder
         if ($title = rex_request('title', 'string', '')) {
