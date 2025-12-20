@@ -219,10 +219,6 @@ body.rex-theme-dark {
     }
     
     /* Modals */
-    .uppy-Dashboard--modal .uppy-Dashboard-overlay {
-        background-color: rgba(0, 0, 0, 0.7);
-    }
-    
     .uppy-Dashboard--modal .uppy-Dashboard-inner {
         background-color: #2c3136;
         border-color: #404448;
@@ -271,7 +267,6 @@ body.rex-theme-dark {
     /* Super Important: Override ALL white backgrounds */
     .uppy-Root,
     .uppy-Dashboard,
-    .uppy-Dashboard-overlay,
     .uppy-Dashboard-innerWrap {
         background-color: #2c3136 !important;
     }
@@ -502,10 +497,6 @@ body.rex-theme-dark {
         }
         
         /* Modals */
-        .uppy-Dashboard--modal .uppy-Dashboard-overlay {
-            background-color: rgba(0, 0, 0, 0.7);
-        }
-        
         .uppy-Dashboard--modal .uppy-Dashboard-inner {
             background-color: #2c3136;
             border-color: #404448;
@@ -554,7 +545,6 @@ body.rex-theme-dark {
         /* Super Important: Override ALL white backgrounds */
         .uppy-Root,
         .uppy-Dashboard,
-        .uppy-Dashboard-overlay,
         .uppy-Dashboard-innerWrap {
             background-color: #2c3136 !important;
         }
@@ -566,5 +556,17 @@ body.rex-theme-dark {
         button[type="button"] {
             color: #4a90e2 !important;
         }
+    }
+}
+
+/* Unified Overlay Definition - applies to both light and dark themes */
+body.rex-theme-dark .uppy-Dashboard-overlay,
+body.rex-theme-dark .uppy-widget-modal-backdrop,
+body.rex-theme-dark .uppy-widget-modal-backdrop.is-visible,
+@media (prefers-color-scheme: dark) {
+    body:not(.rex-theme-light) .uppy-Dashboard-overlay,
+    body:not(.rex-theme-light) .uppy-widget-modal-backdrop,
+    body:not(.rex-theme-light) .uppy-widget-modal-backdrop.is-visible {
+        background: rgba(255, 255, 255, 0.25) !important;
     }
 }

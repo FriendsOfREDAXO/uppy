@@ -253,7 +253,7 @@ body.rex-theme-dark {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(0, 0, 0, 0.15);
     z-index: 10000;
     display: flex;
     align-items: center;
@@ -266,6 +266,19 @@ body.rex-theme-dark {
 .uppy-widget-modal-backdrop.is-visible {
     opacity: 1;
     visibility: visible;
+}
+
+/* Dark Mode: Helleres Overlay */
+body.rex-theme-dark .uppy-widget-modal-backdrop,
+body.rex-theme-dark .uppy-widget-modal-backdrop.is-visible {
+    background: rgba(0, 0, 0, 0.3) !important;
+}
+
+@media (prefers-color-scheme: dark) {
+    body:not(.rex-theme-light) .uppy-widget-modal-backdrop,
+    body:not(.rex-theme-light) .uppy-widget-modal-backdrop.is-visible {
+        background: rgba(0, 0, 0, 0.3) !important;
+    }
 }
 
 .uppy-widget-modal {

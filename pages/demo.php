@@ -28,7 +28,7 @@ $content = '
         <li><a href="#tab_restricted" data-toggle="tab" aria-expanded="false">Restriktionen</a></li>
         <li><a href="#tab_yform" data-toggle="tab" aria-expanded="false">YForm</a></li>
     </ul>
-    <div class="tab-content" style="padding-top: 20px;">
+    <div class="tab-content">
         
         <!-- Tab 1: Standard -->
         <div class="tab-pane active" id="tab_standard">

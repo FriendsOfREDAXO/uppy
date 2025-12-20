@@ -9,27 +9,33 @@ requires:
         metainfo: '>=2.0.0'
 page:
     title: 'translate:uppy_title'
+    icon: rex-icon fa-solid fa-upload
     perm: uppy[upload]
     subpages:
         upload: { 
             title: 'translate:uppy_upload',
+            icon: rex-icon fa-solid fa-cloud-arrow-up,
             perm: uppy[upload]
         }
         demo: { 
             title: 'translate:uppy_demo',
+            icon: rex-icon fa-solid fa-flask,
             perm: admin
         }
         settings: { 
             title: 'translate:uppy_settings',
+            icon: rex-icon fa-solid fa-gears,
             perm: admin
         }
         help: { 
-            title: 'translate:uppy_help', 
+            title: 'translate:uppy_help',
+            icon: rex-icon fa-solid fa-circle-question,
             subPath: README.md, 
             itemClass: 'pull-right' 
         }
         api: { 
-            title: 'translate:uppy_api', 
+            title: 'translate:uppy_api',
+            icon: rex-icon fa-solid fa-code,
             subPath: API.md, 
             itemClass: 'pull-right' 
         }
