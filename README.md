@@ -29,7 +29,7 @@ Multiuploader für REDAXO basierend auf [Uppy 5.0](https://uppy.io/).
 Die globalen Einstellungen befinden sich unter **Uppy → Einstellungen**:
 
 - **Erlaubte Dateitypen**: Definition der zulässigen MIME-Types.
-  - *Neu:* Der Button **"Dateitypen auswählen"** ermöglicht die Auswahl aus einer Liste gängiger Formate (Bilder, Dokumente, Video, Audio).
+  - Der Button **"Dateitypen auswählen"** ermöglicht die Auswahl aus einer Liste gängiger Formate (Bilder, Dokumente, Video, Audio).
 - **Maximale Dateigröße**: Obergrenze pro Datei in MB.
 - **Maximale Anzahl Dateien**: Limit pro Upload-Vorgang.
 - **Standard-Kategorie**: Zielkategorie im Mediapool (falls keine spezifische gewählt wird).
