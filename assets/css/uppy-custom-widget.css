@@ -203,6 +203,20 @@ body.rex-theme-dark {
     stroke: #ffffff !important;
 }
 
+.uppy-custom-widget .uppy-btn-secondary {
+    background-color: transparent !important;
+    color: var(--uppy-widget-text-secondary) !important;
+    border: 2px solid var(--uppy-widget-border) !important;
+    padding: 5px 15px !important;
+}
+
+.uppy-custom-widget .uppy-btn-secondary:hover,
+.uppy-custom-widget .uppy-btn-secondary:focus,
+.uppy-custom-widget .uppy-btn-secondary:active {
+    background-color: var(--uppy-widget-hover-bg) !important;
+    border-color: var(--uppy-widget-text-secondary) !important;
+}
+
 .uppy-custom-widget .uppy-btn-danger {
     color: var(--uppy-widget-danger);
     border-color: var(--uppy-widget-border);

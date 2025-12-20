@@ -226,7 +226,7 @@ class rex_yform_value_uppy_uploader extends rex_yform_value_abstract
 
     public function getDescription(): string
     {
-        return 'uppy_uploader|name|label|[category_id]|[max_files]|[max_filesize]|[allowed_types]|[enable_webcam]|[enable_image_editor]';
+        return 'uppy_uploader|name|label|[category_id]|[max_files]|[max_filesize]|[allowed_types]|[enable_webcam]|[enable_image_editor]|[allow_mediapool]';
     }
 
     public function getDefinitions(): array
@@ -243,6 +243,7 @@ class rex_yform_value_uppy_uploader extends rex_yform_value_abstract
                 'allowed_types' => ['type' => 'text', 'label' => 'Erlaubte Dateitypen', 'default' => 'image/*,application/pdf'],
                 'enable_webcam' => ['type' => 'checkbox', 'label' => 'Webcam aktivieren', 'default' => '0'],
                 'enable_image_editor' => ['type' => 'checkbox', 'label' => 'Image Editor aktivieren', 'default' => '0'],
+                'allow_mediapool' => ['type' => 'checkbox', 'label' => 'Medienpool-Auswahl erlauben', 'default' => '0'],
             ],
             'description' => 'Uppy File Upload Widget',
             'db_type' => ['text'],

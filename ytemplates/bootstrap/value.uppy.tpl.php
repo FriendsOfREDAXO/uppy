@@ -26,6 +26,7 @@ $maxFilesize = $this->getElement('max_filesize') ?: rex_config::get('uppy', 'max
 $allowedTypes = $this->getElement('allowed_types') ?: rex_config::get('uppy', 'allowed_types', '*');
 $enableWebcam = $this->getElement('enable_webcam') !== '' ? (bool)$this->getElement('enable_webcam') : rex_config::get('uppy', 'enable_webcam', false);
 $enableImageEditor = $this->getElement('enable_image_editor') !== '' ? (bool)$this->getElement('enable_image_editor') : rex_config::get('uppy', 'enable_image_editor', false);
+$allowMediapool = $this->getElement('allow_mediapool') !== '' ? (bool)$this->getElement('allow_mediapool') : false;
 
 // HTML Output
 ?>
@@ -44,6 +45,7 @@ $enableImageEditor = $this->getElement('enable_image_editor') !== '' ? (bool)$th
         data-allowed-types="<?= rex_escape($allowedTypes) ?>"
         data-enable-webcam="<?= $enableWebcam ? '1' : '0' ?>"
         data-enable-image-editor="<?= $enableImageEditor ? '1' : '0' ?>"
+        data-allow-mediapool="<?= $allowMediapool ? 'true' : 'false' ?>"
     />
     
     <?php if ($notice = $this->getElement('notice')): ?>

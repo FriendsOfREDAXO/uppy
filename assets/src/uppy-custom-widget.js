@@ -18,6 +18,7 @@ export class UppyCustomWidget {
         this.container = null;
         this.listContainer = null;
         this.uppy = null;
+        this.mediapoolWidgetId = null; // Eindeutige ID für Medienpool-Callbacks
         
         this.init();
     }
@@ -26,6 +27,12 @@ export class UppyCustomWidget {
         if (this.input.dataset.uppyInitialized) return;
         this.input.dataset.uppyInitialized = 'true';
         this.input.style.display = 'none';
+
+        // Eindeutige Widget-ID für Medienpool-Callbacks generieren
+        this.mediapoolWidgetId = 'uppy_' + Math.random().toString(36).substr(2, 9);
+        
+        // Globalen Callback für Medienpool registrieren
+        this.registerMediapoolCallback();
 
         // Track uploading files for visual feedback - MUSS VOR renderList() initialisiert werden
         this.uploadingFiles = new Map(); // fileId -> filename
@@ -41,6 +48,69 @@ export class UppyCustomWidget {
 
     setupMutationObserver() {
         // ... (wird später implementiert falls nötig)
+    }
+    
+    registerMediapoolCallback() {
+        const self = this;
+        
+        // Globalen Callback für writeREXMedialist registrieren
+        // Dies wird von REDAXO's Medienpool aufgerufen
+        if (!window.uppyMediapoolCallbacks) {
+            window.uppyMediapoolCallbacks = {};
+            
+            // Globale writeREXMedialist-Funktion erweitern
+            const originalWriteREXMedialist = window.writeREXMedialist;
+            window.writeREXMedialist = function(id) {
+                // Prüfen ob es ein Uppy-Widget ist
+                if (window.uppyMediapoolCallbacks[id]) {
+                    window.uppyMediapoolCallbacks[id]();
+                    return false;
+                }
+                // Fallback auf Original-Funktion
+                if (originalWriteREXMedialist) {
+                    return originalWriteREXMedialist(id);
+                }
+                return false;
+            };
+        }
+        
+        // Callback für dieses Widget registrieren
+        window.uppyMediapoolCallbacks[this.mediapoolWidgetId] = function() {
+            self.handleMediapoolSelection();
+        };
+    }
+    
+    handleMediapoolSelection() {
+        const selectElement = document.getElementById('REX_MEDIALIST_SELECT_' + this.mediapoolWidgetId);
+        if (!selectElement) return;
+        
+        const config = this.getConfig();
+        const maxFiles = config.maxFiles || 10;
+        const currentFiles = this.getFiles();
+        const allowMultiple = maxFiles > 1;
+        
+        // Alle Optionen aus dem Select-Element lesen
+        const options = Array.from(selectElement.options);
+        const selectedFilenames = options.map(opt => opt.value).filter(f => f);
+        
+        if (!allowMultiple && selectedFilenames.length > 0) {
+            // Single-Select: Ersetze vorhandene Datei
+            this.setFiles([selectedFilenames[0]]);
+        } else {
+            // Multi-Select: Ermittle nur die NEUEN Dateien
+            const newFiles = selectedFilenames.filter(filename => !currentFiles.includes(filename));
+            
+            const remainingSlots = maxFiles - currentFiles.length;
+            const filesToAdd = newFiles.slice(0, remainingSlots);
+            
+            filesToAdd.forEach(filename => {
+                this.addFile(filename);
+            });
+            
+            // Still enforcement - kein Alert, da es hinter dem Medienpool-Fenster wäre
+        }
+        
+        this.renderList();
     }
         
     initListeners() {
@@ -86,16 +156,41 @@ export class UppyCustomWidget {
         this.listContainer.className = 'uppy-file-list';
         this.container.appendChild(this.listContainer);
         
-        const addBtn = document.createElement('button');
-        addBtn.type = 'button';
-        addBtn.className = 'uppy-btn uppy-btn-primary';
-        addBtn.innerHTML = this.getIcon('add') + ' Dateien hinzufügen';
-        addBtn.addEventListener('click', () => {
+        // Button Container für mehrere Buttons mit File Count Info
+        this.buttonContainer = document.createElement('div');
+        this.buttonContainer.className = 'uppy-button-group';
+        this.buttonContainer.style.display = 'flex';
+        this.buttonContainer.style.gap = '8px';
+        this.buttonContainer.style.alignItems = 'center';
+        
+        this.addBtn = document.createElement('button');
+        this.addBtn.type = 'button';
+        this.addBtn.className = 'uppy-btn uppy-btn-primary';
+        this.addBtn.innerHTML = this.getIcon('add') + ' Dateien hinzufügen';
+        this.addBtn.addEventListener('click', () => {
             if (this.uppy) {
                 this.uppy.getPlugin('Dashboard').openModal();
             }
         });
-        this.container.appendChild(addBtn);
+        this.buttonContainer.appendChild(this.addBtn);
+        
+        // Medienpool-Button nur wenn Attribut gesetzt ist
+        if (this.input.dataset.allowMediapool === 'true') {
+            this.mediapoolBtn = document.createElement('button');
+            this.mediapoolBtn.type = 'button';
+            this.mediapoolBtn.className = 'uppy-btn uppy-btn-secondary';
+            this.mediapoolBtn.innerHTML = '<i class="fa fa-folder-open"></i> Aus Medienpool wählen';
+            this.mediapoolBtn.addEventListener('click', () => this.openMediapoolSelection());
+            this.buttonContainer.appendChild(this.mediapoolBtn);
+        }
+        
+        // File count info neben die Buttons
+        this.fileCountInfo = document.createElement('div');
+        this.fileCountInfo.className = 'uppy-file-count-info';
+        this.fileCountInfo.style.cssText = 'font-size: 12px; padding: 4px 8px; border-radius: 3px; background-color: #333; color: #fff; margin-left: auto;';
+        this.buttonContainer.appendChild(this.fileCountInfo);
+        
+        this.container.appendChild(this.buttonContainer);
         
         this.input.parentNode.insertBefore(this.container, this.input.nextSibling);
     }
@@ -109,6 +204,7 @@ export class UppyCustomWidget {
             emptyState.className = 'uppy-empty-state';
             emptyState.textContent = 'Keine Dateien ausgewählt';
             this.listContainer.appendChild(emptyState);
+            this.updateButtonVisibility();
             return;
         }
         
@@ -181,6 +277,35 @@ export class UppyCustomWidget {
             
             this.listContainer.appendChild(li);
         });
+        
+        this.updateButtonVisibility();
+    }
+
+    updateButtonVisibility() {
+        const config = this.getConfig();
+        const maxFiles = config.maxFiles || 10;
+        const currentFileCount = this.getFiles().length;
+        const isMaxReached = currentFileCount >= maxFiles;
+        
+        // Dateianzahl anzeigen
+        if (this.fileCountInfo) {
+            this.fileCountInfo.textContent = `Anzahl: ${currentFileCount}/${maxFiles}`;
+            if (isMaxReached) {
+                this.fileCountInfo.style.color = '#ff8c00'; // Orange
+                this.fileCountInfo.style.fontWeight = 'bold';
+            } else {
+                this.fileCountInfo.style.color = '#fff'; // Weiß
+                this.fileCountInfo.style.fontWeight = 'normal';
+            }
+        }
+        
+        // Nur Buttons ausblenden wenn Maximum erreicht, nicht das Label
+        if (this.addBtn) {
+            this.addBtn.style.display = isMaxReached ? 'none' : 'inline-flex';
+        }
+        if (this.mediapoolBtn) {
+            this.mediapoolBtn.style.display = isMaxReached ? 'none' : 'inline-flex';
+        }
     }
 
     getFiles() {
@@ -190,6 +315,7 @@ export class UppyCustomWidget {
     setFiles(files) {
         this.input.value = files.join(',');
         this.input.dispatchEvent(new Event('change', { bubbles: true }));
+        this.syncUppyWithFiles();
     }
 
     addFile(filename) {
@@ -198,6 +324,41 @@ export class UppyCustomWidget {
             files.push(filename);
             this.setFiles(files);
         }
+    }
+
+    syncUppyWithFiles() {
+        // Synchronisiere das versteckte Input mit Uppy Dashboard
+        // Dies ist relevant wenn Dateien extern (z.B. über Medienpool) hinzugefügt werden
+        if (!this.uppy) return;
+        
+        const currentFiles = this.getFiles();
+        const uppyFiles = this.uppy.getFiles();
+        
+        // Entferne Dateien aus Uppy die nicht mehr im Input sind
+        uppyFiles.forEach(file => {
+            if (!currentFiles.includes(file.name)) {
+                this.uppy.removeFile(file.id);
+            }
+        });
+        
+        // Update Uppy Restrictions basierend auf bereits vorhandenen Dateien
+        const config = this.getConfig();
+        const maxFiles = config.maxFiles || 10;
+        const existingFileCount = currentFiles.length;
+        const remainingSlots = Math.max(0, maxFiles - existingFileCount);
+        
+        // Setze neue maxNumberOfFiles Restriction
+        this.uppy.setOptions({
+            restrictions: {
+                maxFileSize: config.maxFileSize,
+                maxNumberOfFiles: remainingSlots,
+                allowedFileTypes: config.allowedTypes.length > 0 ? config.allowedTypes : null
+            }
+        });
+        
+        // Hinweis: Neue Dateien können nicht zu Uppy hinzugefügt werden, 
+        // da sie nicht als File-Objekte vorliegen (nur Dateinamen aus Medienpool)
+        // Das Dashboard zeigt daher nur hochgeladene Dateien, nicht die aus dem Medienpool
     }
 
     removeFile(index) {
@@ -212,6 +373,63 @@ export class UppyCustomWidget {
         if (newIndex >= 0 && newIndex < files.length) {
             [files[index], files[newIndex]] = [files[newIndex], files[index]];
             this.setFiles(files);
+        }
+    }
+
+    openMediapoolSelection() {
+        const config = this.getConfig();
+        const maxFiles = config.maxFiles || 10;
+        const currentFileCount = this.getFiles().length;
+        const allowMultiple = maxFiles > 1;
+        
+        // Bei max_files=1 wird ersetzt, bei mehr wird geprüft ob noch Platz ist
+        if (!allowMultiple && currentFileCount >= 1) {
+            // Single-Select: Vorhandene Datei wird ersetzt
+        } else if (currentFileCount >= maxFiles) {
+            // Multi-Select: Maximum erreicht - still return ohne Alert
+            return;
+        }
+        
+        // Verstecktes Select-Element und Input erstellen (wie bei MForm imglist)
+        const selectId = 'REX_MEDIALIST_SELECT_' + this.mediapoolWidgetId;
+        const inputId = 'REX_MEDIALIST_' + this.mediapoolWidgetId;
+        
+        // Prüfen ob Elemente bereits existieren, sonst erstellen
+        let selectElement = document.getElementById(selectId);
+        let inputElement = document.getElementById(inputId);
+        
+        if (!selectElement) {
+            selectElement = document.createElement('select');
+            selectElement.id = selectId;
+            selectElement.name = 'REX_MEDIALIST_SELECT[' + this.mediapoolWidgetId + ']';
+            selectElement.style.display = 'none';
+            selectElement.size = 10;
+            document.body.appendChild(selectElement);
+        }
+        
+        if (!inputElement) {
+            inputElement = document.createElement('input');
+            inputElement.type = 'hidden';
+            inputElement.id = inputId;
+            inputElement.name = 'REX_INPUT_MEDIALIST[' + this.mediapoolWidgetId + ']';
+            inputElement.value = '';
+            document.body.appendChild(inputElement);
+        }
+        
+        // Parameter für Medienpool vorbereiten
+        let params = '';
+        if (config.categoryId) {
+            params += '&rex_file_category=' + config.categoryId;
+        }
+        if (config.types) {
+            params += '&args[types]=' + encodeURIComponent(config.types);
+        }
+        
+        // Medienpool öffnen (Multi-Select oder Single-Select)
+        if (allowMultiple && typeof openREXMedialist === 'function') {
+            openREXMedialist(this.mediapoolWidgetId, params);
+        } else if (typeof openMediaPool === 'function') {
+            openMediaPool(inputId);
         }
     }
 
@@ -325,6 +543,18 @@ export class UppyCustomWidget {
                 
                 // Re-render to show final list without uploading state
                 this.renderList();
+                
+                // Prüfen ob Maximum erreicht ist und Modal schließen
+                const config = this.getConfig();
+                const maxFiles = config.maxFiles || 10;
+                const currentFileCount = this.getFiles().length;
+                
+                if (currentFileCount >= maxFiles) {
+                    const dashboard = this.uppy.getPlugin('Dashboard');
+                    if (dashboard) {
+                        dashboard.closeModal();
+                    }
+                }
                 
                 // Optional: Open metadata modal after upload
                 // this.openMetadataModal(responseData.filename);
