@@ -27,6 +27,9 @@ export class UppyCustomWidget {
         this.input.dataset.uppyInitialized = 'true';
         this.input.style.display = 'none';
 
+        // Track uploading files for visual feedback - MUSS VOR renderList() initialisiert werden
+        this.uploadingFiles = new Map(); // fileId -> filename
+
         this.renderUI();
         this.initUppy();
         this.renderList();
@@ -34,9 +37,6 @@ export class UppyCustomWidget {
         // Mutation Observer für dynamisch nachgeladene Felder (z.B. YForm)
         this.setupMutationObserver();
         this.initListeners();
-        
-        // Track uploading files for visual feedback
-        this.uploadingFiles = new Map(); // fileId -> filename
     }
 
     setupMutationObserver() {
