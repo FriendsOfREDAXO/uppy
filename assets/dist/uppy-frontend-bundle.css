@@ -73,7 +73,7 @@ body.rex-theme-dark {
 .uppy-custom-widget .uppy-file-list {
     list-style: none;
     padding: 0;
-    margin: 0 0 var(--uppy-widget-spacing) 0;
+    margin: 0;
     border: 1px solid var(--uppy-widget-border);
     border-radius: var(--uppy-widget-radius);
     background: var(--uppy-widget-bg);
@@ -248,6 +248,14 @@ body.rex-theme-dark {
     background-color: var(--uppy-widget-danger);
     color: white;
     border-color: var(--uppy-widget-danger);
+}
+
+/* Button Container mit Hintergrund */
+.uppy-custom-widget .uppy-button-group {
+    background: var(--uppy-widget-item-bg);
+    padding: 12px;
+    border-radius: var(--uppy-widget-radius);
+    border: 1px solid var(--uppy-widget-border);
 }
 
 .uppy-custom-widget .uppy-empty-state {

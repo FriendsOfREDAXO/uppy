@@ -181,7 +181,7 @@ export class UppyCustomWidget {
         this.addBtn = document.createElement('button');
         this.addBtn.type = 'button';
         this.addBtn.className = 'uppy-btn uppy-btn-primary';
-        this.addBtn.innerHTML = this.getIcon('add') + ' Dateien hinzufügen';
+        this.addBtn.innerHTML = this.getIcon('add') + ' Dateien hochladen';
         this.addBtn.addEventListener('click', () => {
             if (this.uppy) {
                 this.uppy.getPlugin('Dashboard').openModal();
