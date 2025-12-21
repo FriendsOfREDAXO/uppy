@@ -173,6 +173,47 @@ $sig = Signature::create($params);
 /&gt;</code></pre>
                 </div>
             </div>
+
+            <hr>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>Beispiel mit Medienpool-Auswahl:</label>
+                        <p class="help-block">Mit <code>data-allow-mediapool="true"</code> erscheint ein Button, um bestehende Dateien aus dem Mediapool auszuwählen.</p>
+                        <input 
+                            type="hidden" 
+                            class="uppy-upload-widget"
+                            name="demo_custom_mediapool" 
+                            value=""
+                            data-category-id="0"
+                            data-max-files="4"
+                            data-allowed-types="image/*"
+                            data-allow-mediapool="true"
+                        />
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <h4>Code mit Medienpool</h4>
+                    <pre><code class="language-html">&lt;input 
+    type="hidden" 
+    class="uppy-upload-widget"
+    name="rex_input_value_mediapool" 
+    value=""
+    data-category-id="0"
+    data-max-files="4"
+    data-allowed-types="image/*"
+    data-allow-mediapool="true"
+/&gt;</code></pre>
+                    <h4>Features</h4>
+                    <ul>
+                        <li>Einzelauswahl (max_files=1) oder Mehrfachauswahl</li>
+                        <li>Respektiert max-files Einschränkung</li>
+                        <li>Zeigt Anzahl-Anzeige (z.B. "Anzahl: 2/4")</li>
+                        <li>Buttons werden ausgeblendet wenn Maximum erreicht</li>
+                    </ul>
+                </div>
+            </div>
         </div>
 
         <!-- Tab 3: Image Editor -->

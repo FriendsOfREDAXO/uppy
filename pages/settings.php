@@ -163,7 +163,8 @@ $formElements[] = $n;
 
 $n = [];
 $n['label'] = '<label for="uppy-max-files">' . $addon->i18n('uppy_max_files') . '</label>';
-$n['field'] = '<input class="form-control" type="number" id="uppy-max-files" name="config[max_files]" value="' . rex_config::get('uppy', 'max_files', 30) . '" min="1" max="100" />';
+$n['field'] = '<input class="form-control" type="number" id="uppy-max-files" name="config[max_files]" value="' . rex_config::get('uppy', 'max_files', 30) . '" min="0" max="100" />';
+$n['note'] = '0 = unbegrenzt';
 $formElements[] = $n;
 
 $n = [];

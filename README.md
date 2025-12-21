@@ -62,6 +62,7 @@ Uppy kann einfach über `data`-Attribute in einem `hidden` Input-Feld aktiviert 
 - `data-allowed-types="image/*"`: Erlaubte Typen (MIME-Types oder Extensions)
 - `data-enable-image-editor="true"`: Image Editor aktivieren (optional)
 - `data-enable-webcam="true"`: Webcam-Integration aktivieren (optional)
+- `data-allow-mediapool="true"`: Medienpool-Auswahl Button aktivieren (optional)
 - `data-lang="de_DE"`: Sprache erzwingen (optional)
 
 ### YForm Integration
@@ -83,9 +84,12 @@ In YForm lässt sich das Uppy-Widget über das Feld "Attribute" konfigurieren. H
     "class": "uppy-upload-widget",
     "data-category-id": "1",
     "data-max-files": "5",
-    "data-allowed-types": "image/*"
+    "data-allowed-types": "image/*",
+    "data-allow-mediapool": "true"
 }
 ```
+
+> **Tipp:** Mit `data-allow-mediapool="true"` erscheint ein zusätzlicher Button, um bestehende Dateien aus dem Mediapool auszuwählen, statt neue hochzuladen.
 
 ### Frontend Integration
 
@@ -153,6 +157,29 @@ rex_set_session('uppy_token', rex_config::get('uppy', 'api_token'));
    - `data-allowed-types="image/*"`: Erlaubte Typen (MIME-Types oder Extensions)
    - `data-enable-image-editor="true"`: Image Editor aktivieren (optional)
    - `data-enable-webcam="true"`: Webcam aktivieren (optional)
+   - `data-allow-mediapool="true"`: Medienpool-Auswahl Button aktivieren (optional)
+
+### Medienpool-Integration
+
+Mit `data-allow-mediapool="true"` wird ein zusätzlicher Button "Aus Medienpool wählen" angezeigt:
+
+```html
+<input 
+    type="hidden" 
+    class="uppy-upload-widget"
+    name="my_upload_field" 
+    value=""
+    data-category-id="1"
+    data-max-files="5"
+    data-allow-mediapool="true"
+>
+```
+
+**Features:**
+- Auswahl bestehender Dateien aus dem REDAXO Mediapool
+- Unterstützt Einzelauswahl (max_files=1) und Mehrfachauswahl
+- Respektiert die `max-files` Einschränkung automatisch
+- Zeigt eine Anzahl-Anzeige (z.B. "Anzahl: 2/5") neben den Buttons
 
 ## Sicherheit: Manipulationsschutz (Signierte Uploads)
 
@@ -209,6 +236,7 @@ Das AddOn stellt einen eigenen YForm-Value-Typ `uppy_uploader` bereit. Dieser ka
 - `allowed_types` - Erlaubte Dateitypen als JSON (optional, Standard aus Einstellungen)
 - `enable_webcam` - Webcam aktivieren: `1` oder `0` (optional, Standard aus Einstellungen)
 - `enable_image_editor` - Image Editor aktivieren: `1` oder `0` (optional, Standard aus Einstellungen)
+- `allow_mediapool` - Medienpool-Auswahl aktivieren: `1` oder `0` (optional, Standard: deaktiviert)
 
 **Beispiel:**
 ```
@@ -218,9 +246,15 @@ Label: Bildergalerie
 category_id: 5
 max_files: 10
 enable_image_editor: 1
+allow_mediapool: 1
 ```
 
-Die hochgeladenen Dateien werden als komma-separierte Liste der Dateinamen gespeichert. In der Listenansicht werden Vorschaubilder angezeigt (bei Bildern).
+Die hochgeladenen Dateien werden als komma-separierte Liste der Dateinamen gespeichert. In der Listenansicht werden Vorschaubilder (bei Bildern) oder Icons (bei anderen Dateitypen) mit einem kompakten Design angezeigt.
+
+**Listenansicht Features:**
+- Zeigt bei Einzeldateien: Thumbnail/Icon + Medienpool-Titel
+- Zeigt bei mehreren Dateien: Icon (Bilder/Dokumente) + Anzahl + Dateiendungen
+- Kompaktes Design mit inline-flex Layout für bessere Übersicht in Tabellen
 
 #### Automatisches Cleanup
 

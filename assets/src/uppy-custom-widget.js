@@ -121,9 +121,24 @@ export class UppyCustomWidget {
     getConfig() {
         const globalConfig = window.rex?.uppy_config || {};
         
+        // maxFiles: 0 = unbegrenzt, explizit prüfen ob Attribut vorhanden ist
+        let maxFiles;
+        if (this.input.dataset.maxFiles !== undefined && this.input.dataset.maxFiles !== '') {
+            maxFiles = parseInt(this.input.dataset.maxFiles);
+        } else if (globalConfig.max_files !== undefined) {
+            maxFiles = parseInt(globalConfig.max_files);
+        } else {
+            maxFiles = 10; // Default nur wenn nichts gesetzt
+        }
+        
+        // Nur negative Werte auf 10 setzen
+        if (maxFiles < 0) {
+            maxFiles = 10;
+        }
+        
         return {
             apiToken: this.input.dataset.apiToken || '',
-            maxFiles: parseInt(this.input.dataset.maxFiles) || parseInt(globalConfig.max_files) || 10,
+            maxFiles: maxFiles,
             maxFileSize: (parseInt(this.input.dataset.maxFilesize) || parseInt(globalConfig.max_file_size) || 200) * 1024 * 1024,
             allowedTypes: this.input.dataset.allowedTypes 
                 ? this.input.dataset.allowedTypes.split(',').map(t => t.trim()) 
@@ -142,7 +157,7 @@ export class UppyCustomWidget {
             file: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>',
             up: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>',
             down: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>',
-            remove: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>',
+            remove: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>',
             edit: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>'
         };
         return icons[name] || '';
@@ -257,10 +272,11 @@ export class UppyCustomWidget {
                     </div>
                 </div>
                 <div class="uppy-actions">
-                    <button type="button" class="uppy-btn" data-action="edit" title="Metadaten bearbeiten">${this.getIcon('edit')}</button>
-                    ${index > 0 ? `<button type="button" class="uppy-btn" data-action="up" title="Nach oben">${this.getIcon('up')}</button>` : ''}
-                    ${index < files.length - 1 ? `<button type="button" class="uppy-btn" data-action="down" title="Nach unten">${this.getIcon('down')}</button>` : ''}
                     <button type="button" class="uppy-btn uppy-btn-danger" data-action="remove" title="Löschen">${this.getIcon('remove')}</button>
+                    <button type="button" class="uppy-btn" data-action="edit" title="Metadaten bearbeiten">${this.getIcon('edit')}</button>
+                    <span style="width: 24px; display: inline-block;"></span>
+                    <button type="button" class="uppy-btn" data-action="down" title="Nach unten" ${index === files.length - 1 ? 'style="visibility: hidden;"' : ''}>${this.getIcon('down')}</button>
+                    <button type="button" class="uppy-btn" data-action="up" title="Nach oben" ${index === 0 ? 'style="visibility: hidden;"' : ''}>${this.getIcon('up')}</button>
                 </div>
             `;
             
@@ -283,23 +299,30 @@ export class UppyCustomWidget {
 
     updateButtonVisibility() {
         const config = this.getConfig();
-        const maxFiles = config.maxFiles || 10;
+        const maxFiles = config.maxFiles;
         const currentFileCount = this.getFiles().length;
-        const isMaxReached = currentFileCount >= maxFiles;
+        const isUnlimited = maxFiles === 0;
+        const isMaxReached = !isUnlimited && currentFileCount >= maxFiles;
         
         // Dateianzahl anzeigen
         if (this.fileCountInfo) {
-            this.fileCountInfo.textContent = `Anzahl: ${currentFileCount}/${maxFiles}`;
-            if (isMaxReached) {
-                this.fileCountInfo.style.color = '#ff8c00'; // Orange
-                this.fileCountInfo.style.fontWeight = 'bold';
-            } else {
+            if (isUnlimited) {
+                this.fileCountInfo.textContent = `Anzahl: ${currentFileCount}`;
                 this.fileCountInfo.style.color = '#fff'; // Weiß
                 this.fileCountInfo.style.fontWeight = 'normal';
+            } else {
+                this.fileCountInfo.textContent = `Anzahl: ${currentFileCount}/${maxFiles}`;
+                if (isMaxReached) {
+                    this.fileCountInfo.style.color = '#ff8c00'; // Orange
+                    this.fileCountInfo.style.fontWeight = 'bold';
+                } else {
+                    this.fileCountInfo.style.color = '#fff'; // Weiß
+                    this.fileCountInfo.style.fontWeight = 'normal';
+                }
             }
         }
         
-        // Nur Buttons ausblenden wenn Maximum erreicht, nicht das Label
+        // Nur Buttons ausblenden wenn Maximum erreicht, nicht bei unbegrenzt
         if (this.addBtn) {
             this.addBtn.style.display = isMaxReached ? 'none' : 'inline-flex';
         }
@@ -315,14 +338,15 @@ export class UppyCustomWidget {
     setFiles(files) {
         this.input.value = files.join(',');
         this.input.dispatchEvent(new Event('change', { bubbles: true }));
-        this.syncUppyWithFiles();
+        // NICHT syncUppyWithFiles() hier aufrufen - das kann während Uploads problematisch sein
     }
 
     addFile(filename) {
         const files = this.getFiles();
         if (!files.includes(filename)) {
             files.push(filename);
-            this.setFiles(files);
+            this.input.value = files.join(',');
+            this.input.dispatchEvent(new Event('change', { bubbles: true }));
         }
     }
 
@@ -341,20 +365,28 @@ export class UppyCustomWidget {
             }
         });
         
-        // Update Uppy Restrictions basierend auf bereits vorhandenen Dateien
-        const config = this.getConfig();
-        const maxFiles = config.maxFiles || 10;
-        const existingFileCount = currentFiles.length;
-        const remainingSlots = Math.max(0, maxFiles - existingFileCount);
+        // WICHTIG: Restrictions nicht während des Uploads ändern!
+        // Prüfe ob gerade Uploads laufen
+        const hasActiveUploads = uppyFiles.some(file => 
+            file.progress && file.progress.uploadStarted && !file.progress.uploadComplete
+        );
         
-        // Setze neue maxNumberOfFiles Restriction
-        this.uppy.setOptions({
-            restrictions: {
-                maxFileSize: config.maxFileSize,
-                maxNumberOfFiles: remainingSlots,
-                allowedFileTypes: config.allowedTypes.length > 0 ? config.allowedTypes : null
-            }
-        });
+        if (!hasActiveUploads) {
+            // Update Uppy Restrictions NUR wenn keine Uploads laufen
+            const config = this.getConfig();
+            const maxFiles = config.maxFiles || 10;
+            const existingFileCount = currentFiles.length;
+            const remainingSlots = Math.max(0, maxFiles - existingFileCount);
+            
+            // Setze neue maxNumberOfFiles Restriction
+            this.uppy.setOptions({
+                restrictions: {
+                    maxFileSize: config.maxFileSize,
+                    maxNumberOfFiles: remainingSlots,
+                    allowedFileTypes: config.allowedTypes.length > 0 ? config.allowedTypes : null
+                }
+            });
+        }
         
         // Hinweis: Neue Dateien können nicht zu Uppy hinzugefügt werden, 
         // da sie nicht als File-Objekte vorliegen (nur Dateinamen aus Medienpool)
@@ -364,7 +396,8 @@ export class UppyCustomWidget {
     removeFile(index) {
         const files = this.getFiles();
         files.splice(index, 1);
-        this.setFiles(files);
+        this.input.value = files.join(',');
+        this.input.dispatchEvent(new Event('change', { bubbles: true }));
     }
 
     moveFile(index, direction) {
@@ -372,7 +405,8 @@ export class UppyCustomWidget {
         const newIndex = index + direction;
         if (newIndex >= 0 && newIndex < files.length) {
             [files[index], files[newIndex]] = [files[newIndex], files[index]];
-            this.setFiles(files);
+            this.input.value = files.join(',');
+            this.input.dispatchEvent(new Event('change', { bubbles: true }));
         }
     }
 
@@ -541,15 +575,20 @@ export class UppyCustomWidget {
                 const responseData = response.body.data || response.body;
                 this.addFile(responseData.filename);
                 
+                // Datei aus Uppy entfernen nach erfolgreichem Upload
+                this.uppy.removeFile(file.id);
+                
                 // Re-render to show final list without uploading state
                 this.renderList();
                 
-                // Prüfen ob Maximum erreicht ist und Modal schließen
+                // Prüfen ob ALLE Uploads fertig sind und Maximum erreicht ist
                 const config = this.getConfig();
                 const maxFiles = config.maxFiles || 10;
                 const currentFileCount = this.getFiles().length;
+                const allUploadsComplete = this.uploadingFiles.size === 0;
                 
-                if (currentFileCount >= maxFiles) {
+                // Modal nur schließen wenn alle Uploads fertig und Maximum erreicht
+                if (allUploadsComplete && currentFileCount >= maxFiles) {
                     const dashboard = this.uppy.getPlugin('Dashboard');
                     if (dashboard) {
                         dashboard.closeModal();

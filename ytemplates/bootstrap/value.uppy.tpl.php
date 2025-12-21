@@ -20,10 +20,13 @@ $fieldValue = $this->getValue();
 $fieldId = 'yform-uppy-' . $fieldName;
 
 // Parameter aus YForm-Feld-Definition
-$categoryId = $this->getElement('category_id') ?: rex_config::get('uppy', 'category_id', 1);
-$maxFiles = $this->getElement('max_files') ?: rex_config::get('uppy', 'max_files', 10);
-$maxFilesize = $this->getElement('max_filesize') ?: rex_config::get('uppy', 'max_filesize', 10);
-$allowedTypes = $this->getElement('allowed_types') ?: rex_config::get('uppy', 'allowed_types', '*');
+$categoryId = $this->getElement('category_id') !== '' ? (int)$this->getElement('category_id') : rex_config::get('uppy', 'category_id', 1);
+
+// Bei max_files: 0 ist gültig (unbegrenzt), daher !== '' prüfen
+$maxFiles = $this->getElement('max_files') !== '' ? (int)$this->getElement('max_files') : rex_config::get('uppy', 'max_files', 10);
+
+$maxFilesize = $this->getElement('max_filesize') !== '' ? (int)$this->getElement('max_filesize') : rex_config::get('uppy', 'max_filesize', 10);
+$allowedTypes = $this->getElement('allowed_types') !== '' ? $this->getElement('allowed_types') : rex_config::get('uppy', 'allowed_types', '*');
 $enableWebcam = $this->getElement('enable_webcam') !== '' ? (bool)$this->getElement('enable_webcam') : rex_config::get('uppy', 'enable_webcam', false);
 $enableImageEditor = $this->getElement('enable_image_editor') !== '' ? (bool)$this->getElement('enable_image_editor') : rex_config::get('uppy', 'enable_image_editor', false);
 $allowMediapool = $this->getElement('allow_mediapool') !== '' ? (bool)$this->getElement('allow_mediapool') : false;

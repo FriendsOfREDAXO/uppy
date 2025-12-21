@@ -18,6 +18,7 @@ Diese Dokumentation beschreibt die API-Endpunkte, PHP-Klassen und JavaScript-Int
 | `data-allowed-types` | Erlaubte Dateitypen (MIME-Types oder Extensions), kommagetrennt | (alle) |
 | `data-enable-image-editor` | Aktiviert den Bild-Editor (true/false) | false |
 | `data-enable-webcam` | Aktiviert die Webcam-Integration (true/false) | false |
+| `data-allow-mediapool` | Zeigt Button für Medienpool-Auswahl (true/false) | false |
 | `data-lang` | Sprache des Widgets (de_DE, en_US) | de_DE |
 | `data-uppy-signature` | Signatur für manipulationssichere Uploads (via Signature::create()) | - |
 
