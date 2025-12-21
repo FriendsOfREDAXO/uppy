@@ -67,6 +67,8 @@ Uppy kann einfach über `data`-Attribute in einem `hidden` Input-Feld aktiviert 
 
 ### YForm Integration
 
+#### Variante 1: Über Attribute (JSON)
+
 In YForm lässt sich das Uppy-Widget über das Feld "Attribute" konfigurieren. Hierzu wird ein JSON-Objekt verwendet.
 
 **Beispiel 1: Standard Dashboard**
@@ -89,7 +91,81 @@ In YForm lässt sich das Uppy-Widget über das Feld "Attribute" konfigurieren. H
 }
 ```
 
-> **Tipp:** Mit `data-allow-mediapool="true"` erscheint ein zusätzlicher Button, um bestehende Dateien aus dem Mediapool auszuwählen, statt neue hochzuladen.
+#### Variante 2: Über YForm Tablemanager
+
+Das AddOn stellt einen eigenen YForm-Value-Typ `uppy_uploader` bereit. Dieser kann in YForm-Tablemanager-Feldern verwendet werden:
+
+**Feld-Parameter:**
+- `category_id` - Ziel-Kategorie im Mediapool (optional, Standard aus Einstellungen)
+- `max_files` - Maximale Anzahl Dateien (optional, Standard aus Einstellungen)
+- `max_filesize` - Maximale Dateigröße in MB (optional, Standard aus Einstellungen)
+- `allowed_types` - Erlaubte Dateitypen als JSON (optional, Standard aus Einstellungen)
+- `enable_webcam` - Webcam aktivieren: `1` oder `0` (optional, Standard aus Einstellungen)
+- `enable_image_editor` - Image Editor aktivieren: `1` oder `0` (optional, Standard aus Einstellungen)
+- `allow_mediapool` - Medienpool-Auswahl aktivieren: `1` oder `0` (optional, Standard: deaktiviert)
+
+**Beispiel im Tablemanager:**
+```
+Field: uppy_uploader
+Name: gallery
+Label: Bildergalerie
+category_id: 5
+max_files: 10
+enable_image_editor: 1
+allow_mediapool: 1
+```
+
+Die hochgeladenen Dateien werden als komma-separierte Liste der Dateinamen gespeichert. In der Listenansicht werden Vorschaubilder (bei Bildern) oder Icons (bei anderen Dateitypen) mit einem kompakten Design angezeigt.
+
+**Listenansicht Features:**
+- Zeigt bei Einzeldateien: Thumbnail/Icon + Medienpool-Titel
+- Zeigt bei mehreren Dateien: Icon (Bilder/Dokumente) + Anzahl + Dateiendungen
+- Kompaktes Design mit inline-flex Layout für bessere Übersicht in Tabellen
+
+#### Variante 3: Über setValueField()
+
+Alternativ kann das Feld auch programmatisch über `setValueField()` hinzugefügt werden:
+
+```php
+$yform->setValueField('uppy_uploader', [
+    'uppyupload',           // Name des Felds
+    'upload',               // Label
+    '0',                    // Kategorie-ID (0 = Standard)
+    '10',                   // Max. Anzahl Dateien (0 = unbegrenzt)
+    '200',                  // Max. Dateigröße in MB
+    'image/*,application/pdf', // Erlaubte Dateitypen
+    '1',                    // Image Editor aktivieren (1/0)
+    '0',                    // Webcam aktivieren (1/0)
+    '1'                     // Medienpool-Button aktivieren (1/0)
+]);
+```
+
+**Parameter:**
+1. Feldname
+2. Label
+3. Kategorie-ID (0 = Standard aus Einstellungen)
+4. Max. Anzahl Dateien (0 = unbegrenzt)
+5. Max. Dateigröße in MB
+6. Erlaubte Dateitypen (kommasepariert)
+7. Image Editor (1 = aktiviert, 0 = deaktiviert)
+8. Webcam (1 = aktiviert, 0 = deaktiviert)
+9. Medienpool-Button (1 = aktiviert, 0 = deaktiviert)
+
+#### Automatisches Cleanup
+
+Optional kann das automatische Löschen nicht mehr verwendeter Dateien aktiviert werden (**Uppy → Einstellungen → Automatisches Cleanup**). 
+
+**Wichtig:** Diese Funktion löscht Dateien **automatisch und unwiderruflich** aus dem Mediapool, sobald YForm-Einträge gespeichert werden und Dateien aus `uppy_uploader`-Feldern entfernt wurden.
+
+**Sicherheitsmerkmale:**
+- Prüft vor dem Löschen, ob die Datei noch in anderen YForm-Feldern oder MetaInfo-Feldern verwendet wird
+- Ist standardmäßig **deaktiviert**
+- Protokolliert alle Löschvorgänge im REDAXO-Logger
+
+**Schutz vor versehentlichem Löschen:**
+Das AddOn verhindert auch das manuelle Löschen von Dateien im Mediapool, die noch in YForm-Feldern verwendet werden (via `MEDIA_IS_IN_USE` Extension Point).
+
+> **Tipp:** Mit `data-allow-mediapool="true"` (JSON), `allow_mediapool: 1` (Tablemanager) oder Parameter 9 = '1' (setValueField) erscheint ein zusätzlicher Button, um bestehende Dateien aus dem Mediapool auszuwählen, statt neue hochzuladen.
 
 ### Frontend Integration
 
@@ -224,51 +300,6 @@ $signature = Signature::create($params);
 ```
 
 > **Hinweis:** Wenn eine Signatur vorhanden ist, werden die signierten Parameter (`category_id`, `allowed_types`, `max_filesize`) serverseitig strikt durchgesetzt.
-
-### In YForm
-
-Das AddOn stellt einen eigenen YForm-Value-Typ `uppy_uploader` bereit. Dieser kann in YForm-Tablemanager-Feldern verwendet werden:
-
-**Feld-Parameter:**
-- `category_id` - Ziel-Kategorie im Mediapool (optional, Standard aus Einstellungen)
-- `max_files` - Maximale Anzahl Dateien (optional, Standard aus Einstellungen)
-- `max_filesize` - Maximale Dateigröße in MB (optional, Standard aus Einstellungen)
-- `allowed_types` - Erlaubte Dateitypen als JSON (optional, Standard aus Einstellungen)
-- `enable_webcam` - Webcam aktivieren: `1` oder `0` (optional, Standard aus Einstellungen)
-- `enable_image_editor` - Image Editor aktivieren: `1` oder `0` (optional, Standard aus Einstellungen)
-- `allow_mediapool` - Medienpool-Auswahl aktivieren: `1` oder `0` (optional, Standard: deaktiviert)
-
-**Beispiel:**
-```
-Field: uppy_uploader
-Name: gallery
-Label: Bildergalerie
-category_id: 5
-max_files: 10
-enable_image_editor: 1
-allow_mediapool: 1
-```
-
-Die hochgeladenen Dateien werden als komma-separierte Liste der Dateinamen gespeichert. In der Listenansicht werden Vorschaubilder (bei Bildern) oder Icons (bei anderen Dateitypen) mit einem kompakten Design angezeigt.
-
-**Listenansicht Features:**
-- Zeigt bei Einzeldateien: Thumbnail/Icon + Medienpool-Titel
-- Zeigt bei mehreren Dateien: Icon (Bilder/Dokumente) + Anzahl + Dateiendungen
-- Kompaktes Design mit inline-flex Layout für bessere Übersicht in Tabellen
-
-#### Automatisches Cleanup
-
-Optional kann das automatische Löschen nicht mehr verwendeter Dateien aktiviert werden (**Uppy → Einstellungen → Automatisches Cleanup**). 
-
-**Wichtig:** Diese Funktion löscht Dateien **automatisch und unwiderruflich** aus dem Mediapool, sobald YForm-Einträge gespeichert werden und Dateien aus `uppy_uploader`-Feldern entfernt wurden.
-
-**Sicherheitsmerkmale:**
-- Prüft vor dem Löschen, ob die Datei noch in anderen YForm-Feldern oder MetaInfo-Feldern verwendet wird
-- Ist standardmäßig **deaktiviert**
-- Protokolliert alle Löschvorgänge im REDAXO-Logger
-
-**Schutz vor versehentlichem Löschen:**
-Das AddOn verhindert auch das manuelle Löschen von Dateien im Mediapool, die noch in YForm-Feldern verwendet werden (via `MEDIA_IS_IN_USE` Extension Point).
 
 ## Demo Seite
 
