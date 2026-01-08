@@ -108,11 +108,63 @@ export class ChunkUploader {
     }
 
     async prepareUpload(file) {
-        const fileId = 'uppy_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        // Prüfe ob fileId bereits existiert (z.B. aus Modal oder file-added Event)
+        let fileId = file.meta.fileId;
+        
+        if (fileId) {
+            // FileId existiert bereits - prüfe ob Metadaten aktualisiert werden müssen
+            // Metadaten sammeln
+            const metadata = {};
+            Object.keys(file.meta).forEach(function(key) {
+                // Filtere Uppy-interne Felder aus (inkl. fileId)
+                if (!['name', 'type', 'size', 'relativePath', 'fileId'].includes(key)) {
+                    metadata[key] = file.meta[key];
+                }
+            });
+            
+            // Wenn Metadaten vorhanden sind, aktualisiere sie
+            if (Object.keys(metadata).length > 0) {
+                const formData = new FormData();
+                formData.append('fileId', fileId);
+                formData.append('metadata', JSON.stringify(metadata));
+                
+                const url = `${this.opts.endpoint}&func=prepare&api_token=${this.opts.apiToken}`;
+                
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        body: formData,
+                        credentials: 'same-origin'
+                    });
+                    
+                    if (!response.ok) {
+                        console.warn('Metadata update failed:', response.status);
+                    }
+                } catch (error) {
+                    console.warn('Metadata update error:', error);
+                }
+            }
+            
+            return fileId;
+        }
+        
+        // Keine fileId vorhanden - neue generieren und prepare aufrufen
+        fileId = 'uppy_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        
+        // Metadaten sammeln (MUSS VOR console.log sein!)
+        const metadata = {};
+        Object.keys(file.meta).forEach(function(key) {
+            // Filtere Uppy-interne Felder aus
+            if (!['name', 'type', 'size', 'relativePath', 'fileId'].includes(key)) {
+                metadata[key] = file.meta[key];
+            }
+        });
+        
         const formData = new FormData();
         formData.append('fileId', fileId);
         formData.append('fileName', file.name);
         formData.append('fieldName', 'file');
+        formData.append('metadata', JSON.stringify(metadata));
         
         // Endpoint URL enthält bereits Signatur-Parameter (siehe Constructor)
         const url = `${this.opts.endpoint}&func=prepare&api_token=${this.opts.apiToken}`;
@@ -130,6 +182,10 @@ export class ChunkUploader {
         }
         
         const data = await response.json();
+        
+        // FileId in file.meta speichern
+        this.uppy.setFileMeta(file.id, { fileId: data.fileId || fileId });
+        
         return data.fileId || fileId;
     }
 

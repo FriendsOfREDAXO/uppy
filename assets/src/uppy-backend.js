@@ -291,18 +291,24 @@ function initializeUppyPlugins(uppy, config, inputElement, metaFields, valueInpu
             apiToken: tokenParam
         });
         chunkUploader.install();
+        
+        // KEIN file-added Event für Chunk-Upload!
+        // ChunkUploader ruft prepareUpload() selbst auf, wenn Upload startet
+        // (nachdem User optional Metadaten im Modal eingegeben hat)
     } else {
         // Standard XHR Upload
         uppy.use(XHRUpload, {
             endpoint: window.location.origin + '/redaxo/index.php?rex-api-call=uppy_uploader&func=upload&api_token=' + tokenParam + '&category_id=' + currentCategoryId + signatureParams,
             formData: true,
             fieldName: 'file',
-            allowedMetaFields: true,
+            // WICHTIG: allowedMetaFields auf false setzen, da wir Metadaten via prepare senden
+            allowedMetaFields: false,
             headers: {
                 'X-Requested-With': 'XMLHttpRequest'
             },
             limit: 5,
             
+            // fileId als FormData-Parameter mitsenden
             getResponseData: function(responseText, response) {
                 try {
                     return JSON.parse(responseText);
@@ -318,6 +324,11 @@ function initializeUppyPlugins(uppy, config, inputElement, metaFields, valueInpu
                     return responseText;
                 }
             }
+        });
+        
+        // Vor Upload: Metadaten an Backend senden (prepare)
+        uppy.on('file-added', function(file) {
+            prepareUpload(file, uppy, config);
         });
     }
     
@@ -353,6 +364,47 @@ function initializeUppyFallback(container, config, inputElement, valueInput) {
     
     addCompressorPlugin(uppy, config);
     initializeUppyPlugins(uppy, config, inputElement, undefined, valueInput);
+}
+
+/**
+ * Bereitet Upload vor: Sendet Metadaten an Backend
+ */
+function prepareUpload(file, uppy, config) {
+    // Eindeutige fileId generieren
+    const fileId = 'uppy_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    
+    // Metadaten sammeln
+    const metadata = {};
+    
+    // Alle Meta-Felder aus der Datei sammeln
+    Object.keys(file.meta).forEach(function(key) {
+        // Filtere Uppy-interne Felder aus
+        if (!['name', 'type', 'size', 'relativePath'].includes(key)) {
+            metadata[key] = file.meta[key];
+        }
+    });
+    
+    // Prepare-Request senden
+    const formData = new FormData();
+    formData.append('fileId', fileId);
+    formData.append('metadata', JSON.stringify(metadata));
+    
+    fetch(window.location.origin + '/redaxo/index.php?rex-api-call=uppy_uploader&func=prepare', {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: formData
+    }).then(function(response) {
+        return response.json();
+    }).then(function(result) {
+        if (result.status === 'prepared') {
+            // FileId in file.meta speichern, damit sie beim Upload mitgesendet wird
+            uppy.setFileMeta(file.id, { fileId: fileId });
+        }
+    }).catch(function(error) {
+        console.error('Prepare upload failed:', error);
+    });
 }
 
 /**
@@ -1039,6 +1091,30 @@ function showMetadataModal(uppy, file, metaFields) {
         
         // Metadaten in Uppy-Datei speichern
         uppy.setFileMeta(file.id, metadata);
+        
+        // Prepare-Request senden, um Metadaten am Backend zu speichern
+        // Generiere fileId falls noch nicht vorhanden
+        let fileId = file.meta.fileId;
+        if (!fileId) {
+            fileId = 'uppy_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            uppy.setFileMeta(file.id, { fileId: fileId });
+        }
+        
+        const prepareFormData = new FormData();
+        prepareFormData.append('fileId', fileId);
+        prepareFormData.append('metadata', JSON.stringify(metadata));
+        
+        fetch(window.location.origin + '/redaxo/index.php?rex-api-call=uppy_uploader&func=prepare', {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: prepareFormData
+        }).then(function(response) {
+            return response.json();
+        }).catch(function(error) {
+            console.error('Prepare upload failed:', error);
+        });
 
         // Modal schließen
         modal.modal('hide');

@@ -149,17 +149,36 @@ class UppyUploadHandler extends rex_api_function
     protected function handlePrepare(): array
     {
         $fileId = rex_request('fileId', 'string', '');
-        $metadata = rex_request('metadata', 'array', []);
+        // WICHTIG: metadata als String lesen und dann als JSON parsen
+        $metadataJson = rex_request('metadata', 'string', '{}');
+        $metadata = json_decode($metadataJson, true) ?? [];
 
         if (empty($fileId)) {
             throw new rex_api_exception('Missing fileId');
         }
+        
+        // Debug-Logging
+        if (rex::isDebugMode() && rex_config::get('uppy', 'enable_debug_logging', false)) {
+            rex_logger::factory()->log('debug', 'UPPY PREPARE: fileId=' . $fileId);
+            rex_logger::factory()->log('debug', 'UPPY PREPARE: metadata JSON=' . $metadataJson);
+            rex_logger::factory()->log('debug', 'UPPY PREPARE: metadata parsed=' . print_r($metadata, true));
+        }
 
         $metaFile = $this->metadataDir . '/' . $fileId . '.json';
-        rex_file::put($metaFile, json_encode([
+        $metaData = [
             'metadata' => $metadata,
             'timestamp' => time()
-        ]));
+        ];
+        rex_file::put($metaFile, json_encode($metaData));
+        
+        // Verifizieren dass Datei geschrieben wurde
+        if (rex::isDebugMode() && rex_config::get('uppy', 'enable_debug_logging', false)) {
+            if (file_exists($metaFile)) {
+                rex_logger::factory()->log('debug', 'UPPY PREPARE: Metadata file saved: ' . $metaFile);
+            } else {
+                rex_logger::factory()->log('error', 'UPPY PREPARE: Failed to save metadata file: ' . $metaFile);
+            }
+        }
 
         return ['status' => 'prepared', 'fileId' => $fileId];
     }
@@ -179,13 +198,35 @@ class UppyUploadHandler extends rex_api_function
         }
 
         $file = $_FILES['file'];
+        $fileId = rex_request('fileId', 'string', '');
         
-        // Metadaten aus POST-Parametern sammeln (Uppy sendet sie als separate Felder)
+        // Debug-Logging
+        if (rex::isDebugMode() && rex_config::get('uppy', 'enable_debug_logging', false)) {
+            rex_logger::factory()->log('debug', 'UPPY UPLOAD START: fileId=' . $fileId);
+        }
+        
+        // Metadaten aus prepare-Schritt laden (wie bei FilePond)
         $metadata = [];
-        $multilangData = []; // Für mehrsprachige Felder
+        if (!empty($fileId)) {
+            $metadata = $this->loadMetadata($fileId);
+            
+            // Debug: Was wurde geladen?
+            if (rex::isDebugMode() && rex_config::get('uppy', 'enable_debug_logging', false)) {
+                rex_logger::factory()->log('debug', 'UPPY UPLOAD: Loaded metadata from fileId ' . $fileId . ': ' . print_r($metadata, true));
+            }
+            
+            // Metadaten-Datei nach dem Laden löschen
+            $this->deleteMetadata($fileId);
+        } else {
+            if (rex::isDebugMode() && rex_config::get('uppy', 'enable_debug_logging', false)) {
+                rex_logger::factory()->log('warning', 'UPPY UPLOAD: No fileId provided!');
+            }
+        }
         
-        // Kategorie IMMER aus POST-Parameter nehmen (aus Modal oder allowedMetaFields)
-        // POST hat Vorrang vor URL-Parameter, da im Modal änderbar
+        // Zusätzlich: Metadaten aus POST-Parametern sammeln (Fallback/Überschreibung)
+        // Dies ermöglicht es, dass das Dashboard-Modal Werte überschreiben kann
+        
+        // Kategorie aus POST-Parameter (hat Vorrang über URL-Parameter)
         $postCategoryId = rex_request('category_id', 'int', null);
         if ($postCategoryId !== null) {
             $categoryId = $postCategoryId;
@@ -193,16 +234,17 @@ class UppyUploadHandler extends rex_api_function
         
         // Log zur Fehlersuche
         if (rex::isDebugMode() && rex_config::get('uppy', 'enable_debug_logging', false)) {
-            rex_logger::factory()->log('debug', 'Uppy Upload - category_id: ' . $categoryId . ' (URL: ' . rex_request('category_id', 'int', 0) . ', POST: ' . ($postCategoryId ?? 'null') . ')');
+            rex_logger::factory()->log('debug', 'Uppy Upload - category_id: ' . $categoryId . ', fileId: ' . $fileId);
+            rex_logger::factory()->log('debug', 'Final metadata before processing: ' . print_r($metadata, true));
         }
         
-        // Standard-Felder
+        // Standard-Felder aus POST (überschreiben prepare-Metadaten falls vorhanden) aus POST (überschreiben prepare-Metadaten falls vorhanden)
         if ($title = rex_request('title', 'string', '')) {
             $metadata['title'] = $title;
         }
         
-        // MetaInfo-Felder (med_*)
-        // Mehrsprachige Felder kommen bereits als JSON-String vom Frontend
+        // MetaInfo-Felder (med_*) aus POST
+        // Mehrsprachige Felder kommen als JSON-String vom Frontend
         foreach ($_POST as $key => $value) {
             if (str_starts_with($key, 'med_')) {
                 $metadata[$key] = $value;
@@ -304,6 +346,11 @@ class UppyUploadHandler extends rex_api_function
         if (empty($fileId) || empty($fileName)) {
             throw new rex_api_exception('Missing fileId or fileName');
         }
+        
+        // Debug-Logging
+        if (rex::isDebugMode() && rex_config::get('uppy', 'enable_debug_logging', false)) {
+            rex_logger::factory()->log('debug', 'UPPY FINALIZE: fileId=' . $fileId . ', fileName=' . $fileName);
+        }
 
         $fileChunkDir = $this->chunksDir . '/' . $fileId;
         
@@ -364,6 +411,11 @@ class UppyUploadHandler extends rex_api_function
 
         // Metadaten laden
         $metadata = $this->loadMetadata($fileId);
+        
+        // Debug-Logging
+        if (rex::isDebugMode() && rex_config::get('uppy', 'enable_debug_logging', false)) {
+            rex_logger::factory()->log('debug', 'UPPY FINALIZE: Loaded metadata: ' . print_r($metadata, true));
+        }
 
         // Datei zum Mediapool hinzufügen
         $file = [
@@ -536,7 +588,17 @@ class UppyUploadHandler extends rex_api_function
         
         foreach ($metadata as $key => $value) {
             if (in_array($key, $availableFields)) {
-                $sql->setValue($key, $value);
+                // Prüfen ob der Wert ein JSON-String ist (mehrsprachige Felder)
+                if (is_string($value) && $this->isJson($value)) {
+                    // Bereits als JSON - direkt speichern
+                    $sql->setValue($key, $value);
+                } elseif (is_array($value)) {
+                    // Array - als JSON speichern
+                    $sql->setValue($key, json_encode($value));
+                } else {
+                    // Normaler String-Wert
+                    $sql->setValue($key, $value);
+                }
             }
         }
 
@@ -546,6 +608,15 @@ class UppyUploadHandler extends rex_api_function
         } catch (rex_sql_exception $e) {
             rex_logger::logException($e);
         }
+    }
+    
+    /**
+     * Prüft ob ein String ein valides JSON ist
+     */
+    protected function isJson(string $string): bool
+    {
+        json_decode($string);
+        return json_last_error() === JSON_ERROR_NONE;
     }
 
 
