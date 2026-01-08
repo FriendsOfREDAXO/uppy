@@ -2,36 +2,48 @@
 
 namespace FriendsOfRedaxo\Uppy;
 
+use DateTime;
+use Exception;
 use rex;
-use rex_api_function;
+use rex_addon;
 use rex_api_exception;
-use rex_response;
-use rex_path;
+use rex_api_function;
+use rex_backend_login;
+use rex_config;
 use rex_dir;
 use rex_file;
-use rex_request;
-use rex_media;
-use rex_media_service;
-use rex_sql;
 use rex_formatter;
 use rex_logger;
-use rex_config;
-use rex_addon;
-use rex_plugin;
+use rex_media;
 use rex_media_cache;
-use rex_ycom_auth;
-use rex_backend_login;
+use rex_media_service;
+use rex_path;
+use rex_plugin;
+use rex_response;
+use rex_sql;
 use rex_sql_exception;
-use Exception;
+use rex_ycom_auth;
+
+use function in_array;
+use function is_array;
+use function is_resource;
+use function is_string;
+
+use const JSON_ERROR_NONE;
+use const LOCK_EX;
+use const LOCK_UN;
+use const PATHINFO_EXTENSION;
+use const PATHINFO_FILENAME;
+use const SORT_NUMERIC;
 
 /**
- * API-Handler für Uppy-Uploads
- * 
+ * API-Handler für Uppy-Uploads.
+ *
  * Unterstützt:
  * - Standard-Upload für kleine Dateien
  * - Chunk-Upload für große Dateien
  * - Metadaten-Speicherung
- * 
+ *
  * @package uppy
  */
 class UppyUploadHandler extends rex_api_function
@@ -45,7 +57,7 @@ class UppyUploadHandler extends rex_api_function
         $baseDir = rex_path::addonData('uppy', 'upload');
         $this->chunksDir = $baseDir . '/chunks';
         $this->metadataDir = $baseDir . '/metadata';
-        
+
         // Verzeichnisse erstellen, falls nicht vorhanden
         if (!is_dir($this->chunksDir)) {
             rex_dir::create($this->chunksDir);
@@ -56,12 +68,12 @@ class UppyUploadHandler extends rex_api_function
     }
 
     /**
-     * Zentrale Response-Methode
+     * Zentrale Response-Methode.
      */
     protected function sendResponse($data, $statusCode = 200): void
     {
         rex_response::cleanOutputBuffers();
-        if ($statusCode !== 200) {
+        if (200 !== $statusCode) {
             rex_response::setStatus($statusCode);
         }
         rex_response::sendJson($data);
@@ -84,18 +96,22 @@ class UppyUploadHandler extends rex_api_function
                     $result = $this->handlePrepare();
                     $this->sendResponse($result);
 
+                    // no break
                 case 'upload':
                     $result = $this->handleUpload($categoryId);
                     $this->sendResponse($result);
 
+                    // no break
                 case 'chunk':
                     $result = $this->handleChunkUpload($categoryId);
                     $this->sendResponse($result);
 
+                    // no break
                 case 'finalize':
                     $result = $this->handleFinalizeUpload($categoryId);
                     $this->sendResponse($result);
 
+                    // no break
                 default:
                     throw new rex_api_exception('Invalid function: ' . $func);
             }
@@ -111,7 +127,7 @@ class UppyUploadHandler extends rex_api_function
     }
 
     /**
-     * Prüft die Authentifizierung
+     * Prüft die Authentifizierung.
      */
     protected function isAuthorized(): bool
     {
@@ -127,8 +143,8 @@ class UppyUploadHandler extends rex_api_function
         $sessionToken = rex_session('uppy_token', 'string', '');
 
         if ($apiToken && (
-            ($requestToken && hash_equals($apiToken, $requestToken)) ||
-            ($sessionToken && hash_equals($apiToken, $sessionToken))
+            ($requestToken && hash_equals($apiToken, $requestToken))
+            || ($sessionToken && hash_equals($apiToken, $sessionToken))
         )) {
             return true;
         }
@@ -144,7 +160,7 @@ class UppyUploadHandler extends rex_api_function
     }
 
     /**
-     * Vorbereitung: Metadaten speichern
+     * Vorbereitung: Metadaten speichern.
      */
     protected function handlePrepare(): array
     {
@@ -156,7 +172,7 @@ class UppyUploadHandler extends rex_api_function
         if (empty($fileId)) {
             throw new rex_api_exception('Missing fileId');
         }
-        
+
         // Debug-Logging
         if (rex::isDebugMode() && rex_config::get('uppy', 'enable_debug_logging', false)) {
             rex_logger::factory()->log('debug', 'UPPY PREPARE: fileId=' . $fileId);
@@ -167,10 +183,10 @@ class UppyUploadHandler extends rex_api_function
         $metaFile = $this->metadataDir . '/' . $fileId . '.json';
         $metaData = [
             'metadata' => $metadata,
-            'timestamp' => time()
+            'timestamp' => time(),
         ];
         rex_file::put($metaFile, json_encode($metaData));
-        
+
         // Verifizieren dass Datei geschrieben wurde
         if (rex::isDebugMode() && rex_config::get('uppy', 'enable_debug_logging', false)) {
             if (file_exists($metaFile)) {
@@ -184,7 +200,7 @@ class UppyUploadHandler extends rex_api_function
     }
 
     /**
-     * Standard-Upload für kleine Dateien
+     * Standard-Upload für kleine Dateien.
      */
     protected function handleUpload(int $categoryId): array
     {
@@ -199,22 +215,22 @@ class UppyUploadHandler extends rex_api_function
 
         $file = $_FILES['file'];
         $fileId = rex_request('fileId', 'string', '');
-        
+
         // Debug-Logging
         if (rex::isDebugMode() && rex_config::get('uppy', 'enable_debug_logging', false)) {
             rex_logger::factory()->log('debug', 'UPPY UPLOAD START: fileId=' . $fileId);
         }
-        
+
         // Metadaten aus prepare-Schritt laden (wie bei FilePond)
         $metadata = [];
         if (!empty($fileId)) {
             $metadata = $this->loadMetadata($fileId);
-            
+
             // Debug: Was wurde geladen?
             if (rex::isDebugMode() && rex_config::get('uppy', 'enable_debug_logging', false)) {
                 rex_logger::factory()->log('debug', 'UPPY UPLOAD: Loaded metadata from fileId ' . $fileId . ': ' . print_r($metadata, true));
             }
-            
+
             // Metadaten-Datei nach dem Laden löschen
             $this->deleteMetadata($fileId);
         } else {
@@ -222,27 +238,27 @@ class UppyUploadHandler extends rex_api_function
                 rex_logger::factory()->log('warning', 'UPPY UPLOAD: No fileId provided!');
             }
         }
-        
+
         // Zusätzlich: Metadaten aus POST-Parametern sammeln (Fallback/Überschreibung)
         // Dies ermöglicht es, dass das Dashboard-Modal Werte überschreiben kann
-        
+
         // Kategorie aus POST-Parameter (hat Vorrang über URL-Parameter)
         $postCategoryId = rex_request('category_id', 'int', null);
-        if ($postCategoryId !== null) {
+        if (null !== $postCategoryId) {
             $categoryId = $postCategoryId;
         }
-        
+
         // Log zur Fehlersuche
         if (rex::isDebugMode() && rex_config::get('uppy', 'enable_debug_logging', false)) {
             rex_logger::factory()->log('debug', 'Uppy Upload - category_id: ' . $categoryId . ', fileId: ' . $fileId);
             rex_logger::factory()->log('debug', 'Final metadata before processing: ' . print_r($metadata, true));
         }
-        
+
         // Standard-Felder aus POST (überschreiben prepare-Metadaten falls vorhanden) aus POST (überschreiben prepare-Metadaten falls vorhanden)
         if ($title = rex_request('title', 'string', '')) {
             $metadata['title'] = $title;
         }
-        
+
         // MetaInfo-Felder (med_*) aus POST
         // Mehrsprachige Felder kommen als JSON-String vom Frontend
         foreach ($_POST as $key => $value) {
@@ -257,14 +273,14 @@ class UppyUploadHandler extends rex_api_function
         return [
             'success' => true,
             'data' => [
-                'filename' => $filename
-            ]
+                'filename' => $filename,
+            ],
         ];
     }
 
     /**
      * Chunk-Upload Handler
-     * Orientiert an filepond's chunk-upload
+     * Orientiert an filepond's chunk-upload.
      */
     protected function handleChunkUpload(int $categoryId): array
     {
@@ -307,11 +323,11 @@ class UppyUploadHandler extends rex_api_function
             clearstatcache();
             $uploadedChunks = 0;
             foreach (scandir($fileChunkDir) as $f) {
-                if ($f !== '.' && $f !== '..' && $f !== '.lock' && is_file($fileChunkDir . '/' . $f)) {
-                    $uploadedChunks++;
+                if ('.' !== $f && '..' !== $f && '.lock' !== $f && is_file($fileChunkDir . '/' . $f)) {
+                    ++$uploadedChunks;
                 }
             }
-            
+
             flock($lock, LOCK_UN);
             fclose($lock);
             @unlink($lockFile);
@@ -320,9 +336,8 @@ class UppyUploadHandler extends rex_api_function
                 'status' => 'chunk-success',
                 'chunkIndex' => $chunkIndex,
                 'totalChunks' => $totalChunks,
-                'uploadedChunks' => $uploadedChunks
+                'uploadedChunks' => $uploadedChunks,
             ];
-
         } catch (Exception $e) {
             if (isset($lock) && is_resource($lock)) {
                 flock($lock, LOCK_UN);
@@ -335,7 +350,7 @@ class UppyUploadHandler extends rex_api_function
 
     /**
      * Finalisierung des Chunk-Uploads
-     * Fügt Chunks zusammen und fügt Datei zum Mediapool hinzu
+     * Fügt Chunks zusammen und fügt Datei zum Mediapool hinzu.
      */
     protected function handleFinalizeUpload(int $categoryId): array
     {
@@ -346,22 +361,22 @@ class UppyUploadHandler extends rex_api_function
         if (empty($fileId) || empty($fileName)) {
             throw new rex_api_exception('Missing fileId or fileName');
         }
-        
+
         // Debug-Logging
         if (rex::isDebugMode() && rex_config::get('uppy', 'enable_debug_logging', false)) {
             rex_logger::factory()->log('debug', 'UPPY FINALIZE: fileId=' . $fileId . ', fileName=' . $fileName);
         }
 
         $fileChunkDir = $this->chunksDir . '/' . $fileId;
-        
+
         if (!is_dir($fileChunkDir)) {
             throw new rex_api_exception('Chunk directory not found');
         }
 
         // Chunks zusammenführen
         $tmpFile = rex_path::addonData('uppy', 'upload/') . $fileId;
-        $out = fopen($tmpFile, 'wb');
-        
+        $out = fopen($tmpFile, 'w');
+
         if (!$out) {
             throw new rex_api_exception('Could not create output file');
         }
@@ -373,8 +388,8 @@ class UppyUploadHandler extends rex_api_function
         $actualChunks = 0;
         $chunkFiles = [];
         foreach (scandir($fileChunkDir) as $f) {
-            if ($f !== '.' && $f !== '..' && $f !== '.lock' && is_file($fileChunkDir . '/' . $f)) {
-                $actualChunks++;
+            if ('.' !== $f && '..' !== $f && '.lock' !== $f && is_file($fileChunkDir . '/' . $f)) {
+                ++$actualChunks;
                 $chunkFiles[] = $f;
             }
         }
@@ -387,8 +402,8 @@ class UppyUploadHandler extends rex_api_function
 
         // Chunks sortieren und zusammenfügen
         sort($chunkFiles, SORT_NUMERIC);
-        
-        for ($i = 0; $i < $totalChunks; $i++) {
+
+        for ($i = 0; $i < $totalChunks; ++$i) {
             $chunkPath = $fileChunkDir . '/' . $i;
             if (!file_exists($chunkPath)) {
                 fclose($out);
@@ -396,7 +411,7 @@ class UppyUploadHandler extends rex_api_function
                 throw new rex_api_exception("Chunk $i is missing");
             }
 
-            $in = fopen($chunkPath, 'rb');
+            $in = fopen($chunkPath, 'r');
             if (!$in) {
                 fclose($out);
                 $this->cleanupChunks($fileChunkDir);
@@ -411,7 +426,7 @@ class UppyUploadHandler extends rex_api_function
 
         // Metadaten laden
         $metadata = $this->loadMetadata($fileId);
-        
+
         // Debug-Logging
         if (rex::isDebugMode() && rex_config::get('uppy', 'enable_debug_logging', false)) {
             rex_logger::factory()->log('debug', 'UPPY FINALIZE: Loaded metadata: ' . print_r($metadata, true));
@@ -423,7 +438,7 @@ class UppyUploadHandler extends rex_api_function
             'tmp_name' => $tmpFile,
             'type' => rex_file::mimeType($tmpFile),
             'size' => filesize($tmpFile),
-            'error' => 0
+            'error' => 0,
         ];
 
         $filename = $this->processUploadedFile($file, $categoryId, $metadata);
@@ -436,13 +451,13 @@ class UppyUploadHandler extends rex_api_function
         return [
             'success' => true,
             'data' => [
-                'filename' => $filename
-            ]
+                'filename' => $filename,
+            ],
         ];
     }
 
     /**
-     * Räumt Chunk-Verzeichnis auf
+     * Räumt Chunk-Verzeichnis auf.
      */
     protected function cleanupChunks(string $directory): void
     {
@@ -457,16 +472,14 @@ class UppyUploadHandler extends rex_api_function
         }
     }
 
-
-
     /**
-     * Verarbeitet eine hochgeladene Datei und fügt sie zum Mediapool hinzu
+     * Verarbeitet eine hochgeladene Datei und fügt sie zum Mediapool hinzu.
      */
     protected function processUploadedFile(array $file, int $categoryId, array $metadata): string
     {
         // 1. Signatur-Prüfung (Manipulationsschutz)
         $signature = rex_request('uppy_signature', 'string', '');
-        
+
         if ($signature) {
             // Parameter sammeln, die signiert sein müssen
             $params = [
@@ -474,15 +487,15 @@ class UppyUploadHandler extends rex_api_function
                 'allowed_types' => rex_request('uppy_allowed_types', 'string', ''),
                 'max_filesize' => rex_request('uppy_max_filesize', 'string', ''),
             ];
-            
+
             // Signatur prüfen
             if (!Signature::verify($params, $signature)) {
                 rex_logger::logError('UPPY_SECURITY', 'Invalid signature for upload. Params: ' . json_encode($params), [], __FILE__);
                 throw new rex_api_exception('Security violation: Invalid signature');
             }
-            
+
             // 2. Erweiterte Validierung basierend auf signierten Parametern
-            
+
             // Dateigröße prüfen
             if (!empty($params['max_filesize'])) {
                 $maxSize = (int) $params['max_filesize'];
@@ -490,13 +503,13 @@ class UppyUploadHandler extends rex_api_function
                     throw new rex_api_exception('File too large (Max: ' . rex_formatter::bytes($maxSize) . ')');
                 }
             }
-            
+
             // Dateityp prüfen
             if (!empty($params['allowed_types'])) {
                 $allowedTypes = explode(',', $params['allowed_types']);
                 $fileType = $file['type'];
                 $fileExt = '.' . pathinfo($file['name'], PATHINFO_EXTENSION);
-                
+
                 $isValid = false;
                 foreach ($allowedTypes as $type) {
                     $type = trim($type);
@@ -512,12 +525,12 @@ class UppyUploadHandler extends rex_api_function
                         break;
                     }
                     // Extension Match (z.B. .jpg)
-                    elseif (str_starts_with($type, '.') && strcasecmp($type, $fileExt) === 0) {
+                    elseif (str_starts_with($type, '.') && 0 === strcasecmp($type, $fileExt)) {
                         $isValid = true;
                         break;
                     }
                 }
-                
+
                 if (!$isValid) {
                     throw new rex_api_exception('File type not allowed');
                 }
@@ -539,18 +552,18 @@ class UppyUploadHandler extends rex_api_function
                 'name' => $file['name'],
                 'path' => $file['tmp_name'], // wird als Fallback für tmp_name verwendet
                 'tmp_name' => $file['tmp_name'],
-                'error' => $file['error'] ?? 0
-            ]
+                'error' => $file['error'] ?? 0,
+            ],
         ];
 
         $return = rex_media_service::addMedia($data, true);
 
         if (!is_array($return) || !isset($return['filename'])) {
             $error = is_array($return) && isset($return['message']) ? $return['message'] : 'Upload failed';
-            
+
             // Log detailed error for debugging
             rex_logger::logError('UPPY_UPLOAD_ERROR', 'Upload failed for file: ' . $file['name'] . '. Error: ' . $error, [], __FILE__);
-            
+
             throw new rex_api_exception($error);
         }
 
@@ -565,7 +578,7 @@ class UppyUploadHandler extends rex_api_function
     }
 
     /**
-     * Speichert Metadaten für eine Mediendatei
+     * Speichert Metadaten für eine Mediendatei.
      */
     protected function saveMediaMetadata(string $filename, array $metadata): void
     {
@@ -583,13 +596,23 @@ class UppyUploadHandler extends rex_api_function
             $sql->setValue('title', $metadata['title']);
         }
 
+        // Hole Feldtypen aus Metainfo, um Date/DateTime/Time richtig zu behandeln
+        $fieldTypes = $this->getMetaFieldTypes();
+
         // MetaInfo-Felder
         $availableFields = $this->getAvailableMetaFields();
-        
+
         foreach ($metadata as $key => $value) {
             if (in_array($key, $availableFields)) {
+                $fieldType = $fieldTypes[$key] ?? null;
+
+                // Date/DateTime/Time Felder: HTML5 Input Werte in Unix Timestamp konvertieren
+                if ('date' === $fieldType || 'datetime' === $fieldType || 'time' === $fieldType) {
+                    $timestamp = $this->convertToTimestamp($value, $fieldType);
+                    $sql->setValue($key, $timestamp);
+                }
                 // Prüfen ob der Wert ein JSON-String ist (mehrsprachige Felder)
-                if (is_string($value) && $this->isJson($value)) {
+                elseif (is_string($value) && $this->isJson($value)) {
                     // Bereits als JSON - direkt speichern
                     $sql->setValue($key, $value);
                 } elseif (is_array($value)) {
@@ -609,22 +632,113 @@ class UppyUploadHandler extends rex_api_function
             rex_logger::logException($e);
         }
     }
-    
+
     /**
-     * Prüft ob ein String ein valides JSON ist
+     * Konvertiert HTML5 Date/DateTime/Time Input Werte zu Unix Timestamp.
+     *
+     * @param string $value Der Input-Wert (z.B. "2024-01-15", "2024-01-15T14:30", "14:30")
+     * @param string $type Der Feldtyp ('date', 'datetime', 'time')
+     * @return int Unix Timestamp
+     */
+    protected function convertToTimestamp(string $value, string $type): int
+    {
+        if (empty($value)) {
+            return 0;
+        }
+
+        try {
+            switch ($type) {
+                case 'date':
+                    // Format: "2024-01-15"
+                    $date = new DateTime($value);
+                    $date->setTime(0, 0, 0);
+                    return $date->getTimestamp();
+
+                case 'datetime':
+                    // Format: "2024-01-15T14:30"
+                    $date = new DateTime($value);
+                    return $date->getTimestamp();
+
+                case 'time':
+                    // Format: "14:30"
+                    // Time ohne Datum - nutze Unix Epoche (1970-01-01)
+                    $parts = explode(':', $value);
+                    $hour = (int) ($parts[0] ?? 0);
+                    $minute = (int) ($parts[1] ?? 0);
+                    return mktime($hour, $minute, 0, 0, 0, 0);
+
+                default:
+                    return 0;
+            }
+        } catch (Exception $e) {
+            rex_logger::factory()->log('warning', 'Date conversion failed for value: ' . $value . ', type: ' . $type);
+            return 0;
+        }
+    }
+
+    /**
+     * Hole Feldtypen aller MetaInfo-Felder.
+     *
+     * @return array Assoc-Array: field_name => type_label
+     */
+    protected function getMetaFieldTypes(): array
+    {
+        static $cache = null;
+
+        if (null !== $cache) {
+            return $cache;
+        }
+
+        $cache = [];
+
+        if (!rex_addon::get('metainfo')->isAvailable()) {
+            return $cache;
+        }
+
+        try {
+            $sql = rex_sql::factory();
+            $sql->setQuery(
+                'SELECT f.name, t.label FROM ' . rex::getTable('metainfo_field') . ' f ' .
+                'LEFT JOIN ' . rex::getTable('metainfo_type') . ' t ON f.type_id = t.id ' .
+                'WHERE f.name LIKE "med_%"',
+            );
+
+            while ($sql->hasNext()) {
+                $name = $sql->getValue('name');
+                $label = $sql->getValue('label');
+
+                // Normalisiere type labels
+                $type = match ($label) {
+                    'date' => 'date',
+                    'datetime' => 'datetime',
+                    'time' => 'time',
+                    'lang_date' => 'date',
+                    'lang_datetime' => 'datetime',
+                    'lang_time' => 'time',
+                    default => $label,
+                };
+
+                $cache[$name] = $type;
+                $sql->next();
+            }
+        } catch (rex_sql_exception $e) {
+            rex_logger::logException($e);
+        }
+
+        return $cache;
+    }
+
+    /**
+     * Prüft ob ein String ein valides JSON ist.
      */
     protected function isJson(string $string): bool
     {
         json_decode($string);
-        return json_last_error() === JSON_ERROR_NONE;
+        return JSON_ERROR_NONE === json_last_error();
     }
 
-
-
-
-
     /**
-     * Lädt Metadaten aus der Vorbereitungsphase
+     * Lädt Metadaten aus der Vorbereitungsphase.
      */
     protected function loadMetadata(string $fileId): array
     {
@@ -642,7 +756,7 @@ class UppyUploadHandler extends rex_api_function
     }
 
     /**
-     * Löscht Metadaten-Datei
+     * Löscht Metadaten-Datei.
      */
     protected function deleteMetadata(string $fileId): void
     {
@@ -655,12 +769,12 @@ class UppyUploadHandler extends rex_api_function
     }
 
     /**
-     * Gibt verfügbare MetaInfo-Felder zurück
+     * Gibt verfügbare MetaInfo-Felder zurück.
      */
     protected function getAvailableMetaFields(): array
     {
         $fields = [];
-        
+
         if (!rex_addon::get('metainfo')->isAvailable()) {
             return $fields;
         }
@@ -668,7 +782,7 @@ class UppyUploadHandler extends rex_api_function
         try {
             $sql = rex_sql::factory();
             $sql->setQuery('SELECT name FROM ' . rex::getTable('metainfo_field') . ' WHERE name LIKE "med_%"');
-            
+
             while ($sql->hasNext()) {
                 $fields[] = $sql->getValue('name');
                 $sql->next();

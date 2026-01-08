@@ -873,6 +873,43 @@ function setupMetadataModal(uppy, metaFields) {
 }
 
 /**
+ * Konvertiert Unix Timestamp oder Date-Wert in HTML5 Input Format
+ */
+function formatDateValue(value, fieldType) {
+    if (!value || value === '0' || value === 0) {
+        return '';
+    }
+    
+    let date;
+    
+    // Wenn es ein Unix Timestamp ist (Zahl als String oder Number)
+    if (!isNaN(value) && value.toString().length <= 10) {
+        date = new Date(parseInt(value) * 1000);
+    } else {
+        date = new Date(value);
+    }
+    
+    // Prüfe ob gültiges Datum
+    if (isNaN(date.getTime())) {
+        return '';
+    }
+    
+    // Format je nach Feldtyp
+    if (fieldType === 'date' || fieldType === 'lang_date') {
+        // "YYYY-MM-DD"
+        return date.toISOString().split('T')[0];
+    } else if (fieldType === 'datetime' || fieldType === 'lang_datetime') {
+        // "YYYY-MM-DDTHH:mm"
+        return date.toISOString().slice(0, 16);
+    } else if (fieldType === 'time' || fieldType === 'lang_time') {
+        // "HH:mm"
+        return date.toISOString().slice(11, 16);
+    }
+    
+    return value;
+}
+
+/**
  * Zeigt Modal mit Metadaten-Feldern an
  */
 function showMetadataModal(uppy, file, metaFields) {
@@ -895,7 +932,27 @@ function showMetadataModal(uppy, file, metaFields) {
                                 const fieldType = field.type || 'text';
                                 const isMultilang = field.is_multilang || false;
                                 
-                                if (fieldType === 'select' && field.options) {
+                                if (fieldType === 'date' || fieldType === 'datetime' || fieldType === 'time') {
+                                    // HTML5 Date/DateTime/Time Inputs
+                                    const inputType = fieldType === 'datetime' ? 'datetime-local' : 
+                                                     fieldType === 'date' ? 'date' :
+                                                     'time';
+                                    
+                                    // Einfaches Date/DateTime/Time Feld
+                                    const formattedValue = formatDateValue(value, fieldType);
+                                    return `
+                                        <div class="form-group">
+                                            <label for="meta-${field.id}">${field.name}</label>
+                                            <input 
+                                                type="${inputType}" 
+                                                class="form-control" 
+                                                id="meta-${field.id}" 
+                                                name="${field.id}"
+                                                value="${formattedValue}"
+                                            >
+                                        </div>
+                                    `;
+                                } else if (fieldType === 'select' && field.options) {
                                     // Select-Feld (z.B. für Kategorie)
                                     const options = field.options.map(opt => {
                                         const selected = opt.value == value ? 'selected' : '';

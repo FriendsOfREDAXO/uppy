@@ -2,35 +2,36 @@
 
 namespace FriendsOfRedaxo\Uppy;
 
+use Exception;
 use rex;
-use rex_api_function;
+use rex_addon;
 use rex_api_exception;
-use rex_response;
-use rex_request;
+use rex_api_function;
+use rex_backend_login;
+use rex_clang;
+use rex_config;
+use rex_i18n;
+use rex_logger;
 use rex_media;
+use rex_media_cache;
+use rex_plugin;
+use rex_response;
 use rex_sql;
 use rex_sql_exception;
-use rex_clang;
-use rex_i18n;
-use rex_addon;
-use rex_plugin;
-use rex_backend_login;
 use rex_ycom_auth;
-use rex_config;
-use rex_logger;
-use rex_media_cache;
-use rex_media_category;
-use rex_media_category_select;
-use Exception;
+
+use function count;
+use function in_array;
+use function is_array;
 
 /**
- * API für MetaInfo-Felder-Verwaltung
- * 
+ * API für MetaInfo-Felder-Verwaltung.
+ *
  * Stellt Endpunkte bereit um:
  * - Verfügbare MetaInfo-Felder abzurufen
  * - Metadaten zu laden
  * - Metadaten zu speichern
- * 
+ *
  * @package uppy
  */
 class UppyMetadataHandler extends rex_api_function
@@ -38,12 +39,12 @@ class UppyMetadataHandler extends rex_api_function
     protected $published = true;
 
     /**
-     * Zentrale Response-Methode
+     * Zentrale Response-Methode.
      */
     protected function sendResponse($data, $statusCode = 200): void
     {
         rex_response::cleanOutputBuffers();
-        if ($statusCode !== 200) {
+        if (200 !== $statusCode) {
             rex_response::setStatus($statusCode);
         }
         rex_response::sendJson($data);
@@ -87,7 +88,7 @@ class UppyMetadataHandler extends rex_api_function
     }
 
     /**
-     * Prüft die Authentifizierung
+     * Prüft die Authentifizierung.
      */
     protected function isAuthorized(): bool
     {
@@ -117,7 +118,7 @@ class UppyMetadataHandler extends rex_api_function
 
     /**
      * Gibt alle verfügbaren MetaInfo-Felder zurück
-     * Nur Text- und Input-Felder werden berücksichtigt
+     * Nur Text- und Input-Felder werden berücksichtigt.
      */
     protected function getMetaInfoFields(): void
     {
@@ -129,9 +130,9 @@ class UppyMetadataHandler extends rex_api_function
             'name' => 'Titel',
             'placeholder' => 'Titel eingeben',
             'type' => 'text',
-            'is_multilang' => false
+            'is_multilang' => false,
         ];
-        
+
         // Kategorie NICHT hier - wird global auf Upload-Seite ausgewählt
 
         // Automatisch alle verfügbaren Text-Felder aus MetaInfo laden
@@ -139,29 +140,29 @@ class UppyMetadataHandler extends rex_api_function
             try {
                 // Prüfe ob metainfo_lang_fields verfügbar ist und hole dessen type_ids
                 $hasLangFields = rex_addon::get('metainfo_lang_fields')->isAvailable();
-                $languages = $hasLangFields ? \rex_clang::getAll() : [];
-                
-                // Standard type_ids: 1 = Text, 2 = Textarea
-                $allowedTypeIds = [1, 2];
-                
-                // Wenn metainfo_lang_fields aktiv ist, hole die type_ids für lang_text_all und lang_textarea_all
+                $languages = $hasLangFields ? rex_clang::getAll() : [];
+
+                // Standard type_ids: 1 = Text, 2 = Textarea, 10 = Date, 11 = DateTime, 13 = Time
+                $allowedTypeIds = [1, 2, 10, 11, 13];
+
+                // Wenn metainfo_lang_fields aktiv ist, hole die type_ids für mehrsprachige Felder
                 if ($hasLangFields) {
                     $typeSql = rex_sql::factory();
                     $typeSql->setQuery(
-                        'SELECT id FROM ' . rex::getTable('metainfo_type') . 
-                        ' WHERE label IN ("lang_text_all", "lang_textarea_all")'
+                        'SELECT id FROM ' . rex::getTable('metainfo_type') .
+                        ' WHERE label IN ("lang_text_all", "lang_textarea_all")',
                     );
                     while ($typeSql->hasNext()) {
                         $allowedTypeIds[] = (int) $typeSql->getValue('id');
                         $typeSql->next();
                     }
                 }
-                
+
                 $sql = rex_sql::factory();
                 // Text, Textarea und ggf. lang_text_all, lang_textarea_all für med_* Felder
                 $sql->setQuery(
-                    'SELECT * FROM ' . rex::getTable('metainfo_field') . 
-                    ' WHERE name LIKE "med_%" AND type_id IN (' . implode(',', $allowedTypeIds) . ') ORDER BY priority'
+                    'SELECT * FROM ' . rex::getTable('metainfo_field') .
+                    ' WHERE name LIKE "med_%" AND type_id IN (' . implode(',', $allowedTypeIds) . ') ORDER BY priority',
                 );
 
                 $count = $sql->getRows();
@@ -170,26 +171,28 @@ class UppyMetadataHandler extends rex_api_function
                 while ($sql->hasNext()) {
                     $fieldName = $sql->getValue('name');
                     $fieldLabel = $sql->getValue('title') ?: ucfirst($fieldName);
-                    
+
                     // Übersetze Label falls es mit "translate:" beginnt
                     if (str_starts_with($fieldLabel, 'translate:')) {
                         $fieldLabel = rex_i18n::msg(substr($fieldLabel, 10));
                     }
-                    
+
                     $typeId = (int) $sql->getValue('type_id');
                     $params = $sql->getValue('params');
-                    
+
                     // Hole den type_label um zu prüfen ob es ein lang-Feld ist
                     $typeLabelSql = rex_sql::factory();
                     $typeLabelSql->setQuery(
                         'SELECT label FROM ' . rex::getTable('metainfo_type') . ' WHERE id = ?',
-                        [$typeId]
+                        [$typeId],
                     );
                     $typeLabel = $typeLabelSql->getValue('label');
-                    
-                    // Prüfe ob es ein mehrsprachiges Feld ist (lang_text_all oder lang_textarea_all)
-                    $isMultilang = $hasLangFields && in_array($typeLabel, ['lang_text_all', 'lang_textarea_all']);
-                    
+
+                    // Prüfe ob es ein mehrsprachiges Feld ist
+                    $isMultilang = $hasLangFields && in_array($typeLabel, [
+                        'lang_text_all', 'lang_textarea_all',
+                    ]);
+
                     if ($isMultilang && count($languages) > 0) {
                         // EIN Feld mit Array von Sprachen
                         $languagesList = [];
@@ -197,26 +200,34 @@ class UppyMetadataHandler extends rex_api_function
                             $languagesList[] = [
                                 'clang_id' => $clang->getId(),
                                 'clang_name' => $clang->getName(),
-                                'clang_code' => $clang->getCode()
+                                'clang_code' => $clang->getCode(),
                             ];
                         }
-                        
+
                         $fields[] = [
                             'id' => $fieldName,
                             'name' => $fieldLabel,
                             'placeholder' => $fieldLabel . ' eingeben',
                             'is_multilang' => true,
-                            'type' => str_replace('_all', '', $typeLabel), // lang_text oder lang_textarea
-                            'languages' => $languagesList
+                            'type' => str_replace('_all', '', $typeLabel), // lang_text, lang_textarea
+                            'languages' => $languagesList,
                         ];
                     } else {
-                        // Normales Feld
+                        // Normales Feld - Type Mapping
+                        $fieldType = match ($typeId) {
+                            2 => 'textarea',
+                            10 => 'date',
+                            11 => 'datetime',
+                            13 => 'time',
+                            default => 'text',
+                        };
+
                         $fields[] = [
                             'id' => $fieldName,
                             'name' => $fieldLabel,
                             'placeholder' => $fieldLabel . ' eingeben',
                             'is_multilang' => false,
-                            'type' => $typeId == 2 ? 'textarea' : 'text'
+                            'type' => $fieldType,
                         ];
                     }
 
@@ -231,12 +242,12 @@ class UppyMetadataHandler extends rex_api_function
 
         $this->sendResponse([
             'success' => true,
-            'data' => $fields
+            'data' => $fields,
         ]);
     }
 
     /**
-     * Gibt Konfiguration für ein spezifisches Feld zurück
+     * Gibt Konfiguration für ein spezifisches Feld zurück.
      */
     protected function getFieldConfig(): void
     {
@@ -254,17 +265,17 @@ class UppyMetadataHandler extends rex_api_function
 
         $this->sendResponse([
             'success' => true,
-            'field' => $fieldInfo
+            'field' => $fieldInfo,
         ]);
     }
 
     /**
-     * Gibt alle verfügbaren MetaInfo-Felder zurück
+     * Gibt alle verfügbaren MetaInfo-Felder zurück.
      */
     protected function getAvailableMetaFields(): array
     {
         $fields = [];
-        
+
         if (!rex_addon::get('metainfo')->isAvailable()) {
             return $fields;
         }
@@ -272,27 +283,27 @@ class UppyMetadataHandler extends rex_api_function
         try {
             // Prüfe ob metainfo_lang_fields verfügbar ist und hole dessen type_ids
             $hasLangFields = rex_addon::get('metainfo_lang_fields')->isAvailable();
-            
+
             // Standard type_ids: 1 = Text, 2 = Textarea
             $allowedTypeIds = [1, 2];
-            
+
             // Wenn metainfo_lang_fields aktiv ist, hole die type_ids für lang_text_all und lang_textarea_all
             if ($hasLangFields) {
                 $typeSql = rex_sql::factory();
                 $typeSql->setQuery(
-                    'SELECT id FROM ' . rex::getTable('metainfo_type') . 
-                    ' WHERE label IN ("lang_text_all", "lang_textarea_all")'
+                    'SELECT id FROM ' . rex::getTable('metainfo_type') .
+                    ' WHERE label IN ("lang_text_all", "lang_textarea_all")',
                 );
                 while ($typeSql->hasNext()) {
                     $allowedTypeIds[] = (int) $typeSql->getValue('id');
                     $typeSql->next();
                 }
             }
-            
+
             $sql = rex_sql::factory();
             $sql->setQuery(
-                'SELECT name FROM ' . rex::getTable('metainfo_field') . 
-                ' WHERE name LIKE "med_%" AND type_id IN (' . implode(',', $allowedTypeIds) . ') ORDER BY priority'
+                'SELECT name FROM ' . rex::getTable('metainfo_field') .
+                ' WHERE name LIKE "med_%" AND type_id IN (' . implode(',', $allowedTypeIds) . ') ORDER BY priority',
             );
 
             while ($sql->hasNext()) {
@@ -307,7 +318,7 @@ class UppyMetadataHandler extends rex_api_function
     }
 
     /**
-     * Lädt vorhandene Metadaten für eine Datei
+     * Lädt vorhandene Metadaten für eine Datei.
      */
     protected function loadMetadata(): void
     {
@@ -318,7 +329,7 @@ class UppyMetadataHandler extends rex_api_function
         }
 
         $media = rex_media::get($filename);
-        
+
         if (!$media) {
             throw new rex_api_exception('Media not found: ' . $filename);
         }
@@ -331,13 +342,13 @@ class UppyMetadataHandler extends rex_api_function
         $fieldNames = $this->getAvailableMetaFields();
 
         foreach ($fieldNames as $fieldName) {
-            if ($fieldName === 'title') {
+            if ('title' === $fieldName) {
                 continue;
             }
 
             if (method_exists($media, 'getValue')) {
                 $value = $media->getValue($fieldName);
-                if ($value !== null && $value !== '') {
+                if (null !== $value && '' !== $value) {
                     $metadata[$fieldName] = $value;
                 }
             }
@@ -345,12 +356,12 @@ class UppyMetadataHandler extends rex_api_function
 
         $this->sendResponse([
             'success' => true,
-            'metadata' => $metadata
+            'metadata' => $metadata,
         ]);
     }
 
     /**
-     * Speichert Metadaten für eine Datei
+     * Speichert Metadaten für eine Datei.
      */
     protected function saveMetadata(): void
     {
@@ -368,7 +379,7 @@ class UppyMetadataHandler extends rex_api_function
         }
 
         $media = rex_media::get($filename);
-        
+
         if (!$media) {
             throw new rex_api_exception('Media not found: ' . $filename);
         }
@@ -387,20 +398,20 @@ class UppyMetadataHandler extends rex_api_function
         $fieldNames = $this->getAvailableMetaFields();
 
         foreach ($fieldNames as $fieldName) {
-            if ($fieldName === 'title') {
+            if ('title' === $fieldName) {
                 continue;
             }
-            
+
             if (isset($metadata[$fieldName])) {
                 $value = $metadata[$fieldName];
-                
+
                 // Wenn Array, dann ist es ein mehrsprachiges Feld -> in JSON konvertieren
                 if (is_array($value)) {
                     $jsonValue = [];
                     foreach ($value as $clangId => $val) {
                         $jsonValue[] = [
                             'clang_id' => (int) $clangId,
-                            'value' => $val
+                            'value' => $val,
                         ];
                     }
                     $sql->setValue($fieldName, json_encode($jsonValue));
@@ -413,13 +424,13 @@ class UppyMetadataHandler extends rex_api_function
         // Update durchführen
         try {
             $sql->update();
-            
+
             // Cache löschen für diese Datei
             rex_media_cache::delete($filename);
-            
+
             $this->sendResponse([
                 'success' => true,
-                'message' => rex_i18n::msg('uppy_metadata_saved')
+                'message' => rex_i18n::msg('uppy_metadata_saved'),
             ]);
         } catch (rex_sql_exception $e) {
             rex_logger::logException($e);
@@ -428,19 +439,19 @@ class UppyMetadataHandler extends rex_api_function
     }
 
     /**
-     * Analysiert ein Feld und gibt seine Eigenschaften zurück
+     * Analysiert ein Feld und gibt seine Eigenschaften zurück.
      */
     protected function analyzeField(string $fieldName): ?array
     {
         // Standard-Feld title
-        if ($fieldName === 'title') {
+        if ('title' === $fieldName) {
             return [
                 'name' => 'title',
                 'label' => 'Titel',
                 'type' => 'text',
                 'required' => false,
                 'multilingual' => false,
-                'languages' => []
+                'languages' => [],
             ];
         }
 
@@ -453,10 +464,10 @@ class UppyMetadataHandler extends rex_api_function
             $sql = rex_sql::factory();
             $sql->setQuery(
                 'SELECT * FROM ' . rex::getTable('metainfo_field') . ' WHERE name = ?',
-                [$fieldName]
+                [$fieldName],
             );
 
-            if ($sql->getRows() === 0) {
+            if (0 === $sql->getRows()) {
                 return null;
             }
 
@@ -469,9 +480,8 @@ class UppyMetadataHandler extends rex_api_function
                 'type' => $this->getFieldTypeByTypeId($typeId),
                 'required' => false,
                 'multilingual' => $this->isMultilingual($attributes),
-                'languages' => $this->isMultilingual($attributes) ? $this->getAvailableLanguages() : []
+                'languages' => $this->isMultilingual($attributes) ? $this->getAvailableLanguages() : [],
             ];
-
         } catch (rex_sql_exception $e) {
             rex_logger::logException($e);
             return null;
@@ -479,7 +489,7 @@ class UppyMetadataHandler extends rex_api_function
     }
 
     /**
-     * Ermittelt den Feldtyp anhand der Type-ID
+     * Ermittelt den Feldtyp anhand der Type-ID.
      */
     protected function getFieldTypeByTypeId(int $typeId): string
     {
@@ -501,7 +511,7 @@ class UppyMetadataHandler extends rex_api_function
     }
 
     /**
-     * Prüft ob ein Feld mehrsprachig ist
+     * Prüft ob ein Feld mehrsprachig ist.
      */
     protected function isMultilingual(?string $attributes): bool
     {
@@ -510,13 +520,13 @@ class UppyMetadataHandler extends rex_api_function
         }
 
         // Prüfe auf translatable-Attribut
-        return str_contains($attributes, 'translatable') || 
-               str_contains($attributes, 'multilingual') ||
-               str_contains($attributes, 'lang');
+        return str_contains($attributes, 'translatable')
+               || str_contains($attributes, 'multilingual')
+               || str_contains($attributes, 'lang');
     }
 
     /**
-     * Gibt alle verfügbaren Sprachen zurück
+     * Gibt alle verfügbaren Sprachen zurück.
      */
     protected function getAvailableLanguages(): array
     {
@@ -526,7 +536,7 @@ class UppyMetadataHandler extends rex_api_function
             $languages[] = [
                 'id' => $clang->getId(),
                 'code' => $clang->getCode(),
-                'name' => $clang->getName()
+                'name' => $clang->getName(),
             ];
         }
 

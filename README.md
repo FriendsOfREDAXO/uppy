@@ -311,6 +311,32 @@ Eine ausführliche Demo mit Live-Beispielen und Quellcode befindet sich im Backe
 Das AddOn unterstützt automatisch alle im System definierten Metainfo-Felder (`med_...`). 
 Mehrsprachige Felder werden erkannt und können direkt im Upload-Dialog für alle Sprachen gepflegt werden. Die Speicherung erfolgt als JSON-String in der Datenbank.
 
+#### Unterstützte Feldtypen
+Das Uppy AddOn erkennt automatisch folgende MetaInfo-Feldtypen und rendert diese mit passender UI:
+
+**Text-Felder:**
+- `text` - Einzeiliges Textfeld
+- `textarea` - Mehrzeiliges Textfeld
+- `select` - Auswahlfeld (Dropdown)
+
+**Datums-Felder (NEU):**
+- `date` - Datumswahl mit HTML5 Date-Picker (nur Datum, ohne Uhrzeit)
+- `datetime` - Datum + Uhrzeit mit HTML5 DateTime-Picker
+- `time` - Nur Uhrzeit mit HTML5 Time-Picker
+
+**Mehrsprachige Felder:**
+- `lang_text` - Mehrsprachiges Textfeld (alle Sprachen)
+- `lang_textarea` - Mehrsprachiges Textarea (alle Sprachen)
+
+**Vorteile der HTML5 Date-Picker:**
+- ✅ Native Browser-UI (touchscreen-optimiert für mobile Geräte)
+- ✅ Automatische Validierung
+- ✅ Keine zusätzlichen JavaScript-Abhängigkeiten
+- ✅ Bessere UX als Select-Dropdowns
+- ✅ Speicherung als Unix-Timestamp (kompatibel mit REDAXO Standard)
+
+> **Hinweis:** Date/DateTime/Time Felder werden als Unix-Timestamp gespeichert, genau wie die Standard REDAXO MetaInfo-Felder. Die Konvertierung erfolgt automatisch.
+
 ### Chunk Upload
 Der Chunk-Upload teilt große Dateien in kleine Blöcke (Standard: 5MB) und sendet diese sequenziell an den Server. Dies verhindert Timeouts und Memory-Limits bei großen Uploads.
 
