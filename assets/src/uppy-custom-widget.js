@@ -40,6 +40,7 @@ export class UppyCustomWidget {
         this.renderUI();
         this.initUppy();
         this.renderList();
+        this.setupDragAndDrop(); // Drag & Drop auf dem Widget
         
         // Mutation Observer für dynamisch nachgeladene Felder (z.B. YForm)
         this.setupMutationObserver();
@@ -208,6 +209,83 @@ export class UppyCustomWidget {
         this.container.appendChild(this.buttonContainer);
         
         this.input.parentNode.insertBefore(this.container, this.input.nextSibling);
+    }
+
+    setupDragAndDrop() {
+        let dragCounter = 0;
+        
+        // Drag Over/Enter - visuelles Feedback
+        this.container.addEventListener('dragenter', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dragCounter++;
+            this.container.classList.add('uppy-drag-over');
+        });
+        
+        this.container.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        });
+        
+        this.container.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dragCounter--;
+            if (dragCounter === 0) {
+                this.container.classList.remove('uppy-drag-over');
+            }
+        });
+        
+        // Drop - Dateien übernehmen
+        this.container.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dragCounter = 0;
+            this.container.classList.remove('uppy-drag-over');
+            
+            const files = Array.from(e.dataTransfer.files);
+            if (files.length > 0) {
+                this.handleDroppedFiles(files);
+            }
+        });
+    }
+    
+    handleDroppedFiles(files) {
+        const config = this.getConfig();
+        const currentFileCount = this.getFiles().length;
+        const maxFiles = config.maxFiles || 10;
+        const remainingSlots = maxFiles - currentFileCount;
+        
+        if (remainingSlots <= 0) {
+            alert(`Maximale Anzahl von ${maxFiles} Dateien bereits erreicht.`);
+            return;
+        }
+        
+        // Begrenze auf verbleibende Slots
+        const filesToAdd = files.slice(0, remainingSlots);
+        
+        // Dateien zu Uppy hinzufügen
+        filesToAdd.forEach(file => {
+            try {
+                this.uppy.addFile({
+                    name: file.name,
+                    type: file.type,
+                    data: file,
+                    source: 'Local',
+                    isRemote: false
+                });
+            } catch (err) {
+                console.error('Fehler beim Hinzufügen der Datei:', err);
+            }
+        });
+        
+        // Dashboard Modal öffnen
+        if (this.uppy) {
+            const dashboard = this.uppy.getPlugin('Dashboard');
+            if (dashboard) {
+                dashboard.openModal();
+            }
+        }
     }
 
     renderList() {

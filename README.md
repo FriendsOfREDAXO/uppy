@@ -6,6 +6,7 @@ Multiuploader für REDAXO basierend auf [Uppy 5.0](https://uppy.io/).
 ## Features
 
 - ✅ **Moderne UI**: Responsive File-Upload-Oberfläche mit Drag & Drop
+- ✅ **Drag & Drop auf Widget**: Dateien direkt auf das Upload-Widget ziehen - Modal öffnet sich automatisch
 - ✅ **Chunk-Upload**: Unterstützung für sehr große Dateien durch Aufteilung in kleine Pakete (umgeht PHP `upload_max_filesize`)
 - ✅ **Client-seitige Bildoptimierung**: Automatisches Resizing und EXIF-Korrektur vor dem Upload
 - ✅ **Image Editor**: Integrierte Bildbearbeitung (Zuschneiden, Drehen, Spiegeln) mit festen Seitenverhältnissen

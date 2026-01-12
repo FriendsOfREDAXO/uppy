@@ -68,6 +68,38 @@ body.rex-theme-dark {
 .uppy-custom-widget {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     margin-bottom: 20px;
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+/* Drag & Drop Feedback */
+.uppy-custom-widget.uppy-drag-over {
+    border: 2px dashed var(--uppy-widget-primary);
+    background-color: rgba(77, 144, 254, 0.1);
+    border-radius: var(--uppy-widget-radius);
+    padding: 10px;
+}
+
+.uppy-custom-widget.uppy-drag-over::before {
+    content: 'Dateien hier ablegen';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--uppy-widget-primary);
+    background-color: var(--uppy-widget-bg);
+    padding: 10px 20px;
+    border-radius: var(--uppy-widget-radius);
+    z-index: 10;
+    pointer-events: none;
+}
+
+.uppy-custom-widget.uppy-drag-over .uppy-file-list,
+.uppy-custom-widget.uppy-drag-over .uppy-button-group {
+    opacity: 0.3;
+    pointer-events: none;
 }
 
 .uppy-custom-widget .uppy-file-list {

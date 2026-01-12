@@ -2,6 +2,12 @@
 
 ## Version 2.2.0 (2026-01-12)
 
+### 🎉 Neue Features
+- **Drag & Drop auf Widget:** Dateien können jetzt direkt auf das Upload-Widget gezogen werden
+  - Visuelles Feedback beim Hovern (blaue Umrandung)
+  - Modal öffnet sich automatisch mit den gezogenen Dateien
+  - Respektiert `max-files` Limit
+
 ### 🐛 Bugfixes
 - **Frontend-Upload:** XHRUpload Response wird jetzt korrekt aus dem XHR-Objekt extrahiert
 - **Chunked-Upload:** Chunk-Size Kalkulation korrigiert (MB zu Bytes Konvertierung)
@@ -16,6 +22,7 @@
 ### 📝 Dokumentation
 - README um Frontend-Integration erweitert
 - Beispiel-Code für Frontend-Upload mit Chunked-Support
+- Drag & Drop Feature dokumentiert
 
 ---
 
