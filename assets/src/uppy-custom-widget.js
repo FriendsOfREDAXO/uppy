@@ -532,9 +532,13 @@ export class UppyCustomWidget {
         const enableChunks = globalConfig.enable_chunks === true;
 
         if (enableChunks) {
+            // Chunk-Size: Config ist in MB, wir brauchen Bytes
+            const chunkSizeMB = globalConfig.chunk_size || 5;
+            const chunkSizeBytes = chunkSizeMB * 1024 * 1024;
+            
             const chunkUploader = new ChunkUploader(this.uppy, {
                 endpoint: window.location.origin + '/redaxo/index.php?rex-api-call=uppy_uploader' + signatureParams,
-                chunkSize: globalConfig.chunk_size || 5 * 1024 * 1024,
+                chunkSize: chunkSizeBytes,
                 categoryId: config.categoryId,
                 apiToken: tokenParam
             });
@@ -548,12 +552,27 @@ export class UppyCustomWidget {
                     'X-Requested-With': 'XMLHttpRequest'
                 },
                 limit: 5,
-                getResponseData: (responseText) => {
-                    try {
-                        return JSON.parse(responseText);
-                    } catch (e) {
-                        return { success: false, message: 'Invalid response' };
+                getResponseData: (xhr) => {
+                    // Hole die Response aus dem XHR-Objekt
+                    let responseText = xhr.response || xhr.responseText;
+                    
+                    if (typeof responseText === 'object' && responseText !== null) {
+                        // Response ist bereits als Objekt geparst
+                        return responseText;
                     }
+                    
+                    if (typeof responseText === 'string') {
+                        try {
+                            return JSON.parse(responseText);
+                        } catch (e) {
+                            console.error('Uppy: Failed to parse server response as JSON:', e.message);
+                            console.error('Response (first 500 chars):', responseText.substring(0, 500));
+                            return { success: false, message: 'Invalid JSON response from server' };
+                        }
+                    }
+                    
+                    console.error('Uppy: No valid response data received from server');
+                    return { success: false, message: 'No response data' };
                 },
                 getResponseError: (responseText) => {
                     try {
@@ -567,7 +586,6 @@ export class UppyCustomWidget {
         }
 
         this.uppy.on('upload-success', (file, response) => {
-            
             // Remove from uploading list
             this.uploadingFiles.delete(file.id);
             
@@ -598,7 +616,7 @@ export class UppyCustomWidget {
                 // Optional: Open metadata modal after upload
                 // this.openMetadataModal(responseData.filename);
             } else {
-                console.warn('Upload success event but invalid response body:', response);
+                console.warn('Uppy: Upload erfolgte, aber Server-Response hat unerwartetes Format:', response.body);
                 this.renderList();
             }
         });

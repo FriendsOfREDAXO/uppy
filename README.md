@@ -65,6 +65,54 @@ Uppy kann einfach über `data`-Attribute in einem `hidden` Input-Feld aktiviert 
 - `data-allow-mediapool="true"`: Medienpool-Auswahl Button aktivieren (optional)
 - `data-lang="de_DE"`: Sprache erzwingen (optional)
 
+### Im Frontend
+
+Uppy kann auch im Frontend verwendet werden. Dazu müssen die Assets manuell eingebunden werden:
+
+```php
+<?php
+// Token in Session speichern für API-Authentifizierung
+rex_set_session('uppy_token', rex_config::get('uppy', 'api_token'));
+$uppy = rex_addon::get('uppy');
+$apiToken = rex_config::get('uppy', 'api_token');
+
+// Chunked-Upload Konfiguration (optional, für große Dateien empfohlen)
+echo '<script>';
+echo 'window.rex = window.rex || {};';
+echo 'window.rex.uppy_config = {';
+echo '  enable_chunks: true,';
+echo '  chunk_size: 5'; // Chunk-Größe in MB
+echo '};';
+echo '</script>';
+
+// CSS Bundle (im <head>)
+echo '<link rel="stylesheet" href="'. $uppy->getAssetsUrl('dist/uppy-frontend-bundle.css') .'">';
+
+// JS Bundle (am Ende des <body>)
+echo '<script src="'. $uppy->getAssetsUrl('dist/uppy-custom-widget-bundle.js') .'"></script>';
+?>
+
+<!-- Upload-Feld -->
+<input 
+    type="hidden" 
+    class="uppy-upload-widget"
+    name="my_upload_field" 
+    value=""
+    data-widget="uppy" 
+    data-api-token="<?= htmlspecialchars($apiToken) ?>"
+    data-category-id="0"
+    data-max-files="5"
+    data-max-filesize="10"
+    data-allowed-types="image/jpeg,image/png"
+>
+```
+
+**Wichtig für Frontend:**
+- `data-api-token` muss gesetzt werden für die Authentifizierung
+- `rex_set_session('uppy_token', ...)` speichert den Token auch in der Session (Fallback)
+- Optional: `window.rex.uppy_config.enable_chunks = true` für Chunked-Upload
+- Optional: `chunk_size` in MB (Standard: 5 MB)
+
 ### YForm Integration
 
 #### Variante 1: Über Attribute (JSON)

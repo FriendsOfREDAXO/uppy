@@ -65,7 +65,7 @@ export class ChunkUploader {
                 
                 await this.uploadChunk(fileId, chunk, chunkIndex, totalChunks, file);
                 
-                // Progress update (wird auch im uploadChunk gemacht, aber hier zur Sicherheit nochmal für 100% des Chunks)
+                // Progress update
                 this.uppy.emit('upload-progress', this.uppy.getFile(fileID), {
                     uploader: this,
                     bytesUploaded: end,
@@ -80,20 +80,19 @@ export class ChunkUploader {
                 const currentFile = this.uppy.getFile(fileID);
                 
                 if (currentFile) {
-                    // Mark file as complete so it won't be uploaded again
+                    // Mark file as complete
                     this.uppy.setFileState(fileID, {
                         progress: {
                             uploadComplete: true,
-                            uploadStarted: Date.now()
+                            uploadStarted: currentFile.progress?.uploadStarted || Date.now(),
+                            percentage: 100,
+                            bytesUploaded: totalSize,
+                            bytesTotal: totalSize
                         }
                     });
                     
+                    // Emit success event
                     this.uppy.emit('upload-success', currentFile, result);
-                    
-                    // Also emit complete event
-                    this.uppy.emit('complete', { successful: [currentFile], failed: [] });
-                } else {
-                    console.error('File not found in Uppy state:', fileID);
                 }
             } catch (emitError) {
                 console.error('Fehler beim Emitten von upload-success:', emitError);
@@ -275,11 +274,17 @@ export class ChunkUploader {
         
         const data = await response.json();
         
+        // Prüfe ob die Response das erwartete Format hat
+        if (!data.success && !data.data?.filename) {
+            console.error('Unexpected finalize response format:', data);
+            throw new Error('Invalid server response after finalize');
+        }
+        
         // Uppy erwartet ein Response-Objekt mit status und body
-        const result = {
+        return {
             status: response.status,
             body: {
-                success: data.success || true,
+                success: data.success !== false,
                 data: {
                     filename: data.data?.filename || data.filename,
                     title: data.data?.title || ''
@@ -287,7 +292,5 @@ export class ChunkUploader {
             },
             uploadURL: ''
         };
-        
-        return result;
     }
 }
