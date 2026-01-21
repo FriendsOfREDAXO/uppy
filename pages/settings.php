@@ -18,6 +18,7 @@ if (rex_post('config-submit', 'boolean')) {
         ['resize_quality', 'int'],
         ['fix_exif_orientation', 'bool'],
         ['enable_webcam', 'bool'],
+        ['use_custom_widget', 'bool'],
         ['auto_cleanup_enabled', 'bool'],
         ['enable_debug_logging', 'bool']
     ]);
@@ -229,6 +230,13 @@ $n = [];
 $n['label'] = '<label for="uppy-replace-mediapool">' . $addon->i18n('uppy_replace_mediapool') . '</label>';
 $n['field'] = '<input type="checkbox" id="uppy-replace-mediapool" name="config[replace_mediapool]" value="1" ' . (rex_config::get('uppy', 'replace_mediapool', false) ? 'checked' : '') . ' />';
 $n['note'] = $addon->i18n('uppy_replace_mediapool_notice');
+$formElements[] = $n;
+
+// Custom Widget Modus
+$n = [];
+$n['label'] = '<label for="uppy-use-custom-widget">Custom-Widget Modus</label>';
+$n['field'] = '<input type="checkbox" id="uppy-use-custom-widget" name="config[use_custom_widget]" value="1" ' . (rex_config::get('uppy', 'use_custom_widget', false) ? 'checked' : '') . ' />';
+$n['note'] = 'Verwendet das Custom-Widget (bekannt aus YForm) auch auf der Upload-Seite und im Medienpool. Dies ermöglicht das nachträgliche Bearbeiten von Metadaten direkt nach dem Upload.';
 $formElements[] = $n;
 
 // YForm Auto-Cleanup (nur wenn YForm verfügbar)

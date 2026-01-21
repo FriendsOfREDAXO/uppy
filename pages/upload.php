@@ -24,6 +24,9 @@ $catsSel->setAttribute('class', 'selectpicker form-control');
 $catsSel->setAttribute('data-live-search', 'true');
 $catsSel->setSelected(rex_config::get('uppy', 'category_id', 0));
 
+// Custom-Widget Modus prüfen
+$useCustomWidget = rex_config::get('uppy', 'use_custom_widget', false);
+
 // "Keine Kategorie" Option wenn Berechtigung vorhanden
 if (rex::requireUser()->getComplexPerm('media')->hasAll()) {
     $catsSel->addOption(rex_i18n::msg('pool_kats_no'), '0');
@@ -35,19 +38,42 @@ $formElements[] = $n;
 // Uppy Widget
 $n = [];
 $n['label'] = '<label>Upload</label>';
-$n['field'] = '
-<input type="file" 
-       name="uppy_files" 
-       id="uppy-upload-widget"
-       data-widget="uppy"
-       data-category-id="' . rex_config::get('uppy', 'category_id', 0) . '"
-       data-max-files="' . rex_config::get('uppy', 'max_files', 30) . '"
-       data-max-filesize="' . rex_config::get('uppy', 'max_filesize', 200) . '"
-       data-allowed-types="' . rex_config::get('uppy', 'allowed_types', 'image/jpeg,image/png,image/gif,image/webp,image/svg+xml,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,video/mp4,video/mpeg,video/quicktime') . '"
-       data-enable-chunks="' . (rex_config::get('uppy', 'enable_chunks', true) ? 'true' : 'false') . '"
-       data-chunk-size="' . rex_config::get('uppy', 'chunk_size', 5) . '"
-       data-uppy-opener-field="' . rex_escape($openerInputField) . '"
-/>';
+
+if ($useCustomWidget) {
+    // Custom Widget Variante (bekannt aus YForm)
+    $n['field'] = '
+    <input type="hidden" 
+           name="uppy_files" 
+           id="uppy-upload-widget"
+           class="uppy-upload-widget"
+           data-category-id="' . rex_config::get('uppy', 'category_id', 0) . '"
+           data-max-files="' . rex_config::get('uppy', 'max_files', 30) . '"
+           data-max-filesize="' . rex_config::get('uppy', 'max_filesize', 200) . '"
+           data-allowed-types="' . rex_config::get('uppy', 'allowed_types', '*') . '"
+           data-enable-chunks="' . (rex_config::get('uppy', 'enable_chunks', true) ? 'true' : 'false') . '"
+           data-chunk-size="' . rex_config::get('uppy', 'chunk_size', 5) . '"
+           data-enable-image-editor="true"
+           data-enable-webcam="true"
+           data-enable-sorting="false"
+           data-allow-mediapool="false"
+           data-uppy-opener-field="' . rex_escape($openerInputField) . '"
+    />';
+} else {
+    // Standard Dashboard Variante
+    $n['field'] = '
+    <input type="file" 
+           name="uppy_files" 
+           id="uppy-upload-widget"
+           data-widget="uppy"
+           data-category-id="' . rex_config::get('uppy', 'category_id', 0) . '"
+           data-max-files="' . rex_config::get('uppy', 'max_files', 30) . '"
+           data-max-filesize="' . rex_config::get('uppy', 'max_filesize', 200) . '"
+           data-allowed-types="' . rex_config::get('uppy', 'allowed_types', '*') . '"
+           data-enable-chunks="' . (rex_config::get('uppy', 'enable_chunks', true) ? 'true' : 'false') . '"
+           data-chunk-size="' . rex_config::get('uppy', 'chunk_size', 5) . '"
+           data-uppy-opener-field="' . rex_escape($openerInputField) . '"
+    />';
+}
 $formElements[] = $n;
 
 // JavaScript für selectMedia/selectMedialist Funktionen
@@ -124,6 +150,11 @@ document.getElementById("uppy-category").addEventListener("change", function() {
     
     // Hinweis: Die Uppy-Instanz liest die Kategorie-ID beim Upload dynamisch aus dem data-Attribut.
     // Ein Re-Initialisieren ist daher nicht mehr notwendig und würde gewählte Dateien verwerfen.
+
+    // Bei Custom-Widget (bekannt aus YForm) Instanz ebenfalls aktualisieren falls nötig
+    if (widget.uppyWidget) {
+        // Die Kategorie wird dort in getFiles() / fetchMetadata etc. genutzt
+    }
 });
 </script>
 ';

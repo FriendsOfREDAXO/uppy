@@ -151,6 +151,7 @@ export class UppyCustomWidget {
             locale: this.input.dataset.locale || this.input.dataset.lang || 'de-DE',
             enableImageEditor: this.input.dataset.enableImageEditor === 'true',
             enableWebcam: this.input.dataset.enableWebcam === 'true',
+            enableSorting: this.input.dataset.enableSorting !== 'false',
             ...this.options
         };
     }
@@ -202,6 +203,19 @@ export class UppyCustomWidget {
             this.mediapoolBtn.addEventListener('click', () => this.openMediapoolSelection());
             this.buttonContainer.appendChild(this.mediapoolBtn);
         }
+
+        // Liste leeren Button
+        this.clearBtn = document.createElement('button');
+        this.clearBtn.type = 'button';
+        this.clearBtn.className = 'uppy-btn uppy-btn-danger';
+        this.clearBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg> Liste leeren';
+        this.clearBtn.style.display = 'none'; // Initial versteckt
+        this.clearBtn.addEventListener('click', () => {
+            if (confirm('Möchten Sie alle Dateien aus der Liste entfernen?')) {
+                this.setFiles([]);
+            }
+        });
+        this.buttonContainer.appendChild(this.clearBtn);
         
         // File count info neben die Buttons
         this.fileCountInfo = document.createElement('div');
@@ -298,7 +312,7 @@ export class UppyCustomWidget {
         if (files.length === 0 && this.uploadingFiles.size === 0) {
             const emptyState = document.createElement('li');
             emptyState.className = 'uppy-empty-state';
-            emptyState.textContent = 'Keine Dateien ausgewählt';
+            emptyState.innerHTML = '<i class="fa fa-cloud-upload" style="margin-right: 8px;"></i>Keine Dateien ausgewählt – Dateien hierher ziehen oder Buttons nutzen.';
             this.listContainer.appendChild(emptyState);
             this.updateButtonVisibility();
             return;
@@ -335,6 +349,7 @@ export class UppyCustomWidget {
                 return;
             }
             
+            const config = this.getConfig();
             const li = document.createElement('li');
             li.className = 'uppy-file-item';
             
@@ -355,9 +370,11 @@ export class UppyCustomWidget {
                 <div class="uppy-actions">
                     <button type="button" class="uppy-btn uppy-btn-danger" data-action="remove" title="Löschen">${this.getIcon('remove')}</button>
                     <button type="button" class="uppy-btn" data-action="edit" title="Metadaten bearbeiten">${this.getIcon('edit')}</button>
-                    <span style="width: 24px; display: inline-block;"></span>
-                    <button type="button" class="uppy-btn" data-action="down" title="Nach unten" ${index === files.length - 1 ? 'style="visibility: hidden;"' : ''}>${this.getIcon('down')}</button>
-                    <button type="button" class="uppy-btn" data-action="up" title="Nach oben" ${index === 0 ? 'style="visibility: hidden;"' : ''}>${this.getIcon('up')}</button>
+                    ${config.enableSorting ? `
+                        <span style="width: 24px; display: inline-block;"></span>
+                        <button type="button" class="uppy-btn" data-action="down" title="Nach unten" ${index === files.length - 1 ? 'style="visibility: hidden;"' : ''}>${this.getIcon('down')}</button>
+                        <button type="button" class="uppy-btn" data-action="up" title="Nach oben" ${index === 0 ? 'style="visibility: hidden;"' : ''}>${this.getIcon('up')}</button>
+                    ` : ''}
                 </div>
             `;
             
@@ -409,6 +426,10 @@ export class UppyCustomWidget {
         }
         if (this.mediapoolBtn) {
             this.mediapoolBtn.style.display = isMaxReached ? 'none' : 'inline-flex';
+        }
+
+        if (this.clearBtn) {
+            this.clearBtn.style.display = currentFileCount > 0 ? 'inline-flex' : 'none';
         }
     }
 
