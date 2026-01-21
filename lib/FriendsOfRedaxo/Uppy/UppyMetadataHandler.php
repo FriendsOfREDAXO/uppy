@@ -166,7 +166,9 @@ class UppyMetadataHandler extends rex_api_function
                 );
 
                 $count = $sql->getRows();
-                rex_logger::factory()->log('debug', 'Uppy MetaInfo: Gefundene Felder: ' . $count . ' (type_ids: ' . implode(',', $allowedTypeIds) . ')');
+                if (rex::isDebugMode() && rex_config::get('uppy', 'enable_debug_logging', false)) {
+                    rex_logger::factory()->log('debug', 'Uppy MetaInfo: Gefundene Felder: ' . $count . ' (type_ids: ' . implode(',', $allowedTypeIds) . ')');
+                }
 
                 while ($sql->hasNext()) {
                     $fieldName = $sql->getValue('name');
@@ -237,7 +239,9 @@ class UppyMetadataHandler extends rex_api_function
                 rex_logger::logException($e);
             }
         } else {
-            rex_logger::factory()->log('debug', 'Uppy: MetaInfo AddOn ist nicht verfügbar');
+            if (rex::isDebugMode() && rex_config::get('uppy', 'enable_debug_logging', false)) {
+                rex_logger::factory()->log('debug', 'Uppy: MetaInfo AddOn ist nicht verfügbar');
+            }
         }
 
         $this->sendResponse([
