@@ -226,7 +226,7 @@ class rex_yform_value_uppy_uploader extends rex_yform_value_abstract
 
     public function getDescription(): string
     {
-        return 'uppy_uploader|name|label|[category_id]|[max_files]|[max_filesize]|[allowed_types]|[enable_webcam]|[enable_image_editor]|[allow_mediapool]';
+        return 'uppy_uploader|name|label|[category_id]|[upload_folder]|[max_files]|[max_filesize]|[allowed_types]|[enable_webcam]|[enable_image_editor]|[allow_mediapool]';
     }
 
     public function getDefinitions(): array
@@ -237,7 +237,8 @@ class rex_yform_value_uppy_uploader extends rex_yform_value_abstract
             'values' => [
                 'name' => ['type' => 'name', 'label' => rex_i18n::msg('yform_values_defaults_name')],
                 'label' => ['type' => 'text', 'label' => rex_i18n::msg('yform_values_defaults_label')],
-                'category_id' => ['type' => 'text', 'label' => 'Kategorie-ID', 'default' => '0'],
+                'category_id' => ['type' => 'text', 'label' => 'Kategorie-ID (für Mediapool)', 'default' => '0'],
+                'upload_folder' => ['type' => 'text', 'label' => 'Ziel-Ordner (optional, relativ zum Root - deaktiviert Mediapool)', 'default' => ''],
                 'max_files' => ['type' => 'text', 'label' => 'Max. Dateien', 'default' => '10'],
                 'max_filesize' => ['type' => 'text', 'label' => 'Max. Dateigröße (MB)', 'default' => '200'],
                 'allowed_types' => ['type' => 'text', 'label' => 'Erlaubte Dateitypen', 'default' => 'image/*,application/pdf'],

@@ -84,6 +84,7 @@ function initializeUppyWidget(inputElement) {
         maxFileSize: (parseInt(inputElement.dataset.maxFilesize) || 200) * 1024 * 1024, // MB in Bytes umrechnen
         allowedTypes: inputElement.dataset.allowedTypes ? inputElement.dataset.allowedTypes.split(',').map(t => t.trim()) : [],
         categoryId: parseInt(inputElement.dataset.categoryId) || 0,
+        uploadDir: inputElement.dataset.uploadDir || '',
         locale: inputElement.dataset.locale || 'de-DE'
     };
     
@@ -97,8 +98,12 @@ function initializeUppyWidget(inputElement) {
     config.enable_chunks = uppyConfig.enable_chunks !== false;
     config.chunk_size = (uppyConfig.chunk_size || 5) * 1024 * 1024; // MB in Bytes
     
-    // Metadaten-Felder laden
-    loadMetadataFields(config.apiToken).then(function(metaFields) {
+    // Metadaten-Felder laden (nur wenn nicht in Ordner hochgeladen wird)
+    const metadataPromise = config.uploadDir 
+        ? Promise.resolve([]) 
+        : loadMetadataFields(config.apiToken);
+
+    metadataPromise.then(function(metaFields) {
 
         // Uppy-Instanz erstellen
         const uppy = new Uppy({
@@ -278,10 +283,12 @@ function initializeUppyPlugins(uppy, config, inputElement, metaFields, valueInpu
         // Die Werte holen wir direkt aus dem DOM, da sie dort signiert wurden
         const allowedTypes = inputElement.dataset.allowedTypes || '';
         const maxFilesize = inputElement.dataset.maxFilesize || '';
+        const uploadDir = inputElement.dataset.uploadDir || '';
         
         signatureParams = `&uppy_signature=${encodeURIComponent(signature)}` +
                           `&uppy_allowed_types=${encodeURIComponent(allowedTypes)}` +
-                          `&uppy_max_filesize=${encodeURIComponent(maxFilesize)}`;
+                          `&uppy_max_filesize=${encodeURIComponent(maxFilesize)}` +
+                          `&upload_dir=${encodeURIComponent(uploadDir)}`;
     }
 
     if (config.enable_chunks) {
@@ -290,6 +297,7 @@ function initializeUppyPlugins(uppy, config, inputElement, metaFields, valueInpu
             endpoint: window.location.origin + '/redaxo/index.php?rex-api-call=uppy_uploader' + signatureParams,
             chunkSize: config.chunk_size,
             categoryId: () => parseInt(inputElement.dataset.categoryId) || 0,
+            uploadDir: () => inputElement.dataset.uploadDir || '',
             apiToken: tokenParam
         });
         chunkUploader.install();
@@ -302,7 +310,11 @@ function initializeUppyPlugins(uppy, config, inputElement, metaFields, valueInpu
         uppy.use(XHRUpload, {
             endpoint: (file) => {
                 const categoryId = parseInt(inputElement.dataset.categoryId) || 0;
-                return window.location.origin + '/redaxo/index.php?rex-api-call=uppy_uploader&func=upload&api_token=' + tokenParam + '&category_id=' + categoryId + signatureParams;
+                const uploadDir = inputElement.dataset.uploadDir || '';
+                return window.location.origin + '/redaxo/index.php?rex-api-call=uppy_uploader&func=upload&api_token=' + tokenParam + 
+                       '&category_id=' + categoryId + 
+                       '&upload_dir=' + encodeURIComponent(uploadDir) + 
+                       signatureParams;
             },
             formData: true,
             fieldName: 'file',

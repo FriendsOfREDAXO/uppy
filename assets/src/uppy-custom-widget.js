@@ -148,6 +148,7 @@ export class UppyCustomWidget {
                 ? this.input.dataset.allowedTypes.split(',').map(t => t.trim()) 
                 : (globalConfig.allowed_types ? globalConfig.allowed_types.split(',').map(t => t.trim()) : []),
             categoryId: parseInt(this.input.dataset.categoryId) || 0,
+            uploadDir: this.input.dataset.uploadDir || '',
             locale: this.input.dataset.locale || this.input.dataset.lang || 'de-DE',
             enableImageEditor: this.input.dataset.enableImageEditor === 'true',
             enableWebcam: this.input.dataset.enableWebcam === 'true',
@@ -369,7 +370,7 @@ export class UppyCustomWidget {
                 </div>
                 <div class="uppy-actions">
                     <button type="button" class="uppy-btn uppy-btn-danger" data-action="remove" title="Löschen">${this.getIcon('remove')}</button>
-                    <button type="button" class="uppy-btn" data-action="edit" title="Metadaten bearbeiten">${this.getIcon('edit')}</button>
+                    ${!config.uploadDir ? `<button type="button" class="uppy-btn" data-action="edit" title="Metadaten bearbeiten">${this.getIcon('edit')}</button>` : ''}
                     ${config.enableSorting ? `
                         <span style="width: 24px; display: inline-block;"></span>
                         <button type="button" class="uppy-btn" data-action="down" title="Nach unten" ${index === files.length - 1 ? 'style="visibility: hidden;"' : ''}>${this.getIcon('down')}</button>
@@ -626,10 +627,12 @@ export class UppyCustomWidget {
         if (signature) {
             const allowedTypes = this.input.dataset.allowedTypes || '';
             const maxFilesize = this.input.dataset.maxFilesize || '';
+            const uploadDir = this.input.dataset.uploadDir || '';
             
             signatureParams = `&uppy_signature=${encodeURIComponent(signature)}` +
                               `&uppy_allowed_types=${encodeURIComponent(allowedTypes)}` +
-                              `&uppy_max_filesize=${encodeURIComponent(maxFilesize)}`;
+                              `&uppy_max_filesize=${encodeURIComponent(maxFilesize)}` +
+                              `&upload_dir=${encodeURIComponent(uploadDir)}`;
         }
 
         // Upload-Methode wählen (Chunk oder XHR)
@@ -645,6 +648,7 @@ export class UppyCustomWidget {
                 endpoint: window.location.origin + '/redaxo/index.php?rex-api-call=uppy_uploader' + signatureParams,
                 chunkSize: chunkSizeBytes,
                 categoryId: () => parseInt(this.input.dataset.categoryId) || 0,
+                uploadDir: () => this.input.dataset.uploadDir || '',
                 apiToken: tokenParam
             });
             chunkUploader.install();
@@ -652,7 +656,11 @@ export class UppyCustomWidget {
             this.uppy.use(XHRUpload, {
                 endpoint: (file) => {
                     const categoryId = parseInt(this.input.dataset.categoryId) || 0;
-                    return window.location.origin + '/redaxo/index.php?rex-api-call=uppy_uploader&func=upload&api_token=' + tokenParam + '&category_id=' + categoryId + signatureParams;
+                    const uploadDir = this.input.dataset.uploadDir || '';
+                    return window.location.origin + '/redaxo/index.php?rex-api-call=uppy_uploader&func=upload&api_token=' + tokenParam + 
+                           '&category_id=' + categoryId + 
+                           '&upload_dir=' + encodeURIComponent(uploadDir) + 
+                           signatureParams;
                 },
                 formData: true,
                 fieldName: 'file',

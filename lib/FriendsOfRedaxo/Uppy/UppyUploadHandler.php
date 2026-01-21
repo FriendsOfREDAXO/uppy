@@ -486,6 +486,7 @@ class UppyUploadHandler extends rex_api_function
                 'category_id' => $categoryId,
                 'allowed_types' => rex_request('uppy_allowed_types', 'string', ''),
                 'max_filesize' => rex_request('uppy_max_filesize', 'string', ''),
+                'upload_dir' => rex_request('upload_dir', 'string', ''),
             ];
 
             // Signatur prüfen
@@ -498,7 +499,7 @@ class UppyUploadHandler extends rex_api_function
 
             // Dateigröße prüfen
             if (!empty($params['max_filesize'])) {
-                $maxSize = (int) $params['max_filesize'];
+                $maxSize = (int) $params['max_filesize'] * 1024 * 1024; // MB-Wert aus Signatur in Bytes umrechnen
                 if ($file['size'] > $maxSize) {
                     throw new rex_api_exception('File too large (Max: ' . rex_formatter::bytes($maxSize) . ')');
                 }
@@ -543,6 +544,12 @@ class UppyUploadHandler extends rex_api_function
             throw new rex_api_exception('File too large');
         }
 
+        // NEU: Upload in einen bestimmten Ordner (nicht Mediapool)
+        $uploadDir = rex_request('upload_dir', 'string', '');
+        if ($uploadDir) {
+            return $this->handleCustomFolderUpload($file, $uploadDir);
+        }
+
         // Datei zum Mediapool hinzufügen
         // rex_media_service::addMedia erwartet diese Struktur:
         $data = [
@@ -575,6 +582,68 @@ class UppyUploadHandler extends rex_api_function
         }
 
         return $savedFilename;
+    }
+
+    /**
+     * Verarbeitet den Upload in einen benutzerdefinierten Ordner.
+     */
+    protected function handleCustomFolderUpload(array $file, string $uploadDir): string
+    {
+        // Sicherheit: Pfad bereinigen
+        $uploadDir = str_replace(['..', '\\'], '', $uploadDir);
+        $uploadDir = trim($uploadDir, '/');
+
+        // Basis-Pfad bestimmen (relativ zum Root der Installation)
+        $targetDir = rex_path::base($uploadDir);
+
+        if (!is_dir($targetDir)) {
+            if (!rex_dir::create($targetDir)) {
+                throw new rex_api_exception('Could not create target directory: ' . $uploadDir);
+            }
+        }
+
+        $filename = $file['name'];
+
+        // Kollisionsprüfung: Vorhandene Dateien nicht überschreiben
+        $filename = $this->getNonConflictingFilename($targetDir, $filename);
+
+        $targetPath = $targetDir . '/' . $filename;
+
+        // Wenn es ein Chunk-Upload war, liegt die Datei bereits als reguläre Datei in $file['tmp_name']
+        // Wenn es ein Standard-Upload war, muss move_uploaded_file verwendet werden
+        $success = false;
+        if (is_uploaded_file($file['tmp_name'])) {
+            $success = move_uploaded_file($file['tmp_name'], $targetPath);
+        } else {
+            $success = rex_file::copy($file['tmp_name'], $targetPath);
+        }
+
+        if (!$success) {
+            throw new rex_api_exception('Failed to save file to custom directory: ' . $uploadDir);
+        }
+
+        return $filename;
+    }
+
+    /**
+     * Generiert einen Dateinamen, der im Zielordner noch nicht existiert.
+     */
+    protected function getNonConflictingFilename(string $dir, string $filename): string
+    {
+        if (!file_exists($dir . '/' . $filename)) {
+            return $filename;
+        }
+
+        $info = pathinfo($filename);
+        $name = $info['filename'];
+        $ext = isset($info['extension']) ? '.' . $info['extension'] : '';
+
+        $i = 1;
+        while (file_exists($dir . '/' . $name . '_' . $i . $ext)) {
+            ++$i;
+        }
+
+        return $name . '_' . $i . $ext;
     }
 
     /**

@@ -58,6 +58,7 @@ Uppy kann einfach über `data`-Attribute in einem `hidden` Input-Feld aktiviert 
 **Verfügbare Attribute:**
 - `data-widget="uppy"`: Aktiviert das Dashboard Widget
 - `data-category-id="1"`: Ziel-Kategorie ID im Mediapool
+- `data-upload-dir="media/my_folder/"`: Ziel-Ordner im Dateisystem (relativ zum Root, deaktiviert Mediapool-Upload)
 - `data-max-files="5"`: Maximale Anzahl Dateien
 - `data-max-filesize="200"`: Max. Dateigröße in MB (nicht Bytes!)
 - `data-allowed-types="image/*"`: Erlaubte Typen (MIME-Types oder Extensions)
@@ -65,6 +66,8 @@ Uppy kann einfach über `data`-Attribute in einem `hidden` Input-Feld aktiviert 
 - `data-enable-webcam="true"`: Webcam-Integration aktivieren (optional)
 - `data-allow-mediapool="true"`: Medienpool-Auswahl Button aktivieren (optional)
 - `data-lang="de_DE"`: Sprache erzwingen (optional)
+
+> **Sicherheit:** Parameter für den Dateisystem-Upload (`data-upload-dir`) und Einschränkungen sollten im Frontend zusätzlich über `data-uppy-signature` abgesichert werden (siehe Abschnitt Sicherheit).
 
 ### Im Frontend
 
@@ -146,6 +149,7 @@ Das AddOn stellt einen eigenen YForm-Value-Typ `uppy_uploader` bereit. Dieser ka
 
 **Feld-Parameter:**
 - `category_id` - Ziel-Kategorie im Mediapool (optional, Standard aus Einstellungen)
+- `upload_folder` - Pfad für Direkt-Upload (relativ zum Root, z.B. `media/uploads/`). Deaktiviert den Medienpool-Prozess für die Datei.
 - `max_files` - Maximale Anzahl Dateien (optional, Standard aus Einstellungen)
 - `max_filesize` - Maximale Dateigröße in MB (optional, Standard aus Einstellungen)
 - `allowed_types` - Erlaubte Dateitypen als JSON (optional, Standard aus Einstellungen)
@@ -159,15 +163,18 @@ Field: uppy_uploader
 Name: gallery
 Label: Bildergalerie
 category_id: 5
+upload_folder: media/galleries/
 max_files: 10
 enable_image_editor: 1
 allow_mediapool: 1
 ```
 
+> **Info:** Beim Upload in einen Ordner wird automatisch geprüft, ob die Datei bereits existiert. Falls ja, wird ein Suffix angehängt (z.B. `bild_1.jpg`), um Überschreiben zu verhindern.
+
 Die hochgeladenen Dateien werden als komma-separierte Liste der Dateinamen gespeichert. In der Listenansicht werden Vorschaubilder (bei Bildern) oder Icons (bei anderen Dateitypen) mit einem kompakten Design angezeigt.
 
 **Listenansicht Features:**
-- Zeigt bei Einzeldateien: Thumbnail/Icon + Medienpool-Titel
+- Zeigt bei Einzeldateien: Thumbnail/Icon + Medienpool-Titel (bei Mediapool-Upload) oder Dateiname (bei Ordner-Upload)
 - Zeigt bei mehreren Dateien: Icon (Bilder/Dokumente) + Anzahl + Dateiendungen
 - Kompaktes Design mit inline-flex Layout für bessere Übersicht in Tabellen
 
@@ -180,6 +187,7 @@ $yform->setValueField('uppy_uploader', [
     'uppyupload',           // Name des Felds
     'upload',               // Label
     '0',                    // Kategorie-ID (0 = Standard)
+    'media/test/',          // Ziel-Ordner (Leer = Mediapool)
     '10',                   // Max. Anzahl Dateien (0 = unbegrenzt)
     '200',                  // Max. Dateigröße in MB
     'image/*,application/pdf', // Erlaubte Dateitypen
@@ -193,12 +201,13 @@ $yform->setValueField('uppy_uploader', [
 1. Feldname
 2. Label
 3. Kategorie-ID (0 = Standard aus Einstellungen)
-4. Max. Anzahl Dateien (0 = unbegrenzt)
-5. Max. Dateigröße in MB
-6. Erlaubte Dateitypen (kommasepariert)
-7. Image Editor (1 = aktiviert, 0 = deaktiviert)
-8. Webcam (1 = aktiviert, 0 = deaktiviert)
-9. Medienpool-Button (1 = aktiviert, 0 = deaktiviert)
+4. Ziel-Ordner (relativ zum Root, z.B. `media/test/`)
+5. Max. Anzahl Dateien (0 = unbegrenzt)
+6. Max. Dateigröße in MB
+7. Erlaubte Dateitypen (kommasepariert)
+8. Image Editor (1 = aktiviert, 0 = deaktiviert)
+9. Webcam (1 = aktiviert, 0 = deaktiviert)
+10. Medienpool-Button (1 = aktiviert, 0 = deaktiviert)
 
 #### Automatisches Cleanup
 
@@ -298,6 +307,47 @@ Mit `data-allow-mediapool="true"` wird ein zusätzlicher Button "Aus Medienpool 
     data-max-files="5"
     data-allow-mediapool="true"
 >
+
+## Sicherheit & Signaturen
+
+Um Manipulationen der Upload-Parameter (z.B. Zielordner, erlaubte Dateitypen oder Dateigrößen) im Frontend zu verhindern, nutzt Uppy ein Signatur-Verfahren.
+
+1. Alle sensiblen Parameter werden serverseitig mit einem geheimen Schlüssel (`rex_config`) als HMAC-SHA256 gehasht.
+2. Die Signatur wird im Attribut `data-uppy-signature` übergeben.
+3. Der Server validiert vor der finalen Verarbeitung der Datei, ob die mitgelieferten Parameter mit der Signatur übereinstimmen.
+
+Das YForm-Widget und die Backend-Seiten erledigen dies automatisch. Bei einer manuellen Frontend-Integration können Sie die Signatur wie folgt erstellen:
+
+```php
+use FriendsOfRedaxo\Uppy\Signature;
+
+$params = [
+    'category_id' => 0,
+    'allowed_types' => 'image/*',
+    'max_filesize' => 10, // MB
+    'upload_dir' => 'media/protected/'
+];
+
+$signature = Signature::create($params);
+```
+
+Im HTML:
+```html
+<input ... 
+       data-category-id="0" 
+       data-allowed-types="image/*" 
+       data-max-filesize="10" 
+       data-upload-dir="media/protected/" 
+       data-uppy-signature="<?= $signature ?>">
+```
+
+**Validierte Parameter:**
+*   `category_id`
+*   `upload_dir`
+*   `allowed_types`
+*   `max_filesize`
+
+Wenn die Signatur fehlt oder ungültig ist, lehnt der Server den Upload mit einem Fehler (400 Bad Request) ab.
 ```
 
 **Features:**

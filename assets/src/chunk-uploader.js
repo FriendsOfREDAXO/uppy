@@ -11,6 +11,7 @@ export class ChunkUploader {
             endpoint: '',
             chunkSize: 5 * 1024 * 1024, // 5MB default
             categoryId: 0,
+            uploadDir: '',
             apiToken: ''
         }, opts);
         
@@ -201,9 +202,13 @@ export class ChunkUploader {
             const categoryId = typeof this.opts.categoryId === 'function' 
                 ? this.opts.categoryId() 
                 : this.opts.categoryId;
+
+            const uploadDir = typeof this.opts.uploadDir === 'function'
+                ? this.opts.uploadDir()
+                : this.opts.uploadDir;
             
             // Endpoint URL enthält bereits Signatur-Parameter
-            const url = `${this.opts.endpoint}&func=chunk&category_id=${categoryId}&api_token=${this.opts.apiToken}`;
+            const url = `${this.opts.endpoint}&func=chunk&category_id=${categoryId}&upload_dir=${encodeURIComponent(uploadDir)}&api_token=${this.opts.apiToken}`;
             
             const xhr = new XMLHttpRequest();
             xhr.open('POST', url, true);
@@ -266,9 +271,13 @@ export class ChunkUploader {
         const categoryId = typeof this.opts.categoryId === 'function' 
             ? this.opts.categoryId() 
             : this.opts.categoryId;
+
+        const uploadDir = typeof this.opts.uploadDir === 'function'
+            ? this.opts.uploadDir()
+            : this.opts.uploadDir;
             
         // Endpoint URL enthält bereits Signatur-Parameter
-        const url = `${this.opts.endpoint}&func=finalize&category_id=${categoryId}&api_token=${this.opts.apiToken}`;
+        const url = `${this.opts.endpoint}&func=finalize&category_id=${categoryId}&upload_dir=${encodeURIComponent(uploadDir)}&api_token=${this.opts.apiToken}`;
         
         const response = await fetch(url, {
             method: 'POST',
