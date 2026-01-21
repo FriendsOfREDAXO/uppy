@@ -112,6 +112,9 @@ function initializeUppyWidget(inputElement) {
             },
             locale: config.locale === 'de-DE' ? German : undefined
         });
+
+        // Uppy-Instanz am Element speichern für externen Zugriff
+        inputElement.uppyInstance = uppy;
         
         // DEBUG: Global verfügbar machen
         if (!window.uppyInstances) {
@@ -264,7 +267,6 @@ function initializeUppyPlugins(uppy, config, inputElement, metaFields, valueInpu
     }
     
     // Upload Plugin: Chunked oder Standard
-    const currentCategoryId = parseInt(inputElement.dataset.categoryId) || 0;
     const tokenParam = config.apiToken ? encodeURIComponent(config.apiToken) : '';
     
     // Signatur-Parameter vorbereiten
@@ -287,7 +289,7 @@ function initializeUppyPlugins(uppy, config, inputElement, metaFields, valueInpu
         const chunkUploader = new ChunkUploader(uppy, {
             endpoint: window.location.origin + '/redaxo/index.php?rex-api-call=uppy_uploader' + signatureParams,
             chunkSize: config.chunk_size,
-            categoryId: currentCategoryId,
+            categoryId: () => parseInt(inputElement.dataset.categoryId) || 0,
             apiToken: tokenParam
         });
         chunkUploader.install();
@@ -298,7 +300,10 @@ function initializeUppyPlugins(uppy, config, inputElement, metaFields, valueInpu
     } else {
         // Standard XHR Upload
         uppy.use(XHRUpload, {
-            endpoint: window.location.origin + '/redaxo/index.php?rex-api-call=uppy_uploader&func=upload&api_token=' + tokenParam + '&category_id=' + currentCategoryId + signatureParams,
+            endpoint: (file) => {
+                const categoryId = parseInt(inputElement.dataset.categoryId) || 0;
+                return window.location.origin + '/redaxo/index.php?rex-api-call=uppy_uploader&func=upload&api_token=' + tokenParam + '&category_id=' + categoryId + signatureParams;
+            },
             formData: true,
             fieldName: 'file',
             // WICHTIG: allowedMetaFields auf false setzen, da wir Metadaten via prepare senden

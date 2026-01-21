@@ -27,6 +27,9 @@ export class UppyCustomWidget {
         if (this.input.dataset.uppyInitialized) return;
         this.input.dataset.uppyInitialized = 'true';
         this.input.style.display = 'none';
+        
+        // Widget-Instanz am Element speichern
+        this.input.uppyWidget = this;
 
         // Eindeutige Widget-ID für Medienpool-Callbacks generieren
         this.mediapoolWidgetId = 'uppy_' + Math.random().toString(36).substr(2, 9);
@@ -560,6 +563,9 @@ export class UppyCustomWidget {
             locale: config.locale === 'de-DE' ? German : undefined
         });
 
+        // Uppy-Instanz am Element speichern
+        this.input.uppyInstance = this.uppy;
+
         this.uppy.use(Dashboard, {
             inline: false,
             trigger: null, // We handle trigger manually
@@ -617,13 +623,16 @@ export class UppyCustomWidget {
             const chunkUploader = new ChunkUploader(this.uppy, {
                 endpoint: window.location.origin + '/redaxo/index.php?rex-api-call=uppy_uploader' + signatureParams,
                 chunkSize: chunkSizeBytes,
-                categoryId: config.categoryId,
+                categoryId: () => parseInt(this.input.dataset.categoryId) || 0,
                 apiToken: tokenParam
             });
             chunkUploader.install();
         } else {
             this.uppy.use(XHRUpload, {
-                endpoint: window.location.origin + '/redaxo/index.php?rex-api-call=uppy_uploader&func=upload&api_token=' + tokenParam + '&category_id=' + config.categoryId + signatureParams,
+                endpoint: (file) => {
+                    const categoryId = parseInt(this.input.dataset.categoryId) || 0;
+                    return window.location.origin + '/redaxo/index.php?rex-api-call=uppy_uploader&func=upload&api_token=' + tokenParam + '&category_id=' + categoryId + signatureParams;
+                },
                 formData: true,
                 fieldName: 'file',
                 headers: {

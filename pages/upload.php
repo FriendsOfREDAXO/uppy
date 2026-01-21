@@ -122,16 +122,8 @@ document.getElementById("uppy-category").addEventListener("change", function() {
     var widget = document.getElementById("uppy-upload-widget");
     widget.dataset.categoryId = this.value;
     
-    // Uppy-Instanz neu initialisieren falls bereits vorhanden
-    if (widget.uppyInstance) {
-        widget.uppyInstance.close();
-        widget.removeAttribute("data-uppy-initialized");
-        widget.uppyInstance = null;
-        
-        // Neu initialisieren über rex:ready Event
-        var event = new CustomEvent("rex:ready");
-        document.dispatchEvent(event);
-    }
+    // Hinweis: Die Uppy-Instanz liest die Kategorie-ID beim Upload dynamisch aus dem data-Attribut.
+    // Ein Re-Initialisieren ist daher nicht mehr notwendig und würde gewählte Dateien verwerfen.
 });
 </script>
 ';
