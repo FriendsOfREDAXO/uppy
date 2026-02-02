@@ -384,7 +384,7 @@ body.rex-theme-dark .uppy-widget-modal-backdrop.is-visible {
     display: block;
     width: 100%;
     padding: 8px 12px;
-    font-size: 1rem;
+    font-size: 1em;
     line-height: 1.5;
     color: var(--uppy-widget-text);
     background-color: var(--uppy-widget-bg);
