@@ -40,6 +40,54 @@ Die globalen Einstellungen befinden sich unter **Uppy → Einstellungen**:
 
 ## Verwendung
 
+### Als E-Mail-Anhang versenden
+
+Um hochgeladene Dateien direkt als E-Mail-Anhang zu versenden, kann die Action `uppy2email` verwendet werden:
+
+```text
+action|uppy2email|file_upload_field_name
+```
+
+Diese Action hängt alle im Feld `file_upload_field_name` ausgewählten Dateien an die E-Mail an, die im `value_pool` "email" definiert sind.
+
+#### Vollständiges PHP-Beispiel
+
+Hier ein komplettes Beispiel für ein Formular mit Name, Datei-Upload und anschließendem E-Mail-Versand inklusive Dateianhang:
+
+```php
+$yform = new rex_yform();
+$yform->setObjectparams('form_name', 'upload_form');
+$yform->setObjectparams('real_field_names', true);
+
+// Einfaches Textfeld
+$yform->setValueField('text', ['your_name', 'Ihr Name']);
+$yform->setValidateField('empty', ['your_name', 'Bitte geben Sie Ihren Namen ein.']);
+
+// Uppy Upload Feld
+$yform->setValueField('uppy_uploader', [
+    'name' => 'file_upload',
+    'label' => 'Dateien',
+    'category_id' => 1,             // Mediapool Kategorie ID
+    'max_files' => 5,               // Max. 5 Dateien
+    'max_filesize' => 10,           // Max. 10 MB pro Datei
+    'allowed_types' => 'image/*,application/pdf', // Nur Bilder und PDF
+    'allow_mediapool' => 1          // Erlaube Mediapool-Auswahl
+]);
+
+// Action: Uploads an E-Mail anhängen (Wichtig: muss vor tpl2email kommen!)
+$yform->setActionField('uppy2email', ['file_upload']);
+
+// Action: E-Mail versenden (Template "contact_request" muss im YForm E-Mail-Manager existieren)
+$yform->setActionField('tpl2email', ['contact_request', 'zieladresse@domain.de']);
+
+// Action: Erfolgsmeldung
+$yform->setActionField('showtext', ['Vielen Dank für Ihren Upload!', '<div class="alert alert-success">', '</div>']);
+
+echo $yform->getForm();
+```
+
+> **Hinweis:** Die Action `uppy2email` muss **vor** der Versand-Action (`tpl2email` oder `email`) aufgerufen werden, damit die Anhänge rechtzeitig in den Mailer geladen werden.
+
 ### Im Backend (Module / AddOns)
 
 Uppy kann einfach über `data`-Attribute in einem `hidden` Input-Feld aktiviert werden. Das Widget kümmert sich um die Darstellung und das Speichern der Dateinamen.

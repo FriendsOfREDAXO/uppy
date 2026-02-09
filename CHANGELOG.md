@@ -1,5 +1,13 @@
 # Changelog
 
+## Version 2.4.0 (2026-02-09)
+
+### 🎉 Neue Features
+- **E-Mail-Anhänge in YForm**: Neue Action `uppy2email` ermöglicht das direkte Versenden hochgeladener Dateien als E-Mail-Anhang.
+  - Verwendung: `action|uppy2email|feldname`
+- **Verbesserte YForm-Integration**: Dateien werden nun korrekt im `value_pool` für 'email' bereitgestellt.
+- **Auto-Cleanup**: Ungenutzte Dateien werden besser erkannt und bereinigt (inkl. Prüfung in YForm-Tabellen und MEDIA_IS_IN_USE Extension Point).
+
 ## Version 2.3.0 (2026-01-21)
 
 ### 🎉 Neue Features
