@@ -212,16 +212,39 @@ class rex_yform_value_uppy_uploader extends rex_yform_value_abstract
     
     public function enterObject()
     {
-        // Wert für E-Mail-Versand verfügbar machen
-        $this->params['value_pool']['email'][$this->getName()] = $this->getValue();
+        $this->setValue($this->getValue());
+
+        if ($this->params['send']) {
+            $value = '';
+            
+            // Wert aus Formular-Daten holen (Standard YForm Verhalten)
+            if (isset($_REQUEST['FORM']) && is_array($_REQUEST['FORM'])) {
+                foreach ($_REQUEST['FORM'] as $form) {
+                    if (is_array($form) && isset($form[$this->getId()])) {
+                        $value = (string)$form[$this->getId()];
+                        break;
+                    }
+                }
+            } elseif (isset($this->params['real_field_names']) && $this->params['real_field_names']) {
+                // Fallback für Real Field Names
+                $value = rex_request($this->getName(), 'string', '');
+            }
+            
+            $this->setValue($value);
+
+            // Wert für E-Mail-Versand verfügbar machen
+            $this->params['value_pool']['email'][$this->getName()] = $this->getValue();
+
+            // Wert für Datenbank speichern (kommagetrennte Dateinamen)
+            if ($this->saveInDB()) {
+                $this->params['value_pool']['sql'][$this->getName()] = $this->getValue();
+            }
+        }
 
         // Output für Formular
         if ($this->needsOutput() && $this->isViewable()) {
             $this->params['form_output'][$this->getId()] = $this->parse('value.uppy.tpl.php');
         }
-
-        // Wert für Datenbank speichern (kommagetrennte Dateinamen)
-        $this->params['value_pool']['sql'][$this->getName()] = $this->getValue();
     }
 
     public function getDescription(): string
