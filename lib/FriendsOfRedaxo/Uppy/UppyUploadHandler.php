@@ -131,13 +131,30 @@ class UppyUploadHandler extends rex_api_function
      */
     protected function isAuthorized(): bool
     {
-        // Backend-User
+        // 1. Backend-User (immer erlauben, höchstes Recht)
         $user = rex_backend_login::createUser();
         if ($user) {
             return true;
         }
 
-        // API-Token
+        // 2. Not-Aus: Wurden alle Checks vom Admin deaktiviert? (ACHTUNG: Unsicher!)
+        if (rex_config::get('uppy', 'auth_disable_checks', 0)) {
+            return true;
+        }
+
+        // 3. YCom Strict Check (falls aktiviert)
+        // Wenn aktiviert, MUSS ein User eingeloggt sein. Sonst sofort raus.
+        if (rex_config::get('uppy', 'ycom_auth_enabled', 0)) {
+            $ycomUser = rex_ycom_auth::getUser();
+            if (!$ycomUser) {
+                rex_logger::factory()->log('info', 'Uppy: Upload blocked. YCom auth required but no user logged in.');
+                return false;
+            }
+            // Wenn eingeloggt, gilt er als autorisiert (auch ohne Token)
+            return true;
+        }
+
+        // 4. API-Token Check (Standard-Schutz)
         $apiToken = rex_config::get('uppy', 'api_token');
         $requestToken = rex_request('api_token', 'string', null);
         $sessionToken = rex_session('uppy_token', 'string', '');
@@ -149,9 +166,12 @@ class UppyUploadHandler extends rex_api_function
             return true;
         }
 
-        // YCom-User
+        // 5. Fallback: Alter YCom-Logik (Kompatibilität)
+        // Wenn kein Token gesetzt war, aber ein YCom User da ist -> erlauben.
+        // (Nur relevant wenn Strict-Mode AUS ist, sonst wären wir oben schon raus oder drin)
         if (rex_plugin::get('ycom', 'auth')->isAvailable()) {
             if (rex_ycom_auth::getUser()) {
+                // Info: Das ist der Legacy-Pfad. Künftig sollte man Strict Mode nutzen.
                 return true;
             }
         }

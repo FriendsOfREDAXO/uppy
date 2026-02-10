@@ -28,6 +28,7 @@ uppy_fix_exif_orientation = EXIF-Orientierung korrigieren
 uppy_fix_exif_orientation_notice = Korrigiert automatisch die Bildausrichtung
 uppy_api_token = API-Token
 uppy_api_token_notice = Token für Frontend-Uploads (automatisch generiert)
+uppy_api_token_security_warning = SICHERHEITSHINWEIS: Dieses API-Token ist vertraulich und darf NIEMALS öffentlich im Frontend-Code (HTML/JS) sichtbar sein. Es sollte ausschließlich in der Server-Session (PHP) verwendet werden.
 uppy_save_success = Einstellungen erfolgreich gespeichert
 uppy_save_error = Fehler beim Speichern der Einstellungen
 uppy_select_types = Dateitypen auswählen
@@ -61,6 +62,12 @@ uppy_yform_notice = Maximale Dateigröße: {0} MB
 uppy_yform_media_in_use = Medium wird in folgenden YForm-Einträgen verwendet:
 
 # YForm Auto-Cleanup
+uppy_ycom_auth_enabled = YCom / Community Authentifizierung
+uppy_ycom_auth_notice = Wenn aktiviert, können nur eingeloggte YCom-Benutzer Dateien hochladen.
+uppy_auth_disable_checks = Sicherheits-Checks deaktivieren (Experten)
+uppy_auth_disable_checks_notice = Deaktiviert die interne Prüfung von Token und YCom-Login.
+uppy_auth_disable_checks_warning = ACHTUNG: Der Uploader ist nun für JEDEN öffentlich zugänglich! Sie sind selbst dafür verantwortlich, den Zugriff (z.B. via Extension Points oder Server-Config) abzusichern. Öffentliche Upload-Formulare sind ein hohes Sicherheitsrisiko (Spam, Malware).
+uppy_security_info = Hinweis zu öffentlichen Uploads: Wenn Sie Uploads ohne Authentifizierung erlauben, kann jeder Internetnutzer Dateien auf Ihren Server laden. Nutzen Sie zusätzliche Schutzmaßnahmen wie Captchas, IP-Sperren oder manuelle Freigabe-Prozesse.
 uppy_auto_cleanup_enabled = Automatisches Cleanup (YForm)
 uppy_auto_cleanup_enabled_label = Aktiviert
 uppy_auto_cleanup_disabled = Deaktiviert

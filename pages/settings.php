@@ -1,6 +1,7 @@
 <?php
 
 $addon = rex_addon::get('uppy');
+rex_view::addJsFile($addon->getAssetsUrl('js/settings.js'));
 
 // POST-Daten verarbeiten
 if (rex_post('config-submit', 'boolean')) {
@@ -12,6 +13,8 @@ if (rex_post('config-submit', 'boolean')) {
         ['enable_chunks', 'bool'],
         ['chunk_size', 'int'],
         ['replace_mediapool', 'bool'],
+        ['ycom_auth_enabled', 'bool'],
+        ['auth_disable_checks', 'bool'],
         ['enable_resize', 'bool'],
         ['resize_width', 'int'],
         ['resize_height', 'int'],
@@ -125,34 +128,6 @@ $n['field'] = '
     </div>
 </div>
 
-<script nonce="' . rex_response::getNonce() . '">
-(function($) {
-    // Modal öffnen und Checkboxen basierend auf Input setzen
-    $("#uppy-types-modal").on("show.bs.modal", function() {
-        var currentTypes = $("#uppy-allowed-types").val().split(",");
-        currentTypes = currentTypes.map(function(t) { return t.trim(); });
-        
-        $(".uppy-type-cb").prop("checked", false);
-        
-        $(".uppy-type-cb").each(function() {
-            if (currentTypes.indexOf($(this).val()) > -1) {
-                $(this).prop("checked", true);
-            }
-        });
-    });
-    
-    // Auswahl übernehmen
-    $("#uppy-apply-types").on("click", function() {
-        var selectedTypes = [];
-        $(".uppy-type-cb:checked").each(function() {
-            selectedTypes.push($(this).val());
-        });
-        
-        $("#uppy-allowed-types").val(selectedTypes.join(","));
-        $("#uppy-types-modal").modal("hide");
-    });
-})(jQuery);
-</script>
 ';
 $n['note'] = 'MIME-Types (kommagetrennt), z.B. <code>image/jpeg,image/png,image/webp,image/svg+xml,application/pdf</code>';
 $formElements[] = $n;
@@ -232,6 +207,35 @@ $n['field'] = '<input type="checkbox" id="uppy-replace-mediapool" name="config[r
 $n['note'] = $addon->i18n('uppy_replace_mediapool_notice');
 $formElements[] = $n;
 
+// YCom Auth (nur wenn YCom verfügbar)
+if (rex_addon::get('ycom')->isAvailable()) {
+    $n = [];
+    $n['label'] = '<label for="uppy-ycom-auth">' . $addon->i18n('uppy_ycom_auth_enabled') . '</label>';
+    $n['field'] = '<input type="checkbox" id="uppy-ycom-auth" name="config[ycom_auth_enabled]" value="1" ' . (rex_config::get('uppy', 'ycom_auth_enabled', 0) ? 'checked' : '') . ' />';
+    $n['note'] = $addon->i18n('uppy_ycom_auth_notice');
+    $formElements[] = $n;
+}
+
+// EXPERTEN: Auth Checks deaktivieren
+$authChecksDisabled = rex_config::get('uppy', 'auth_disable_checks', 0);
+$containerStyle = $authChecksDisabled
+    ? 'border: 2px solid #d9534f; padding: 15px; background-color: #fff1f0; border-radius: 3px;' 
+    : 'border: 2px solid #3c763d; padding: 15px; background-color: #dff0d8; border-radius: 3px;';
+
+$statusText = $authChecksDisabled
+    ? '<span style="color: #d9534f; font-weight: bold;"><i class="rex-icon fa-exclamation-triangle"></i> ' . $addon->i18n('uppy_auth_disable_checks_warning') . '</span>'
+    : '<span style="color: #3c763d; font-weight: bold;"><i class="rex-icon fa-check-circle"></i> Authentifizierungs-Prüfungen sind aktiv (Sicher/Empfohlen)</span>';
+
+$n = [];
+$n['label'] = '<label for="uppy-auth-disable">' . $addon->i18n('uppy_auth_disable_checks') . '</label>';
+$n['field'] = '<div style="' . $containerStyle . '">';
+$n['field'] .= '<input type="checkbox" id="uppy-auth-disable" name="config[auth_disable_checks]" value="1" ' . ($authChecksDisabled ? 'checked' : '') . ' />';
+$n['field'] .= '<span style="margin-left: 10px;">' . $statusText . '</span>';
+$n['field'] .= '<div class="text-muted" style="margin-top: 5px;">' . $addon->i18n('uppy_security_info') . '</div>';
+$n['field'] .= '</div>';
+$n['note'] = $addon->i18n('uppy_auth_disable_checks_notice');
+$formElements[] = $n;
+
 // Custom Widget Modus
 $n = [];
 $n['label'] = '<label for="uppy-use-custom-widget">Custom-Widget Modus</label>';
@@ -268,7 +272,8 @@ $formElements[] = $n;
 $n = [];
 $n['label'] = '<label>' . $addon->i18n('uppy_api_token') . '</label>';
 $token = rex_config::get('uppy', 'api_token', '');
-$n['field'] = '<input class="form-control" type="text" value="' . rex_escape($token) . '" readonly onclick="this.select()" />';
+$n['field'] = '<div class="alert alert-danger" style="margin-bottom: 10px; font-weight: bold;"><i class="rex-icon fa-exclamation-triangle"></i> ' . $addon->i18n('uppy_api_token_security_warning') . '</div>';
+$n['field'] .= '<input class="form-control" type="text" value="' . rex_escape($token) . '" readonly onclick="this.select()" />';
 $n['note'] = $addon->i18n('uppy_api_token_notice');
 $formElements[] = $n;
 
