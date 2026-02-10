@@ -73,3 +73,5 @@ uppy_enable_webcam_notice = Enables taking photos via webcam directly in the upl
 # Debug
 uppy_enable_debug_logging = Enable debug logging
 uppy_enable_debug_logging_notice = Enables detailed debug logs. Additionally requires REDAXO debug mode (System).
+uppy_docs_frontend = Frontend Configuration
+uppy_docs_frontend = Frontend Configuration

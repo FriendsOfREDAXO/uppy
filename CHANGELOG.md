@@ -1,5 +1,15 @@
 # Changelog
 
+## Version 2.5.0 (2026-02-10)
+
+### 🎉 Neue Features
+- **Helper Klasse**: `FriendsOfRedaxo\Uppy\Utils::ensureApiSession()` zum einfachen Setzen des API-Tokens im Frontend.
+
+### 📖 Dokumentation
+- **Struktur**: Aufteilung der Dokumentation in Übersicht (README) und Integration (`frontend_usage.md`).
+- **Frontend-Guide**: Neue, ausführliche Anleitung für YForm-Integration, Nutzung in eigenen Formularen und API-Features.
+- **Troubleshooting**: Tipps zu Caching, Reverse Proxies (Nginx, Cloudflare), CSP-Headern und Server-Limits ergänzt.
+
 ## Version 2.4.0 (2026-02-09)
 
 ### 🎉 Neue Features

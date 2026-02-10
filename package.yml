@@ -1,5 +1,5 @@
 package: uppy
-version: '2.4.0'
+version: '2.5.0'
 author: 'Friends Of REDAXO'
 supportpage: https://github.com/FriendsOfREDAXO/uppy
 requires:
@@ -32,6 +32,12 @@ page:
             icon: rex-icon fa-solid fa-circle-question,
             subPath: README.md, 
             itemClass: 'pull-right' 
+        }
+        frontend: {
+            title: 'translate:uppy_docs_frontend',
+            icon: rex-icon fa-solid fa-code,
+            subPath: frontend_usage.md,
+            itemClass: 'pull-right'
         }
         api: { 
             title: 'translate:uppy_api',

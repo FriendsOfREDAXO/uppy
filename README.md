@@ -40,55 +40,7 @@ Die globalen Einstellungen befinden sich unter **Uppy → Einstellungen**:
 
 ## Verwendung
 
-### Als E-Mail-Anhang versenden
-
-Um hochgeladene Dateien direkt als E-Mail-Anhang zu versenden, kann die Action `uppy2email` verwendet werden:
-
-```text
-action|uppy2email|file_upload_field_name
-```
-
-Diese Action hängt alle im Feld `file_upload_field_name` ausgewählten Dateien an die E-Mail an, die im `value_pool` "email" definiert sind.
-
-#### Vollständiges PHP-Beispiel
-
-Hier ein komplettes Beispiel für ein Formular mit Name, Datei-Upload und anschließendem E-Mail-Versand inklusive Dateianhang:
-
-```php
-$yform = new rex_yform();
-$yform->setObjectparams('form_name', 'upload_form');
-$yform->setObjectparams('real_field_names', true);
-
-// Einfaches Textfeld
-$yform->setValueField('text', ['your_name', 'Ihr Name']);
-$yform->setValidateField('empty', ['your_name', 'Bitte geben Sie Ihren Namen ein.']);
-
-// Uppy Upload Feld
-$yform->setValueField('uppy_uploader', [
-    'name' => 'file_upload',
-    'label' => 'Dateien',
-    'category_id' => 1,             // Mediapool Kategorie ID
-    'max_files' => 5,               // Max. 5 Dateien
-    'max_filesize' => 10,           // Max. 10 MB pro Datei
-    'allowed_types' => 'image/*,application/pdf', // Nur Bilder und PDF
-    'allow_mediapool' => 1          // Erlaube Mediapool-Auswahl
-]);
-
-// Action: Uploads an E-Mail anhängen (Wichtig: muss vor tpl2email kommen!)
-$yform->setActionField('uppy2email', ['file_upload']);
-
-// Action: E-Mail versenden (Template "contact_request" muss im YForm E-Mail-Manager existieren)
-$yform->setActionField('tpl2email', ['contact_request', 'zieladresse@domain.de']);
-
-// Action: Erfolgsmeldung
-$yform->setActionField('showtext', ['Vielen Dank für Ihren Upload!', '<div class="alert alert-success">', '</div>']);
-
-echo $yform->getForm();
-```
-
-> **Hinweis:** Die Action `uppy2email` muss **vor** der Versand-Action (`tpl2email` oder `email`) aufgerufen werden, damit die Anhänge rechtzeitig in den Mailer geladen werden.
-
-### Im Backend (Module / AddOns)
+### Im Backend
 
 Uppy kann einfach über `data`-Attribute in einem `hidden` Input-Feld aktiviert werden. Das Widget kümmert sich um die Darstellung und das Speichern der Dateinamen.
 
@@ -103,7 +55,20 @@ Uppy kann einfach über `data`-Attribute in einem `hidden` Input-Feld aktiviert 
        data-allowed-types="image/*,application/pdf">
 ```
 
-**Verfügbare Attribute:**
+### Im Frontend / YForm
+
+Für die Verwendung im Frontend (z.B. mit YForm) gibt es eine ausführliche Dokumentation:
+👉 **[Frontend-Nutzung & YForm Integration](frontend_usage.md)**
+
+Dort findest du Anleitungen für:
+- Integration in YForm (Pipe, PHP, YORM)
+- Nutzung in eigenen Formularen
+- E-Mail-Versand von Anhängen (`uppy2email`)
+- Frontend-Assets und Authentifizierung (via `FriendsOfRedaxo\Uppy\Utils::ensureApiSession()`)
+
+## Backend-Attribute
+
+**Verfügbare Attribute für das Widget:**
 - `data-widget="uppy"`: Aktiviert das Dashboard Widget
 - `data-category-id="1"`: Ziel-Kategorie ID im Mediapool
 - `data-upload-dir="media/my_folder/"`: Ziel-Ordner im Dateisystem (relativ zum Root, deaktiviert Mediapool-Upload)
@@ -114,90 +79,6 @@ Uppy kann einfach über `data`-Attribute in einem `hidden` Input-Feld aktiviert 
 - `data-enable-webcam="true"`: Webcam-Integration aktivieren (optional)
 - `data-allow-mediapool="true"`: Medienpool-Auswahl Button aktivieren (optional)
 - `data-lang="de_DE"`: Sprache erzwingen (optional)
-
-> **Sicherheit:** Parameter für den Dateisystem-Upload (`data-upload-dir`) und Einschränkungen sollten im Frontend zusätzlich über `data-uppy-signature` abgesichert werden (siehe Abschnitt Sicherheit).
-
-### Im Frontend
-
-Uppy kann auch im Frontend verwendet werden. Dazu müssen die Assets manuell eingebunden werden:
-
-```php
-<?php
-// Token in Session speichern für API-Authentifizierung
-rex_set_session('uppy_token', rex_config::get('uppy', 'api_token'));
-$uppy = rex_addon::get('uppy');
-$apiToken = rex_config::get('uppy', 'api_token');
-
-// Chunked-Upload Konfiguration (optional, für große Dateien empfohlen)
-echo '<script>';
-echo 'window.rex = window.rex || {};';
-echo 'window.rex.uppy_config = {';
-echo '  enable_chunks: true,';
-echo '  chunk_size: 5'; // Chunk-Größe in MB
-echo '};';
-echo '</script>';
-
-// CSS Bundle (im <head>)
-echo '<link rel="stylesheet" href="'. $uppy->getAssetsUrl('dist/uppy-frontend-bundle.css') .'">';
-
-// JS Bundle (am Ende des <body>)
-echo '<script src="'. $uppy->getAssetsUrl('dist/uppy-custom-widget-bundle.js') .'"></script>';
-?>
-
-<!-- Upload-Feld -->
-<input 
-    type="hidden" 
-    class="uppy-upload-widget"
-    name="my_upload_field" 
-    value=""
-    data-widget="uppy" 
-    data-api-token="<?= htmlspecialchars($apiToken) ?>"
-    data-category-id="0"
-    data-max-files="5"
-    data-max-filesize="10"
-    data-allowed-types="image/jpeg,image/png"
->
-```
-
-**Wichtig für Frontend:**
-- `data-api-token` muss gesetzt werden für die Authentifizierung
-- `rex_set_session('uppy_token', ...)` speichert den Token auch in der Session (Fallback)
-- Optional: `window.rex.uppy_config.enable_chunks = true` für Chunked-Upload
-- Optional: `chunk_size` in MB (Standard: 5 MB)
-
-### YForm Integration
-
-#### Variante 1: Über Attribute (JSON)
-
-In YForm lässt sich das Uppy-Widget über das Feld "Attribute" konfigurieren. Hierzu wird ein JSON-Objekt verwendet.
-
-**Beispiel 1: Standard Dashboard**
-```json
-{
-    "data-widget": "uppy",
-    "data-category-id": "1",
-    "data-max-files": "10"
-}
-```
-
-**Beispiel 2: Custom Widget (Minimal UI)**
-```json
-{
-    "class": "uppy-upload-widget",
-    "data-category-id": "1",
-    "data-max-files": "5",
-    "data-allowed-types": "image/*",
-    "data-allow-mediapool": "true"
-}
-```
-
-#### Variante 2: Über YForm Tablemanager
-
-Das AddOn stellt einen eigenen YForm-Value-Typ `uppy_uploader` bereit. Dieser kann in YForm-Tablemanager-Feldern verwendet werden:
-
-**Feld-Parameter:**
-- `category_id` - Ziel-Kategorie im Mediapool (optional, Standard aus Einstellungen)
-- `upload_folder` - Pfad für Direkt-Upload (relativ zum Root, z.B. `media/uploads/`). Deaktiviert den Medienpool-Prozess für die Datei.
 - `max_files` - Maximale Anzahl Dateien (optional, Standard aus Einstellungen)
 - `max_filesize` - Maximale Dateigröße in MB (optional, Standard aus Einstellungen)
 - `allowed_types` - Erlaubte Dateitypen als JSON (optional, Standard aus Einstellungen)
@@ -257,7 +138,7 @@ $yform->setValueField('uppy_uploader', [
 9. Webcam (1 = aktiviert, 0 = deaktiviert)
 10. Medienpool-Button (1 = aktiviert, 0 = deaktiviert)
 
-#### Automatisches Cleanup
+### Automatisches Cleanup
 
 Optional kann das automatische Löschen nicht mehr verwendeter Dateien aktiviert werden (**Uppy → Einstellungen → Automatisches Cleanup**). 
 
@@ -289,8 +170,14 @@ Der Upload-Handler unterstützt **drei Authentifizierungsmethoden** (in dieser R
 - Für öffentliche Frontend-Formulare ohne User-Login
 - Token wird serverseitig in der PHP-Session gespeichert (nie im Browser sichtbar!)
 
+Am einfachsten über den Helper (empfohlen):
 ```php
-// Im Template oder Modul EINMALIG ausführen
+// Im Template EINMALIG ausführen
+\FriendsOfRedaxo\Uppy\Utils::ensureApiSession();
+```
+
+*Alternative (manuell):*
+```php
 rex_set_session('uppy_token', rex_config::get('uppy', 'api_token'));
 ```
 
@@ -355,47 +242,6 @@ Mit `data-allow-mediapool="true"` wird ein zusätzlicher Button "Aus Medienpool 
     data-max-files="5"
     data-allow-mediapool="true"
 >
-
-## Sicherheit & Signaturen
-
-Um Manipulationen der Upload-Parameter (z.B. Zielordner, erlaubte Dateitypen oder Dateigrößen) im Frontend zu verhindern, nutzt Uppy ein Signatur-Verfahren.
-
-1. Alle sensiblen Parameter werden serverseitig mit einem geheimen Schlüssel (`rex_config`) als HMAC-SHA256 gehasht.
-2. Die Signatur wird im Attribut `data-uppy-signature` übergeben.
-3. Der Server validiert vor der finalen Verarbeitung der Datei, ob die mitgelieferten Parameter mit der Signatur übereinstimmen.
-
-Das YForm-Widget und die Backend-Seiten erledigen dies automatisch. Bei einer manuellen Frontend-Integration können Sie die Signatur wie folgt erstellen:
-
-```php
-use FriendsOfRedaxo\Uppy\Signature;
-
-$params = [
-    'category_id' => 0,
-    'allowed_types' => 'image/*',
-    'max_filesize' => 10, // MB
-    'upload_dir' => 'media/protected/'
-];
-
-$signature = Signature::create($params);
-```
-
-Im HTML:
-```html
-<input ... 
-       data-category-id="0" 
-       data-allowed-types="image/*" 
-       data-max-filesize="10" 
-       data-upload-dir="media/protected/" 
-       data-uppy-signature="<?= $signature ?>">
-```
-
-**Validierte Parameter:**
-*   `category_id`
-*   `upload_dir`
-*   `allowed_types`
-*   `max_filesize`
-
-Wenn die Signatur fehlt oder ungültig ist, lehnt der Server den Upload mit einem Fehler (400 Bad Request) ab.
 ```
 
 **Features:**
@@ -409,6 +255,20 @@ Wenn die Signatur fehlt oder ungültig ist, lehnt der Server den Upload mit eine
 Standardmäßig werden Einschränkungen wie `data-max-filesize` oder `data-allowed-types` nur client-seitig im Browser geprüft. Ein versierter Nutzer könnte diese Werte über die Entwicklertools manipulieren.
 
 Um dies zu verhindern, lassen sich die Parameter serverseitig signieren. Dabei wird ein Hash über die erlaubten Werte generiert. Der Server prüft beim Upload, ob die Signatur zu den gesendeten Parametern passt.
+
+> **Wichtig:** Bei Verwendung über **YForm (`uppy_uploader`)** oder im **REDAXO-Backend** kümmert sich das AddOn **automatisch** um die Erstellung und Prüfung der Signaturen. Du musst hier nichts weiter tun. Die manuelle Erstellung (siehe unten) ist nur für eigene Frontend-Implementierungen erforderlich.
+
+1. Alle sensiblen Parameter werden serverseitig mit einem geheimen Schlüssel (`rex_config`) als HMAC-SHA256 gehasht.
+2. Die Signatur wird im Attribut `data-uppy-signature` übergeben.
+3. Der Server validiert vor der finalen Verarbeitung der Datei, ob die mitgelieferten Parameter mit der Signatur übereinstimmen.
+
+**Validierte Parameter:**
+*   `category_id`
+*   `upload_dir`
+*   `allowed_types`
+*   `max_filesize`
+
+Wenn die Signatur fehlt oder ungültig ist, lehnt der Server den Upload mit einem Fehler (400 Bad Request) ab.
 
 ### Funktionsweise
 1. Die Parameter werden in PHP definiert.
@@ -427,7 +287,8 @@ use FriendsOfRedaxo\Uppy\Signature;
 $params = [
     'category_id' => 1,
     'allowed_types' => 'image/jpeg,image/png',
-    'max_filesize' => 500 // in MB
+    'max_filesize' => 500, // in MB
+    'upload_dir' => 'media/protected/' // Optional: Zielordner schützen
 ];
 
 // Signatur erstellen
@@ -438,15 +299,16 @@ $signature = Signature::create($params);
 <!-- Widget mit Signatur ausgeben -->
 <input type="hidden" 
        name="REX_INPUT_VALUE[1]" 
-       value="REX_VALUE[1]"
+       value=""
        data-widget="uppy" 
        data-category-id="<?= $params['category_id'] ?>"
        data-allowed-types="<?= $params['allowed_types'] ?>"
        data-max-filesize="<?= $params['max_filesize'] ?>"
+       data-upload-dir="<?= $params['upload_dir'] ?>"
        data-uppy-signature="<?= $signature ?>">
 ```
 
-> **Hinweis:** Wenn eine Signatur vorhanden ist, werden die signierten Parameter (`category_id`, `allowed_types`, `max_filesize`) serverseitig strikt durchgesetzt.
+> **Hinweis:** Wenn eine Signatur vorhanden ist, werden die signierten Parameter (`category_id`, `allowed_types`, `max_filesize`, `upload_dir`) serverseitig strikt durchgesetzt.
 
 ## Demo Seite
 
