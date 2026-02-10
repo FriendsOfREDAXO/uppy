@@ -1,7 +1,6 @@
 <?php
 
 $addon = rex_addon::get('uppy');
-rex_view::addJsFile($addon->getAssetsUrl('js/settings.js'));
 
 // POST-Daten verarbeiten
 if (rex_post('config-submit', 'boolean')) {
@@ -31,6 +30,15 @@ if (rex_post('config-submit', 'boolean')) {
     }
     
     echo rex_view::success($addon->i18n('uppy_save_success'));
+}
+
+// Generelle Warnung wenn Auth-Checks deaktiviert sind (Not-Aus aktiv)
+if (rex_config::get('uppy', 'auth_disable_checks', 0)) {
+    echo rex_view::warning(
+        '<i class="rex-icon fa-exclamation-triangle"></i> ' .
+        '<strong>ACHTUNG: ' . $addon->i18n('uppy_auth_disable_checks') . ' ist derzeit aktiv!</strong><br>' .
+        $addon->i18n('uppy_auth_disable_checks_warning')
+    );
 }
 
 

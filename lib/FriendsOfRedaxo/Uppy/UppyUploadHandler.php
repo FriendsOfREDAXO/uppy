@@ -137,12 +137,32 @@ class UppyUploadHandler extends rex_api_function
             return true;
         }
 
-        // 2. Not-Aus: Wurden alle Checks vom Admin deaktiviert? (ACHTUNG: Unsicher!)
+        // Vorbereitung für Checks
+        $apiToken = rex_config::get('uppy', 'api_token');
+        $requestToken = rex_request('api_token', 'string', null);
+        $sessionToken = rex_session('uppy_token', 'string', '');
+        $tokenValid = ($apiToken && (
+            ($requestToken && hash_equals($apiToken, $requestToken))
+            || ($sessionToken && hash_equals($apiToken, $sessionToken))
+        ));
+
+        // 2. Extension Point (Custom Auth) - Hat Vorrang vor "Not-Aus"!
+        // Wenn ein Entwickler den EP nutzt, will er die Kontrolle.
+        // Das "Not-Aus" (auth_disable_checks) wird dann ignoriert.
+        if (!empty(rex_extension::getListeners('UPPY_AUTH_CHECK'))) {
+            return (bool) rex_extension::registerPoint(new rex_extension_point('UPPY_AUTH_CHECK', false, [
+                'token_valid' => $tokenValid,
+                'request_token' => $requestToken,
+                'session_token' => $sessionToken
+            ]));
+        }
+
+        // 3. Not-Aus: Wurden alle Checks vom Admin deaktiviert? (ACHTUNG: Unsicher!)
         if (rex_config::get('uppy', 'auth_disable_checks', 0)) {
             return true;
         }
 
-        // 3. YCom Strict Check (falls aktiviert)
+        // 4. YCom Strict Check (falls aktiviert)
         // Wenn aktiviert, MUSS ein User eingeloggt sein. Sonst sofort raus.
         if (rex_config::get('uppy', 'ycom_auth_enabled', 0)) {
             $ycomUser = rex_ycom_auth::getUser();
@@ -154,19 +174,12 @@ class UppyUploadHandler extends rex_api_function
             return true;
         }
 
-        // 4. API-Token Check (Standard-Schutz)
-        $apiToken = rex_config::get('uppy', 'api_token');
-        $requestToken = rex_request('api_token', 'string', null);
-        $sessionToken = rex_session('uppy_token', 'string', '');
-
-        if ($apiToken && (
-            ($requestToken && hash_equals($apiToken, $requestToken))
-            || ($sessionToken && hash_equals($apiToken, $sessionToken))
-        )) {
+        // 5. API-Token Check (Standard-Schutz)
+        if ($tokenValid) {
             return true;
         }
 
-        // 5. Fallback: Alter YCom-Logik (Kompatibilität)
+        // 6. Fallback: Alter YCom-Logik (Kompatibilität)
         // Wenn kein Token gesetzt war, aber ein YCom User da ist -> erlauben.
         // (Nur relevant wenn Strict-Mode AUS ist, sonst wären wir oben schon raus oder drin)
         if (rex_plugin::get('ycom', 'auth')->isAvailable()) {
@@ -600,6 +613,16 @@ class UppyUploadHandler extends rex_api_function
         if (!empty($metadata)) {
             $this->saveMediaMetadata($savedFilename, $metadata);
         }
+
+        // Extension Point: UPPY_UPLOAD_COMPLETE
+        // Ermöglicht das Eingreifen nach erfolgreichem Upload
+        $savedFilename = rex_extension::registerPoint(new rex_extension_point('UPPY_UPLOAD_COMPLETE', $savedFilename, [
+            'original_file' => $file,
+            'category_id' => $categoryId,
+            'metadata' => $metadata,
+            'upload_dir' => $uploadDir,
+            'is_custom_folder' => !empty($uploadDir)
+        ]));
 
         return $savedFilename;
     }

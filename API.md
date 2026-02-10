@@ -779,6 +779,69 @@ $uppy = rex_addon::get('uppy');
 </html>
 ```
 
+## Extension Points
+
+Das Addon stellt folgende Extension Points bereit, um in den Upload-Prozess einzugreifen:
+
+### `UPPY_AUTH_CHECK`
+
+Wird aufgerufen, bevor ein Upload verarbeitet wird. Erlaubt die Implementierung eigener Authentifizierungs-Logik (z.B. Prüfung eigener Session-Variablen, IP-Whitelists, etc.).
+Wird nur ausgeführt, wenn **keine** der Standard-Methoden (Backend-Login, YCom, API-Token) bereits Zugriff gewährt hat.
+
+**Parameter:**
+- `subject` (bool): `false` (Standard). Muss `true` zurückgeben, um Zugriff zu gewähren.
+- `params` (array):
+  - `token_valid` (bool): Ob das API-Token technisch korrekt war (aber ggf. nicht ausgereicht hat).
+  - `request_token` (string|null): Das Token aus dem Request.
+  - `session_token` (string): Das Token aus der Session.
+
+**Beispiel:**
+
+```php
+rex_extension::register('UPPY_AUTH_CHECK', function (rex_extension_point $ep) {
+    // Beispiel: Zugriff erlauben, wenn eine bestimmte Session-Variable gesetzt ist
+    if (rex_session('custom_upload_permission', 'boolean', false)) {
+        return true;
+    }
+    
+    // Oder: IP-Whitelist prüfen
+    if ($_SERVER['REMOTE_ADDR'] === '192.168.1.50') {
+        return true;
+    }
+    
+    return $ep->getSubject();
+});
+```
+
+### `UPPY_UPLOAD_COMPLETE`
+
+Wird aufgerufen, nachdem eine Datei erfolgreich hochgeladen und verarbeitet wurde (inkl. Verschieben in den Zielordner oder Hinzufügen zum Medienpool).
+
+**Parameter:**
+- `subject` (string): Der Dateiname der hochgeladenen Datei.
+- `params` (array):
+  - `original_file` (array): Das ursprüngliche `$_FILES`-Element.
+  - `category_id` (int): Die ID der Medienpool-Kategorie (0 bei Custom Folder Uploads).
+  - `metadata` (array): Die empfangenen Metadaten (Titel, Alt-Text, etc.).
+  - `upload_dir` (string): Der Pfad zum Custom Upload Folder (falls verwendet).
+  - `is_custom_folder` (bool): `true` wenn in einen Custom Folder hochgeladen wurde, `false` bei Medienpool.
+
+**Beispiel:**
+
+```php
+rex_extension::register('UPPY_UPLOAD_COMPLETE', function (rex_extension_point $ep) {
+    $filename = $ep->getSubject();
+    $params = $ep->getParams();
+    
+    // Beispiel: Loggen des Uploads
+    $category = $params['is_custom_folder'] 
+        ? 'Custom Folder: ' . $params['upload_dir'] 
+        : 'Mediapool Category: ' . $params['category_id'];
+        
+    rex_logger::logError(null, "Neue Datei hochgeladen: $filename in $category", __FILE__, __LINE__);
+});
+```
+
 ---
 
 ## Troubleshooting

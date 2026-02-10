@@ -6,9 +6,10 @@
 - **Helper Klasse**: `FriendsOfRedaxo\Uppy\Utils::ensureApiSession()` zum einfachen Setzen des API-Tokens im Frontend.
 - **Not-Aus**: Option "Auth Checks deaktivieren" für Notfälle oder internes Testen hinzugefügt (mit visueller Warnung).
 - **YForm Action**: `uppy2email` berücksichtigt nun explizit den konfigurierten `upload_folder` (Custom Folder), falls gesetzt.
+- **Extension Points**: Neue Hooks `UPPY_AUTH_CHECK` (Custom Auth Provider) und `UPPY_UPLOAD_COMPLETE` (Post-Processing).
 
 ### 🔒 Security
-- **Auth-Hierarchie**: Strikte Priorisierung implementiert: Backend User > Not-Aus > YCom User > API Token.
+- **Auth-Hierarchie**: Strikte Priorisierung implementiert: Backend User > Custom Auth (EP) > Not-Aus > YCom User > API Token.
 - **Settings UI**: Verbesserte Darstellung der Sicherheitseinstellungen (API Token Warnung, Farbkodierung für Auth-Status).
 - **API Token**: Fallback-Mechanismus gehärtet, Token wird nicht mehr im HTML-Markup exposed.
 

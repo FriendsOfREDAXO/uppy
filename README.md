@@ -417,6 +417,13 @@ assets/
     └── en_US.min.js
 ```
 
+## Entwickler & API
+
+Das Addon bietet umfangreiche Möglichkeiten zur Erweiterung und Integration:
+
+- **API-Dokumentation**: Detaillierte Beschreibung der PHP-Klassen, Endpunkte und Extension Points finden Sie in [API.md](API.md).
+- **Frontend-Integration**: Anleitung zur Nutzung von Uppy in eigenen Frontend-Formularen in [frontend_usage.md](frontend_usage.md).
+
 ## Autor
 
 **Friends Of REDAXO**
