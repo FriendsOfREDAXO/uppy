@@ -10,6 +10,9 @@
 if (!rex::isBackend()) {
     $apiToken = rex_config::get('uppy', 'api_token');
     if ($apiToken) {
+        if (session_status() !== PHP_SESSION_ACTIVE) {
+            \rex_login::startSession();
+        }
         rex_set_session('uppy_token', $apiToken);
     }
 }
@@ -42,6 +45,9 @@ $signature = \FriendsOfRedaxo\Uppy\Signature::create([
 ]);
 
 // HTML Output
+// API-Endpoint: Immer Frontend index.php verwenden (wie FilePond)
+// Im Backend wird /redaxo/../index.php genutzt, im Frontend direkt /index.php
+$apiEndpoint = rex_url::frontendController(['rex-api-call' => 'uppy_uploader']);
 ?>
 <div class="form-group">
     <label class="control-label" for="<?= $fieldId ?>"><?= rex_escape($this->getLabel()) ?></label>
@@ -52,6 +58,7 @@ $signature = \FriendsOfRedaxo\Uppy\Signature::create([
         name="<?= $this->getFieldName() ?>" 
         value="<?= rex_escape($fieldValue) ?>"
         class="uppy-upload-widget"
+        data-api-endpoint="<?= rex_escape($apiEndpoint) ?>"
         data-category-id="<?= (int)$categoryId ?>"
         data-upload-dir="<?= rex_escape($uploadFolder) ?>"
         data-max-files="<?= (int)$maxFiles ?>"

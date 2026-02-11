@@ -10,6 +10,8 @@ use rex_api_function;
 use rex_backend_login;
 use rex_clang;
 use rex_config;
+use rex_extension;
+use rex_extension_point;
 use rex_i18n;
 use rex_logger;
 use rex_media;
@@ -44,9 +46,9 @@ class UppyMetadataHandler extends rex_api_function
     protected function sendResponse($data, $statusCode = 200): void
     {
         rex_response::cleanOutputBuffers();
-        if (200 !== $statusCode) {
-            rex_response::setStatus($statusCode);
-        }
+        // Status IMMER setzen – im Frontend kann YRewrite/Structure bereits
+        // einen 404-Status gesetzt haben, der sonst bestehen bleibt.
+        rex_response::setStatus($statusCode);
         rex_response::sendJson($data);
         exit;
     }
@@ -81,32 +83,69 @@ class UppyMetadataHandler extends rex_api_function
                 default:
                     throw new rex_api_exception('Invalid action: ' . $action);
             }
+        } catch (rex_api_exception $e) {
+            rex_logger::factory()->log('warning', 'Uppy Metadata API Exception: ' . $e->getMessage());
+            $this->sendResponse(['error' => $e->getMessage()], rex_response::HTTP_BAD_REQUEST);
         } catch (Exception $e) {
             rex_logger::logException($e);
-            $this->sendResponse(['error' => $e->getMessage()], rex_response::HTTP_FORBIDDEN);
+            $this->sendResponse(['error' => $e->getMessage()], rex_response::HTTP_INTERNAL_ERROR);
         }
     }
 
     /**
      * Prüft die Authentifizierung.
+     * Gleiche Logik wie UppyUploadHandler::isAuthorized()
      */
     protected function isAuthorized(): bool
     {
-        // Backend-User
+        // Session starten, falls noch nicht aktiv
+        if (session_status() !== PHP_SESSION_ACTIVE) {
+            \rex_login::startSession();
+        }
+
+        // 1. Backend-User
         $user = rex_backend_login::createUser();
         if ($user) {
             return true;
         }
 
-        // API-Token
+        // Vorbereitung für Checks
         $apiToken = rex_config::get('uppy', 'api_token');
         $requestToken = rex_request('api_token', 'string', null);
+        $sessionToken = rex_session('uppy_token', 'string', '');
+        $tokenValid = ($apiToken && (
+            ($requestToken && hash_equals($apiToken, $requestToken))
+            || ($sessionToken && hash_equals($apiToken, $sessionToken))
+        ));
 
-        if ($apiToken && $requestToken && hash_equals($apiToken, $requestToken)) {
+        // 2. Extension Point (Custom Auth)
+        $epResult = rex_extension::registerPoint(new rex_extension_point('UPPY_AUTH_CHECK', null, [
+            'token_valid' => $tokenValid,
+            'request_token' => $requestToken,
+            'session_token' => $sessionToken
+        ]));
+
+        if (null !== $epResult) {
+            return (bool) $epResult;
+        }
+
+        // 3. Not-Aus
+        if (rex_config::get('uppy', 'auth_disable_checks', 0)) {
             return true;
         }
 
-        // YCom-User
+        // 4. YCom Strict Check
+        if (rex_config::get('uppy', 'ycom_auth_enabled', 0)) {
+            $ycomUser = rex_ycom_auth::getUser();
+            return (bool) $ycomUser;
+        }
+
+        // 5. API-Token Check (Request oder Session)
+        if ($tokenValid) {
+            return true;
+        }
+
+        // 6. Fallback YCom
         if (rex_plugin::get('ycom', 'auth')->isAvailable()) {
             if (rex_ycom_auth::getUser()) {
                 return true;

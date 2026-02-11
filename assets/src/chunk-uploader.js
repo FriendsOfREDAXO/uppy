@@ -128,7 +128,7 @@ export class ChunkUploader {
                 formData.append('fileId', fileId);
                 formData.append('metadata', JSON.stringify(metadata));
                 
-                const url = `${this.opts.endpoint}&func=prepare&api_token=${this.opts.apiToken}`;
+                const url = `${this.opts.endpoint}&func=prepare`;
                 
                 try {
                     const response = await fetch(url, {
@@ -167,7 +167,7 @@ export class ChunkUploader {
         formData.append('metadata', JSON.stringify(metadata));
         
         // Endpoint URL enthält bereits Signatur-Parameter (siehe Constructor)
-        const url = `${this.opts.endpoint}&func=prepare&api_token=${this.opts.apiToken}`;
+        const url = `${this.opts.endpoint}&func=prepare`;
         
         const response = await fetch(url, {
             method: 'POST',
@@ -208,7 +208,7 @@ export class ChunkUploader {
                 : this.opts.uploadDir;
             
             // Endpoint URL enthält bereits Signatur-Parameter
-            const url = `${this.opts.endpoint}&func=chunk&category_id=${categoryId}&upload_dir=${encodeURIComponent(uploadDir)}&api_token=${this.opts.apiToken}`;
+            const url = `${this.opts.endpoint}&func=chunk&category_id=${categoryId}&upload_dir=${encodeURIComponent(uploadDir)}`;
             
             const xhr = new XMLHttpRequest();
             xhr.open('POST', url, true);
@@ -277,7 +277,7 @@ export class ChunkUploader {
             : this.opts.uploadDir;
             
         // Endpoint URL enthält bereits Signatur-Parameter
-        const url = `${this.opts.endpoint}&func=finalize&category_id=${categoryId}&upload_dir=${encodeURIComponent(uploadDir)}&api_token=${this.opts.apiToken}`;
+        const url = `${this.opts.endpoint}&func=finalize&category_id=${categoryId}&upload_dir=${encodeURIComponent(uploadDir)}`;
         
         const response = await fetch(url, {
             method: 'POST',

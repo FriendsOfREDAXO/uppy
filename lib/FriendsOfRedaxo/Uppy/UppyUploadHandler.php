@@ -11,6 +11,8 @@ use rex_api_function;
 use rex_backend_login;
 use rex_config;
 use rex_dir;
+use rex_extension;
+use rex_extension_point;
 use rex_file;
 use rex_formatter;
 use rex_logger;
@@ -73,9 +75,9 @@ class UppyUploadHandler extends rex_api_function
     protected function sendResponse($data, $statusCode = 200): void
     {
         rex_response::cleanOutputBuffers();
-        if (200 !== $statusCode) {
-            rex_response::setStatus($statusCode);
-        }
+        // Status IMMER setzen – im Frontend kann YRewrite/Structure bereits
+        // einen 404-Status gesetzt haben, der sonst bestehen bleibt.
+        rex_response::setStatus($statusCode);
         rex_response::sendJson($data);
         exit;
     }
@@ -147,14 +149,15 @@ class UppyUploadHandler extends rex_api_function
         ));
 
         // 2. Extension Point (Custom Auth) - Hat Vorrang vor "Not-Aus"!
-        // Wenn ein Entwickler den EP nutzt, will er die Kontrolle.
-        // Das "Not-Aus" (auth_disable_checks) wird dann ignoriert.
-        if (!empty(rex_extension::getListeners('UPPY_AUTH_CHECK'))) {
-            return (bool) rex_extension::registerPoint(new rex_extension_point('UPPY_AUTH_CHECK', false, [
-                'token_valid' => $tokenValid,
-                'request_token' => $requestToken,
-                'session_token' => $sessionToken
-            ]));
+        // Wenn ein Entwickler den EP nutzt und einen Wert != null zurückgibt, hat er die Kontrolle.
+        $epResult = rex_extension::registerPoint(new rex_extension_point('UPPY_AUTH_CHECK', null, [
+            'token_valid' => $tokenValid,
+            'request_token' => $requestToken,
+            'session_token' => $sessionToken
+        ]));
+
+        if (null !== $epResult) {
+            return (bool) $epResult;
         }
 
         // 3. Not-Aus: Wurden alle Checks vom Admin deaktiviert? (ACHTUNG: Unsicher!)

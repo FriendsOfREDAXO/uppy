@@ -618,7 +618,8 @@ export class UppyCustomWidget {
         }
 
         // XHR Upload
-        const tokenParam = config.apiToken ? encodeURIComponent(config.apiToken) : '';
+        // API Endpoint aus data-Attribut (vom PHP-Template gesetzt)
+        const apiEndpoint = this.input.dataset.apiEndpoint || '/index.php?rex-api-call=uppy_uploader';
         
         // Signatur-Parameter vorbereiten
         let signatureParams = '';
@@ -639,17 +640,20 @@ export class UppyCustomWidget {
         const globalConfig = window.rex?.uppy_config || {};
         const enableChunks = globalConfig.enable_chunks === true;
 
+        // Check if endpoint already has query params
+        const hasQuery = apiEndpoint.indexOf('?') > -1;
+        const separator = hasQuery ? '&' : '?';
+
         if (enableChunks) {
             // Chunk-Size: Config ist in MB, wir brauchen Bytes
             const chunkSizeMB = globalConfig.chunk_size || 5;
             const chunkSizeBytes = chunkSizeMB * 1024 * 1024;
             
             const chunkUploader = new ChunkUploader(this.uppy, {
-                endpoint: window.location.origin + '/redaxo/index.php?rex-api-call=uppy_uploader' + signatureParams,
+                endpoint: apiEndpoint + signatureParams,
                 chunkSize: chunkSizeBytes,
                 categoryId: () => parseInt(this.input.dataset.categoryId) || 0,
                 uploadDir: () => this.input.dataset.uploadDir || '',
-                apiToken: tokenParam
             });
             chunkUploader.install();
         } else {
@@ -657,7 +661,7 @@ export class UppyCustomWidget {
                 endpoint: (file) => {
                     const categoryId = parseInt(this.input.dataset.categoryId) || 0;
                     const uploadDir = this.input.dataset.uploadDir || '';
-                    return window.location.origin + '/redaxo/index.php?rex-api-call=uppy_uploader&func=upload&api_token=' + tokenParam + 
+                    return apiEndpoint + separator + 'func=upload' + 
                            '&category_id=' + categoryId + 
                            '&upload_dir=' + encodeURIComponent(uploadDir) + 
                            signatureParams;
@@ -759,11 +763,14 @@ export class UppyCustomWidget {
     }
 
     async fetchMetaFields() {
-        const config = this.getConfig();
-        const tokenParam = config.apiToken ? `&api_token=${encodeURIComponent(config.apiToken)}` : '';
+        const apiEndpoint = this.input.dataset.apiEndpoint || '/index.php?rex-api-call=uppy_uploader';
+        // Metadata handler uses uppy_metadata API
+        const metaEndpoint = apiEndpoint.replace('uppy_uploader', 'uppy_metadata');
         
         try {
-            const response = await fetch(`${window.location.origin}/redaxo/index.php?rex-api-call=uppy_metadata&action=get_fields${tokenParam}`);
+            const response = await fetch(`${metaEndpoint}&action=get_fields`, {
+                credentials: 'same-origin'
+            });
             const data = await response.json();
             return data.success ? data.data : [];
         } catch (e) {
@@ -773,11 +780,13 @@ export class UppyCustomWidget {
     }
 
     async fetchMetadata(filename) {
-        const config = this.getConfig();
-        const tokenParam = config.apiToken ? `&api_token=${encodeURIComponent(config.apiToken)}` : '';
+        const apiEndpoint = this.input.dataset.apiEndpoint || '/index.php?rex-api-call=uppy_uploader';
+        const metaEndpoint = apiEndpoint.replace('uppy_uploader', 'uppy_metadata');
         
         try {
-            const response = await fetch(`${window.location.origin}/redaxo/index.php?rex-api-call=uppy_metadata&action=load_metadata&filename=${encodeURIComponent(filename)}${tokenParam}`);
+            const response = await fetch(`${metaEndpoint}&action=load_metadata&filename=${encodeURIComponent(filename)}`, {
+                credentials: 'same-origin'
+            });
             const data = await response.json();
             return (data.success && data.metadata) ? data.metadata : {};
         } catch (e) {
@@ -787,17 +796,18 @@ export class UppyCustomWidget {
     }
 
     async saveMetadata(filename, metadata) {
-        const config = this.getConfig();
-        const tokenParam = config.apiToken ? `&api_token=${encodeURIComponent(config.apiToken)}` : '';
+        const apiEndpoint = this.input.dataset.apiEndpoint || '/index.php?rex-api-call=uppy_uploader';
+        const metaEndpoint = apiEndpoint.replace('uppy_uploader', 'uppy_metadata');
         
         const formData = new FormData();
         formData.append('filename', filename);
         formData.append('metadata', JSON.stringify(metadata));
         
         try {
-            const response = await fetch(`${window.location.origin}/redaxo/index.php?rex-api-call=uppy_metadata&action=save_metadata${tokenParam}`, {
+            const response = await fetch(`${metaEndpoint}&action=save_metadata`, {
                 method: 'POST',
-                body: formData
+                body: formData,
+                credentials: 'same-origin'
             });
             const data = await response.json();
             return data.success;
