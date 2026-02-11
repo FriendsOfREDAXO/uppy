@@ -14,16 +14,18 @@ Die Response vom Upload-Handler wird nicht korrekt verarbeitet. Dies kann mehrer
 
 ## Lösung
 
-### 1. API-Token korrekt setzen
+### 1. API-Token sicher setzen
 
-Der API-Token muss sowohl in der Session als auch als data-Attribut gesetzt werden:
+**WICHTIG:** Der API-Token darf **niemals** im HTML-Code ausgegeben werden (z.B. als `data-api-token`), da er sonst für jeden Besucher sichtbar ist!
+Nutzen Sie stattdessen die PHP-Session.
 
 ```php
 <?php
-// WICHTIG: EINMALIG am Anfang des Templates/Moduls ausführen
-rex_set_session('uppy_token', rex_config::get('uppy', 'api_token'));
+// WICHTIG: EINMALIG am Anfang des Templates/Moduls ausführen (vor der HTML-Ausgabe)
+// Dies setzt den Token in die verschlüsselte PHP-Session.
+\FriendsOfRedaxo\Uppy\Utils::ensureApiSession();
+
 $uppy = rex_addon::get('uppy');
-$apiToken = rex_config::get('uppy', 'api_token');
 ?>
 
 <!-- CSS im <head> -->
@@ -36,7 +38,6 @@ $apiToken = rex_config::get('uppy', 'api_token');
     name="my_upload_field" 
     value=""
     data-widget="uppy" 
-    data-api-token="<?= htmlspecialchars($apiToken) ?>"
     data-category-id="0"
     data-max-files="5"
     data-max-filesize="10"
