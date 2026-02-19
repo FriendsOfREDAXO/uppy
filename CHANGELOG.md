@@ -1,5 +1,20 @@
 # Changelog
 
+## Version 2.6.0 (2026-02-19)
+
+### 🎉 Neue Features
+- **Erweiterte Dateitypen-Auswahl**: Settings-Seite mit vollständigem Dateitypen-Katalog in 8 Gruppen (Bilder, Dokumente, Archive, Video, Audio, Office, OpenDocument, Fonts).
+- **Automatische Mediapool-Erweiterung**: Vom Uppy konfigurierte MIME-Types werden zur Laufzeit automatisch im Mediapool freigeschaltet – keine manuelle Pflege der `allowed_mime_types` mehr nötig.
+- **Neue Dateiformate**: Unterstützung für ICS (iCalendar), JSON, XML, VTT, SRT, EPUB, EPS, FLAC, M4A, AVI, MKV, ICO, RAR, 7z, GZ, TAR, OpenDocument (ODT/ODS/ODP), Font-Dateien (WOFF/WOFF2/TTF/OTF) und Office-Vorlagen (DOTX/POTX/PPSX).
+
+### ✨ Verbesserungen
+- **Dateitypen-UI neu gestaltet**: Modal durch übersichtliches Accordion mit Inline-Checkboxen und Badge-Zähler pro Gruppe ersetzt.
+- **Sichtbare Konfiguration**: Aktive MIME-Types werden in einem Textarea-Feld angezeigt statt in einem versteckten Input.
+- **Eigene MIME-Types**: Freitext-Feld für benutzerdefinierte MIME-Types, die nicht im Katalog enthalten sind.
+
+### 🐛 Bugfixes
+- **Dateitypen-Auswahl funktionierte nicht**: Fehlender JavaScript-Handler für die Übernahme ausgewählter Dateitypen behoben.
+
 ## Version 2.5.0 (2026-02-10)
 
 ### 🎉 Neue Features

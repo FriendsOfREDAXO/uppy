@@ -63,81 +63,145 @@ while ($sql->hasNext()) {
 $content = '';
 $formElements = [];
 
-// Allgemeine Einstellungen
+// Allgemeine Einstellungen – Dateitypen als Inline-Checkboxen
+$currentTypesValue = rex_config::get('uppy', 'allowed_types', 'image/jpeg,image/png,image/gif,image/webp,image/svg+xml,application/pdf,video/mp4,video/mpeg,video/quicktime,audio/mpeg,audio/wav');
+$currentTypes = array_map('trim', explode(',', $currentTypesValue));
+
+$typeGroups = [
+    'Bilder' => [
+        'image/jpeg' => 'JPEG',
+        'image/png' => 'PNG',
+        'image/gif' => 'GIF',
+        'image/webp' => 'WebP',
+        'image/svg+xml' => 'SVG',
+        'image/tiff' => 'TIFF',
+        'image/bmp' => 'BMP',
+        'image/heic' => 'HEIC',
+        'image/avif' => 'AVIF',
+        'image/x-icon' => 'ICO',
+    ],
+    'Dokumente' => [
+        'application/pdf' => 'PDF',
+        'text/plain' => 'Text (.txt)',
+        'text/csv' => 'CSV',
+        'text/calendar' => 'iCalendar (.ics)',
+        'application/rtf' => 'RTF',
+        'application/json' => 'JSON',
+        'text/xml' => 'XML',
+        'text/vtt' => 'WebVTT (.vtt)',
+        'text/srt' => 'Untertitel (.srt)',
+        'application/epub+zip' => 'E-Book (.epub)',
+        'application/postscript' => 'PostScript (.eps)',
+    ],
+    'Archive' => [
+        'application/zip' => 'ZIP',
+        'application/x-gzip' => 'GZIP (.gz)',
+        'application/x-tar' => 'TAR',
+        'application/x-rar-compressed' => 'RAR',
+        'application/x-7z-compressed' => '7-Zip (.7z)',
+    ],
+    'Video' => [
+        'video/mp4' => 'MP4',
+        'video/mpeg' => 'MPEG',
+        'video/quicktime' => 'QuickTime (.mov)',
+        'video/webm' => 'WebM',
+        'video/ogg' => 'OGG Video',
+        'video/x-msvideo' => 'AVI',
+        'video/x-matroska' => 'MKV',
+    ],
+    'Audio' => [
+        'audio/mpeg' => 'MP3',
+        'audio/wav' => 'WAV',
+        'audio/ogg' => 'OGG Audio',
+        'audio/aac' => 'AAC',
+        'audio/midi' => 'MIDI',
+        'audio/flac' => 'FLAC',
+        'audio/mp4' => 'M4A',
+        'audio/webm' => 'WebM Audio',
+    ],
+    'Office' => [
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document' => 'Word (.docx)',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' => 'Excel (.xlsx)',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation' => 'PowerPoint (.pptx)',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.template' => 'Word-Vorlage (.dotx)',
+        'application/vnd.openxmlformats-officedocument.presentationml.template' => 'PowerPoint-Vorlage (.potx)',
+        'application/vnd.openxmlformats-officedocument.presentationml.slideshow' => 'PowerPoint-Show (.ppsx)',
+        'application/msword' => 'Word (.doc)',
+        'application/vnd.ms-excel' => 'Excel (.xls)',
+        'application/vnd.ms-powerpoint' => 'PowerPoint (.ppt)',
+    ],
+    'OpenDocument' => [
+        'application/vnd.oasis.opendocument.text' => 'Writer (.odt)',
+        'application/vnd.oasis.opendocument.spreadsheet' => 'Calc (.ods)',
+        'application/vnd.oasis.opendocument.presentation' => 'Impress (.odp)',
+    ],
+    'Fonts' => [
+        'font/woff' => 'WOFF',
+        'font/woff2' => 'WOFF2',
+        'font/ttf' => 'TrueType (.ttf)',
+        'font/otf' => 'OpenType (.otf)',
+    ],
+];
+
+// Alle bekannten MIME-Types sammeln
+$knownTypes = [];
+foreach ($typeGroups as $types) {
+    foreach ($types as $mime => $label) {
+        $knownTypes[] = $mime;
+    }
+}
+// Unbekannte/eigene Types extrahieren
+$customTypes = array_filter($currentTypes, static function ($t) use ($knownTypes) {
+    return '' !== $t && !in_array($t, $knownTypes, true);
+});
+
+// Checkbox-HTML aufbauen
+$fieldHtml = '<textarea class="form-control" id="uppy-allowed-types" name="config[allowed_types]" rows="5" readonly style="margin-bottom:10px; cursor:default;">' . rex_escape($currentTypesValue) . '</textarea>';
+
+$fieldHtml .= '<div class="panel-group" id="uppy-types-accordion" role="tablist">';
+
+$panelIndex = 0;
+foreach ($typeGroups as $groupName => $types) {
+    $panelId = 'uppy-type-panel-' . $panelIndex;
+    $collapseId = 'uppy-type-collapse-' . $panelIndex;
+
+    // Zähle aktive Types in dieser Gruppe
+    $activeCount = 0;
+    foreach ($types as $mime => $label) {
+        if (in_array($mime, $currentTypes, true)) {
+            ++$activeCount;
+        }
+    }
+    $badge = $activeCount > 0 ? ' <span class="badge">' . $activeCount . '</span>' : '';
+
+    $fieldHtml .= '<div class="panel panel-default">';
+    $fieldHtml .= '<div class="panel-heading" role="tab" id="' . $panelId . '">';
+    $fieldHtml .= '<h4 class="panel-title"><a role="button" data-toggle="collapse" data-parent="#uppy-types-accordion" href="#' . $collapseId . '" aria-expanded="false" aria-controls="' . $collapseId . '" style="text-decoration:none;">';
+    $fieldHtml .= rex_escape($groupName) . $badge;
+    $fieldHtml .= '</a></h4></div>';
+    $fieldHtml .= '<div id="' . $collapseId . '" class="panel-collapse collapse" role="tabpanel" aria-labelledby="' . $panelId . '">';
+    $fieldHtml .= '<div class="panel-body"><div class="row">';
+
+    foreach ($types as $mime => $label) {
+        $checked = in_array($mime, $currentTypes, true) ? ' checked' : '';
+        $fieldHtml .= '<div class="col-sm-4 col-md-3"><div class="checkbox" style="margin:2px 0;"><label><input type="checkbox" class="uppy-type-cb" value="' . rex_escape($mime) . '"' . $checked . '> ' . rex_escape($label) . '</label></div></div>';
+    }
+
+    $fieldHtml .= '</div></div></div></div>';
+    ++$panelIndex;
+}
+
+$fieldHtml .= '</div>'; // panel-group
+
+$fieldHtml .= '<div style="margin-top: 8px;">';
+$fieldHtml .= '<label for="uppy-custom-types"><small>Eigene MIME-Types (kommagetrennt):</small></label>';
+$fieldHtml .= '<input class="form-control" type="text" id="uppy-custom-types" placeholder="z.B. text/calendar,application/xml" value="' . rex_escape(implode(', ', $customTypes)) . '" />';
+$fieldHtml .= '</div>';
+
 $n = [];
-$n['label'] = '<label for="uppy-allowed-types">' . $addon->i18n('uppy_allowed_types') . '</label>';
-$n['field'] = '
-<div class="input-group">
-    <input class="form-control" type="text" id="uppy-allowed-types" name="config[allowed_types]" value="' . rex_escape(rex_config::get('uppy', 'allowed_types', 'image/jpeg,image/png,image/gif,image/webp,image/svg+xml,application/pdf,video/mp4,video/mpeg,video/quicktime,audio/mpeg,audio/wav')) . '" />
-    <span class="input-group-btn">
-        <button class="btn btn-default" type="button" id="uppy-select-types-btn" data-toggle="modal" data-target="#uppy-types-modal">
-            <i class="rex-icon rex-icon-add"></i> ' . $addon->i18n('uppy_select_types') . '
-        </button>
-    </span>
-</div>
-
-<!-- Modal für Dateitypen-Auswahl -->
-<div class="modal fade" id="uppy-types-modal" tabindex="-1" role="dialog">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                <h4 class="modal-title">' . $addon->i18n('uppy_select_types') . '</h4>
-            </div>
-            <div class="modal-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <h5>Bilder</h5>
-                        <div class="checkbox"><label><input type="checkbox" class="uppy-type-cb" value="image/jpeg"> JPEG (image/jpeg)</label></div>
-                        <div class="checkbox"><label><input type="checkbox" class="uppy-type-cb" value="image/png"> PNG (image/png)</label></div>
-                        <div class="checkbox"><label><input type="checkbox" class="uppy-type-cb" value="image/gif"> GIF (image/gif)</label></div>
-                        <div class="checkbox"><label><input type="checkbox" class="uppy-type-cb" value="image/webp"> WebP (image/webp)</label></div>
-                        <div class="checkbox"><label><input type="checkbox" class="uppy-type-cb" value="image/svg+xml"> SVG (image/svg+xml)</label></div>
-                        <div class="checkbox"><label><input type="checkbox" class="uppy-type-cb" value="image/tiff"> TIFF (image/tiff)</label></div>
-                        <div class="checkbox"><label><input type="checkbox" class="uppy-type-cb" value="image/bmp"> BMP (image/bmp)</label></div>
-                        <div class="checkbox"><label><input type="checkbox" class="uppy-type-cb" value="image/heic"> HEIC (image/heic)</label></div>
-                        
-                        <h5>Dokumente</h5>
-                        <div class="checkbox"><label><input type="checkbox" class="uppy-type-cb" value="application/pdf"> PDF (application/pdf)</label></div>
-                        <div class="checkbox"><label><input type="checkbox" class="uppy-type-cb" value="text/plain"> Text (text/plain)</label></div>
-                        <div class="checkbox"><label><input type="checkbox" class="uppy-type-cb" value="application/rtf"> RTF (application/rtf)</label></div>
-                        <div class="checkbox"><label><input type="checkbox" class="uppy-type-cb" value="application/zip"> ZIP (application/zip)</label></div>
-                    </div>
-                    <div class="col-md-6">
-                        <h5>Video</h5>
-                        <div class="checkbox"><label><input type="checkbox" class="uppy-type-cb" value="video/mp4"> MP4 (video/mp4)</label></div>
-                        <div class="checkbox"><label><input type="checkbox" class="uppy-type-cb" value="video/mpeg"> MPEG (video/mpeg)</label></div>
-                        <div class="checkbox"><label><input type="checkbox" class="uppy-type-cb" value="video/quicktime"> QuickTime (video/quicktime)</label></div>
-                        <div class="checkbox"><label><input type="checkbox" class="uppy-type-cb" value="video/webm"> WebM (video/webm)</label></div>
-                        <div class="checkbox"><label><input type="checkbox" class="uppy-type-cb" value="video/ogg"> OGG (video/ogg)</label></div>
-                        
-                        <h5>Audio</h5>
-                        <div class="checkbox"><label><input type="checkbox" class="uppy-type-cb" value="audio/mpeg"> MP3 (audio/mpeg)</label></div>
-                        <div class="checkbox"><label><input type="checkbox" class="uppy-type-cb" value="audio/wav"> WAV (audio/wav)</label></div>
-                        <div class="checkbox"><label><input type="checkbox" class="uppy-type-cb" value="audio/ogg"> OGG (audio/ogg)</label></div>
-                        <div class="checkbox"><label><input type="checkbox" class="uppy-type-cb" value="audio/aac"> AAC (audio/aac)</label></div>
-                        <div class="checkbox"><label><input type="checkbox" class="uppy-type-cb" value="audio/midi"> MIDI (audio/midi)</label></div>
-                    </div>
-                </div>
-                <div class="row" style="margin-top: 15px; border-top: 1px solid #eee; padding-top: 10px;">
-                    <div class="col-md-12">
-                        <h5>Office (Modern)</h5>
-                        <div class="checkbox"><label><input type="checkbox" class="uppy-type-cb" value="application/vnd.openxmlformats-officedocument.wordprocessingml.document"> Word .docx</label></div>
-                        <div class="checkbox"><label><input type="checkbox" class="uppy-type-cb" value="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"> Excel .xlsx</label></div>
-                        <div class="checkbox"><label><input type="checkbox" class="uppy-type-cb" value="application/vnd.openxmlformats-officedocument.presentationml.presentation"> PowerPoint .pptx</label></div>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-default" data-dismiss="modal">' . $addon->i18n('uppy_cancel') . '</button>
-                <button type="button" class="btn btn-primary" id="uppy-apply-types">' . $addon->i18n('uppy_apply') . '</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-';
-$n['note'] = 'MIME-Types (kommagetrennt), z.B. <code>image/jpeg,image/png,image/webp,image/svg+xml,application/pdf</code>';
+$n['label'] = '<label>' . $addon->i18n('uppy_allowed_types') . '</label>';
+$n['field'] = $fieldHtml;
+$n['note'] = 'Dateitypen auswählen oder eigene MIME-Types eintragen. Änderungen werden automatisch übernommen.';
 $formElements[] = $n;
 
 $n = [];
