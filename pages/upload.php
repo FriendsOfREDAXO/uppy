@@ -15,22 +15,37 @@ $n = [];
 $n['label'] = '<label>' . $addon->i18n('uppy_select_category') . '</label>';
 
 // rex_media_category_select verwenden (wie im Standard-Mediapool)
-$catsSel = new rex_media_category_select();
+$selectedCategory = rex_request('category_id', 'int', 0);
+$catsSel = new rex_media_category_select(true); // checkPerm = true: nur erlaubte Kategorien anzeigen
 $catsSel->setStyle('class="form-control"');
 $catsSel->setSize(1);
 $catsSel->setName('category_id');
 $catsSel->setId('uppy-category');
 $catsSel->setAttribute('class', 'selectpicker form-control');
 $catsSel->setAttribute('data-live-search', 'true');
-$catsSel->setSelected(rex_config::get('uppy', 'category_id', 0));
 
 // Custom-Widget Modus prüfen
 $useCustomWidget = rex_config::get('uppy', 'use_custom_widget', false);
 
 // "Keine Kategorie" Option wenn Berechtigung vorhanden
-if (rex::requireUser()->getComplexPerm('media')->hasAll()) {
+$mediaPerm = rex::getUser() ? rex::getUser()->getComplexPerm('media') : null;
+if ($mediaPerm instanceof rex_media_perm && $mediaPerm->hasAll()) {
     $catsSel->addOption(rex_i18n::msg('pool_kats_no'), '0');
+    if ($selectedCategory === 0) {
+        $selectedCategory = (int) rex_config::get('uppy', 'category_id', 0);
+    }
+} elseif ($selectedCategory === 0) {
+    // Eingeschränkter User ohne explizit gesetzte Kategorie:
+    // erste verfügbare Kategorie automatisch vorauswählen
+    $rootCats = rex_media_category::getRootCategories();
+    foreach ($rootCats as $cat) {
+        if (!($mediaPerm instanceof rex_media_perm) || $mediaPerm->hasCategoryPerm($cat->getId())) {
+            $selectedCategory = $cat->getId();
+            break;
+        }
+    }
 }
+$catsSel->setSelected($selectedCategory);
 
 $n['field'] = $catsSel->get();
 $formElements[] = $n;
@@ -46,7 +61,7 @@ if ($useCustomWidget) {
            name="uppy_files" 
            id="uppy-upload-widget"
            class="uppy-upload-widget"
-           data-category-id="' . rex_config::get('uppy', 'category_id', 0) . '"
+           data-category-id="' . $selectedCategory . '"
            data-max-files="' . rex_config::get('uppy', 'max_files', 30) . '"
            data-max-filesize="' . rex_config::get('uppy', 'max_filesize', 200) . '"
            data-allowed-types="' . rex_config::get('uppy', 'allowed_types', '*') . '"
@@ -65,7 +80,7 @@ if ($useCustomWidget) {
            name="uppy_files" 
            id="uppy-upload-widget"
            data-widget="uppy"
-           data-category-id="' . rex_config::get('uppy', 'category_id', 0) . '"
+           data-category-id="' . $selectedCategory . '"
            data-max-files="' . rex_config::get('uppy', 'max_files', 30) . '"
            data-max-filesize="' . rex_config::get('uppy', 'max_filesize', 200) . '"
            data-allowed-types="' . rex_config::get('uppy', 'allowed_types', '*') . '"
@@ -144,6 +159,15 @@ function selectMedialist(filename) {
 $n = [];
 $n['field'] = '
 <script>
+// Initialsynchronisation: data-category-id mit dem aktuell gewählten Select-Wert abgleichen.
+(function() {
+    var sel = document.getElementById("uppy-category");
+    var widget = document.getElementById("uppy-upload-widget");
+    if (sel && widget && sel.value.length > 0) {
+        widget.dataset.categoryId = sel.value;
+    }
+})();
+
 document.getElementById("uppy-category").addEventListener("change", function() {
     var widget = document.getElementById("uppy-upload-widget");
     widget.dataset.categoryId = this.value;
