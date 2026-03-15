@@ -796,7 +796,7 @@ body.rex-theme-dark {
     .uppy-Dashboard-AddFiles-title,
     .uppy-DashboardContent-addMore,
     .uppy-DashboardContent-save,
-    button[type="button"] {
+    {
         color: #4a90e2 !important;
     }
 }
