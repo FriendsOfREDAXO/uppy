@@ -96,3 +96,4 @@ uppy_ycom_auth_panel_title = YCom media permissions (optional)
 uppy_ycom_auth_panel_intro = Optional: Set the frontend visibility applied to every file uploaded in this session. Has no effect unless values are set.
 uppy_ycom_media_auth_defaults_enabled = Set YCom media permissions during upload
 uppy_ycom_media_auth_defaults_enabled_notice = Adds an optional panel to the upload page so authorised backend users (permission "uppy[ycom_media_auth]") can preset YCom media permissions for every file uploaded in the session. Requires the ycom/media_auth plugin.
+uppy_ycom_auth_reset = Reset session defaults

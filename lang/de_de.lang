@@ -96,3 +96,4 @@ uppy_ycom_auth_panel_title = YCom-Medienberechtigungen (optional)
 uppy_ycom_auth_panel_intro = Optional: Lege fest, welche Frontend-Sichtbarkeit alle Dateien dieser Upload-Sitzung erhalten sollen. Wirkt sich nur aus, solange Werte gesetzt sind.
 uppy_ycom_media_auth_defaults_enabled = YCom-Medienberechtigungen beim Upload setzen
 uppy_ycom_media_auth_defaults_enabled_notice = Aktiviert auf der Upload-Seite ein optionales Panel, mit dem berechtigte Backend-User (Permission "uppy[ycom_media_auth]") YCom-Medienberechtigungen für die in der Sitzung neu hochgeladenen Dateien vorbelegen können. Voraussetzung: Plugin ycom/media_auth.
+uppy_ycom_auth_reset = Sitzungs-Defaults zurücksetzen

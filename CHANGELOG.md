@@ -9,6 +9,7 @@
   - Eigene Backend-Permission `uppy[ycom_media_auth]` (oder Admin) zur Steuerung, wer das Panel sehen und nutzen darf.
   - Werte werden pro Backend-Session gespeichert und automatisch auf jede neue Datei angewendet (Standard- und Chunk-Upload).
   - Gruppenfelder erscheinen nur, wenn `ycom/group` verfügbar ist und ein passender Auth-/Gruppentyp gewählt ist.
+  - Status-Badge im Panel-Header zeigt jederzeit, ob aktuell „Alle (öffentlich)“ oder „Nur eingeloggte“ als Default greift; Reset-Button setzt die Sitzungs-Defaults sofort zurück (UI + Session).
 - **Info-Center Widget**: Wenn das AddOn `info_center` installiert ist, registriert Uppy ein Dashboard-Widget mit Kategorieauswahl, Drag&Drop-Bereich und direktem Link zur kompletten Upload-Seite.
 
 ### 🐛 Bugfixes

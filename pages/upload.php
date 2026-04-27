@@ -127,14 +127,26 @@ if (\FriendsOfRedaxo\Uppy\YcomAuthSettings::isEnabled()
             . '</div>';
     }
 
+    // Status-Badge: zeigt aktuell aktive Defaults
+    $badgeText = 0 === $ycomDefaults['ycom_auth_type']
+        ? $addon->i18n('uppy_ycom_auth_all')
+        : $addon->i18n('uppy_ycom_auth_only_logged_in');
+    $badgeClass = 0 === $ycomDefaults['ycom_auth_type'] ? 'label-default' : 'label-warning';
+    $statusBadge = '<span id="uppy-ycom-auth-status" class="label ' . $badgeClass . '" data-public-text="'
+        . rex_escape($addon->i18n('uppy_ycom_auth_all'))
+        . '" data-protected-text="' . rex_escape($addon->i18n('uppy_ycom_auth_only_logged_in')) . '">'
+        . rex_escape($badgeText) . '</span>';
+
     $ycomAuthHtml = '
 <div class="panel panel-default" id="uppy-ycom-auth-panel" style="margin-top:15px;">
-    <div class="panel-heading">
-        <h3 class="panel-title">
-            <a role="button" data-toggle="collapse" href="#uppy-ycom-auth-body" aria-expanded="false" aria-controls="uppy-ycom-auth-body" class="collapsed">
-                <i class="rex-icon fa-solid fa-lock"></i> ' . rex_escape($addon->i18n('uppy_ycom_auth_panel_title')) . '
-            </a>
-        </h3>
+    <div class="panel-heading" style="display:flex; align-items:center; gap:8px;">
+        <a role="button" data-toggle="collapse" href="#uppy-ycom-auth-body" aria-expanded="false" aria-controls="uppy-ycom-auth-body" class="collapsed" style="flex:1;">
+            <i class="rex-icon fa-solid fa-lock"></i> ' . rex_escape($addon->i18n('uppy_ycom_auth_panel_title')) . '
+        </a>
+        ' . $statusBadge . '
+        <button type="button" id="uppy-ycom-auth-reset" class="btn btn-default btn-xs" title="' . rex_escape($addon->i18n('uppy_ycom_auth_reset')) . '">
+            <i class="rex-icon fa-solid fa-rotate-left"></i>
+        </button>
     </div>
     <div id="uppy-ycom-auth-body" class="panel-collapse collapse" aria-expanded="false">
         <div class="panel-body">

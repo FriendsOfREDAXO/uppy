@@ -31,45 +31,25 @@
         return values;
     }
 
-    function save() {
+    function buildFormData() {
         var fd = new FormData();
         fd.append('ycom_auth_type', getValue('uppy-ycom-auth-type') || '0');
         fd.append('ycom_group_type', getValue('uppy-ycom-group-type') || '0');
-
-        var groups = getMultiValues('uppy-ycom-groups');
-        groups.forEach(function (v) {
+        getMultiValues('uppy-ycom-groups').forEach(function (v) {
             fd.append('ycom_groups[]', v);
         });
+        return fd;
+    }
 
-        fetch(endpoint, {
+    function save() {
+        return fetch(endpoint, {
             method: 'POST',
             credentials: 'same-origin',
             headers: { 'X-Requested-With': 'XMLHttpRequest' },
-            body: fd
+            body: buildFormData()
         }).catch(function () {
             // Fehler still behandeln; Defaults sind nicht kritisch
         });
-    }
-
-    function init() {
-        var ids = ['uppy-ycom-auth-type', 'uppy-ycom-group-type', 'uppy-ycom-groups'];
-        var found = false;
-        ids.forEach(function (id) {
-            var el = document.getElementById(id);
-            if (el) {
-                el.addEventListener('change', function () {
-                    save();
-                    updateVisibility();
-                });
-                found = true;
-            }
-        });
-
-        if (found) {
-            updateVisibility();
-            // Beim ersten Laden Defaults aus dem aktuellen Form-State sicher in die Session schreiben.
-            save();
-        }
     }
 
     /**
@@ -89,6 +69,73 @@
         }
         if (groupsRow) {
             groupsRow.style.display = (authType === 1 && groupType > 0) ? '' : 'none';
+        }
+    }
+
+    /**
+     * Status-Badge im Panel-Header aktualisieren.
+     */
+    function updateBadge() {
+        var badge = document.getElementById('uppy-ycom-auth-status');
+        if (!badge) {
+            return;
+        }
+        var authType = parseInt(getValue('uppy-ycom-auth-type') || '0', 10);
+        if (authType === 1) {
+            badge.textContent = badge.dataset.protectedText || 'eingeloggte';
+            badge.classList.remove('label-default');
+            badge.classList.add('label-warning');
+        } else {
+            badge.textContent = badge.dataset.publicText || 'öffentlich';
+            badge.classList.remove('label-warning');
+            badge.classList.add('label-default');
+        }
+    }
+
+    function onChange() {
+        updateVisibility();
+        updateBadge();
+        save();
+    }
+
+    function reset() {
+        var auth = document.getElementById('uppy-ycom-auth-type');
+        var groupType = document.getElementById('uppy-ycom-group-type');
+        var groups = document.getElementById('uppy-ycom-groups');
+        if (auth) { auth.value = '0'; }
+        if (groupType) { groupType.value = '0'; }
+        if (groups) {
+            for (var i = 0; i < groups.options.length; i++) {
+                groups.options[i].selected = false;
+            }
+        }
+        onChange();
+    }
+
+    function init() {
+        var ids = ['uppy-ycom-auth-type', 'uppy-ycom-group-type', 'uppy-ycom-groups'];
+        var found = false;
+        ids.forEach(function (id) {
+            var el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('change', onChange);
+                found = true;
+            }
+        });
+
+        var resetBtn = document.getElementById('uppy-ycom-auth-reset');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                reset();
+            });
+        }
+
+        if (found) {
+            updateVisibility();
+            updateBadge();
+            // Beim ersten Laden Defaults aus dem aktuellen Form-State sicher in die Session schreiben.
+            save();
         }
     }
 
