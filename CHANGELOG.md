@@ -1,6 +1,6 @@
 # Changelog
 
-## Version 2.7.0 (2026-04-27)
+## Version 2.7.0 (2026-XX-XX)
 
 ### 🎉 Neue Features
 - **YCom-Medienberechtigungen beim Upload setzen**: Optionales, ausklappbares Panel auf der Upload-Seite, mit dem berechtigte Backend-User die Frontend-Sichtbarkeit (`ycom_auth_type`, `ycom_group_type`, `ycom_groups`) für alle in der Sitzung neu hochgeladenen Dateien vorbelegen können.
