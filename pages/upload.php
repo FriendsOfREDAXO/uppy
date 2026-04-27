@@ -50,17 +50,123 @@ $catsSel->setSelected($selectedCategory);
 $n['field'] = $catsSel->get();
 $formElements[] = $n;
 
+// YCom Media Auth Defaults (nur wenn aktiviert + verfügbar + User berechtigt).
+// Wird als ausklappbares Panel direkt nach der Kategorieauswahl gerendert.
+$ycomAuthHtml = '';
+if (\FriendsOfRedaxo\Uppy\YcomAuthSettings::isEnabled()
+    && \FriendsOfRedaxo\Uppy\YcomAuthSettings::userMayManage(rex::getUser())) {
+    $ycomDefaults = \FriendsOfRedaxo\Uppy\YcomAuthSettings::getSessionDefaults();
+    $hasGroupSupport = \FriendsOfRedaxo\Uppy\YcomAuthSettings::isGroupSupportAvailable();
+
+    // Auth-Typ Select
+    $authSel = new rex_select();
+    $authSel->setName('ycom_auth_type');
+    $authSel->setId('uppy-ycom-auth-type');
+    $authSel->setSize(1);
+    $authSel->setAttribute('class', 'form-control');
+    $authSel->addArrayOptions([
+        0 => $addon->i18n('uppy_ycom_auth_all'),
+        1 => $addon->i18n('uppy_ycom_auth_only_logged_in'),
+    ]);
+    $authSel->setSelected($ycomDefaults['ycom_auth_type']);
+
+    $rowAuth = '<div class="form-group">'
+        . '<label for="uppy-ycom-auth-type">' . rex_escape($addon->i18n('uppy_ycom_auth_type')) . '</label>'
+        . $authSel->get()
+        . '<p class="help-block text-muted">' . rex_escape($addon->i18n('uppy_ycom_auth_type_note')) . '</p>'
+        . '</div>';
+
+    // Group-Typ + Gruppen (nur bei "nur eingeloggte" + ycom/group)
+    $rowGroupType = '';
+    $rowGroups = '';
+    if ($hasGroupSupport) {
+        $groupTypeSel = new rex_select();
+        $groupTypeSel->setName('ycom_group_type');
+        $groupTypeSel->setId('uppy-ycom-group-type');
+        $groupTypeSel->setSize(1);
+        $groupTypeSel->setAttribute('class', 'form-control');
+        $groupTypeSel->addArrayOptions([
+            0 => rex_i18n::msg('ycom_group_forallgroups'),
+            1 => rex_i18n::msg('ycom_group_inallgroups'),
+            2 => rex_i18n::msg('ycom_group_inonegroup'),
+            3 => rex_i18n::msg('ycom_group_nogroups'),
+        ]);
+        $groupTypeSel->setSelected($ycomDefaults['ycom_group_type']);
+
+        $rowGroupType = '<div class="form-group" id="uppy-ycom-group-type-row">'
+            . '<label for="uppy-ycom-group-type">' . rex_escape($addon->i18n('uppy_ycom_group_type')) . '</label>'
+            . $groupTypeSel->get()
+            . '</div>';
+
+        $ycomGroups = [];
+        if (class_exists(rex_ycom_group::class)) {
+            try {
+                $ycomGroups = rex_ycom_group::getGroups();
+            } catch (\Throwable $e) {
+                $ycomGroups = [];
+            }
+        }
+
+        $groupSel = new rex_select();
+        $groupSel->setName('ycom_groups[]');
+        $groupSel->setId('uppy-ycom-groups');
+        $groupSel->setMultiple();
+        $groupSel->setSize(min(8, max(3, count($ycomGroups))));
+        $groupSel->setAttribute('class', 'form-control');
+        foreach ($ycomGroups as $gid => $gname) {
+            $groupSel->addOption($gname, (string) $gid);
+        }
+        if (!empty($ycomDefaults['ycom_groups'])) {
+            $groupSel->setSelected($ycomDefaults['ycom_groups']);
+        }
+
+        $rowGroups = '<div class="form-group" id="uppy-ycom-groups-row">'
+            . '<label for="uppy-ycom-groups">' . rex_escape($addon->i18n('uppy_ycom_groups')) . '</label>'
+            . $groupSel->get()
+            . '<p class="help-block text-muted">' . rex_escape($addon->i18n('uppy_ycom_groups_note')) . '</p>'
+            . '</div>';
+    }
+
+    $ycomAuthHtml = '
+<div class="panel panel-default" id="uppy-ycom-auth-panel" style="margin-top:15px;">
+    <div class="panel-heading">
+        <h3 class="panel-title">
+            <a role="button" data-toggle="collapse" href="#uppy-ycom-auth-body" aria-expanded="false" aria-controls="uppy-ycom-auth-body" class="collapsed">
+                <i class="rex-icon fa-solid fa-lock"></i> ' . rex_escape($addon->i18n('uppy_ycom_auth_panel_title')) . '
+            </a>
+        </h3>
+    </div>
+    <div id="uppy-ycom-auth-body" class="panel-collapse collapse" aria-expanded="false">
+        <div class="panel-body">
+            <p class="text-muted">' . rex_escape($addon->i18n('uppy_ycom_auth_panel_intro')) . '</p>
+            ' . $rowAuth . $rowGroupType . $rowGroups . '
+        </div>
+    </div>
+</div>';
+
+    // Als Form-Element direkt nach der Kategorieauswahl einreihen
+    $n = [];
+    $n['field'] = $ycomAuthHtml;
+    $formElements[] = $n;
+}
+
 // Uppy Widget
 $n = [];
 $n['label'] = '<label>Upload</label>';
 
 if ($useCustomWidget) {
     // Custom Widget Variante (bekannt aus YForm)
+    // WICHTIG: data-api-endpoint explizit auf den Backend-Endpoint setzen,
+    // damit die Backend-Session (inkl. YCom-Media-Auth-Defaults) verwendet wird.
+    // Default des Custom-Widgets wäre "/index.php?rex-api-call=uppy_uploader" (Frontend).
+    $apiEndpoint = rex_url::backendController(['rex-api-call' => 'uppy_uploader'], false);
+
     $n['field'] = '
     <input type="hidden" 
            name="uppy_files" 
            id="uppy-upload-widget"
            class="uppy-upload-widget"
+           data-api-endpoint="' . rex_escape($apiEndpoint) . '"
            data-category-id="' . $selectedCategory . '"
            data-max-files="' . rex_config::get('uppy', 'max_files', 30) . '"
            data-max-filesize="' . rex_config::get('uppy', 'max_filesize', 200) . '"

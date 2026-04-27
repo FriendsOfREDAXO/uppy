@@ -12,6 +12,10 @@ $addon = rex_addon::get('uppy');
 // API-Klassen explizit registrieren (ab REDAXO 5.17)
 rex_api_function::register('uppy_uploader', FriendsOfRedaxo\Uppy\UppyUploadHandler::class);
 rex_api_function::register('uppy_metadata', FriendsOfRedaxo\Uppy\UppyMetadataHandler::class);
+rex_api_function::register('uppy_ycom_auth', rex_api_uppy_ycom_auth::class);
+
+// Backend-Permission für die Verwaltung der YCom-Media-Auth-Defaults beim Upload
+rex_perm::register(\FriendsOfRedaxo\Uppy\YcomAuthSettings::PERM, $addon->i18n('uppy_perm_ycom_media_auth'));
 
 // YForm Integration - registrieren wenn YForm verfügbar ist
 rex_extension::register('PACKAGES_INCLUDED', function() use ($addon) {
@@ -166,6 +170,14 @@ if (rex::isBackend() && rex::getUser()) {
     if ('uppy/settings' === rex_be_controller::getCurrentPage()) {
         rex_view::addJsFile($addon->getAssetsUrl('js/uppy-settings.js'));
     }
+
+    // Upload-Seite: JS für YCom-Media-Auth-Defaults (Backend-User mit Permission)
+    if ('uppy/upload' === rex_be_controller::getCurrentPage()
+        && \FriendsOfRedaxo\Uppy\YcomAuthSettings::isEnabled()
+        && \FriendsOfRedaxo\Uppy\YcomAuthSettings::userMayManage(rex::getUser())
+    ) {
+        rex_view::addJsFile($addon->getAssetsUrl('js/uppy-ycom-auth.js'));
+    }
 }
 
 // Optional: Mediapool-Upload-Seite ersetzen
@@ -181,5 +193,20 @@ if (rex_config::get('uppy', 'replace_mediapool', false)) {
                 );
             }
         }
+    });
+}
+
+// Info-Center-Widget für schnellen Upload aus dem Dashboard
+if (rex::isBackend()
+    && rex::getUser()
+    && rex_addon::get('info_center')->isAvailable()
+    && class_exists(\KLXM\InfoCenter\InfoCenter::class)
+) {
+    rex_extension::register('PACKAGES_INCLUDED', static function (): void {
+        if (!class_exists(\KLXM\InfoCenter\InfoCenter::class)) {
+            return;
+        }
+        $infoCenter = \KLXM\InfoCenter\InfoCenter::getInstance();
+        $infoCenter->registerWidget(new \FriendsOfRedaxo\Uppy\InfoCenter\UppyUploadWidget());
     });
 }

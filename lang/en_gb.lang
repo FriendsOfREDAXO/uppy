@@ -82,3 +82,17 @@ uppy_enable_debug_logging = Enable debug logging
 uppy_enable_debug_logging_notice = Enables detailed debug logs. Additionally requires REDAXO debug mode (System).
 uppy_docs_frontend = Frontend Configuration
 uppy_docs_frontend = Frontend Configuration
+
+# YCom Media Auth Defaults (Upload page)
+uppy_perm_ycom_media_auth = Uppy: Set YCom media permissions for uploads
+uppy_ycom_auth_type = Frontend visibility (YCom)
+uppy_ycom_auth_type_note = Automatically applied to every file uploaded in this session.
+uppy_ycom_auth_all = Everyone (public)
+uppy_ycom_auth_only_logged_in = Only logged-in YCom users
+uppy_ycom_group_type = Group check
+uppy_ycom_groups = YCom groups
+uppy_ycom_groups_note = Multiple selection allowed. Evaluated together with the group check.
+uppy_ycom_auth_panel_title = YCom media permissions (optional)
+uppy_ycom_auth_panel_intro = Optional: Set the frontend visibility applied to every file uploaded in this session. Has no effect unless values are set.
+uppy_ycom_media_auth_defaults_enabled = Set YCom media permissions during upload
+uppy_ycom_media_auth_defaults_enabled_notice = Adds an optional panel to the upload page so authorised backend users (permission "uppy[ycom_media_auth]") can preset YCom media permissions for every file uploaded in the session. Requires the ycom/media_auth plugin.
