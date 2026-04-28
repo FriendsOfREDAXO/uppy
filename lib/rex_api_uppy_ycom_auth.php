@@ -18,6 +18,13 @@ class rex_api_uppy_ycom_auth extends rex_api_function
     {
         rex_response::cleanOutputBuffers();
 
+        // Nur POST – mutiert Session-State, daher GET/HEAD ablehnen.
+        if ('POST' !== strtoupper((string) rex_server('REQUEST_METHOD', 'string', ''))) {
+            rex_response::setStatus('405 Method Not Allowed');
+            rex_response::sendJson(['error' => 'method_not_allowed']);
+            exit;
+        }
+
         // Backend-Session zwingend
         if (!rex_backend_login::hasSession()) {
             rex_response::setStatus(rex_response::HTTP_FORBIDDEN);

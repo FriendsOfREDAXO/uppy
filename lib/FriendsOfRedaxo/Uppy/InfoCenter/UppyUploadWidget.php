@@ -5,7 +5,6 @@ namespace FriendsOfRedaxo\Uppy\InfoCenter;
 use KLXM\InfoCenter\AbstractWidget;
 use rex;
 use rex_addon;
-use rex_be_controller;
 use rex_config;
 use rex_escape;
 use rex_media_category_select;
