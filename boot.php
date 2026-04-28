@@ -172,7 +172,12 @@ if (rex::isBackend() && rex::getUser()) {
     }
 
     // Upload-Seite: JS für YCom-Media-Auth-Defaults (Backend-User mit Permission)
-    if ('uppy/upload' === rex_be_controller::getCurrentPage()
+    // Auch auf mediapool/upload laden, falls die Uppy-Variante über replace_mediapool eingehängt ist –
+    // sonst würde das Panel zwar gerendert, aber die Session-Defaults nicht persistiert/zurückgesetzt.
+    $currentPage = rex_be_controller::getCurrentPage();
+    $isUppyUploadPage = 'uppy/upload' === $currentPage
+        || ('mediapool/upload' === $currentPage && rex_config::get('uppy', 'replace_mediapool', false));
+    if ($isUppyUploadPage
         && \FriendsOfRedaxo\Uppy\YcomAuthSettings::isEnabled()
         && \FriendsOfRedaxo\Uppy\YcomAuthSettings::userMayManage(rex::getUser())
     ) {
