@@ -617,6 +617,9 @@ class UppyUploadHandler extends rex_api_function
             $this->saveMediaMetadata($savedFilename, $metadata);
         }
 
+        // YCom Media Auth Defaults aus Backend-Session anwenden
+        $this->applyYcomMediaAuthDefaults($savedFilename);
+
         // Extension Point: UPPY_UPLOAD_COMPLETE
         // Ermöglicht das Eingreifen nach erfolgreichem Upload
         $savedFilename = rex_extension::registerPoint(new rex_extension_point('UPPY_UPLOAD_COMPLETE', $savedFilename, [
@@ -741,6 +744,43 @@ class UppyUploadHandler extends rex_api_function
         }
 
         try {
+            $sql->update();
+            rex_media_cache::delete($filename);
+        } catch (rex_sql_exception $e) {
+            rex_logger::logException($e);
+        }
+    }
+
+    /**
+     * Wendet die in der Backend-Session hinterlegten YCom-Media-Auth-Defaults
+     * auf die soeben hochgeladene Datei an. Voraussetzung: ycom/media_auth
+     * Plugin verfügbar und der eingeloggte Backend-User besitzt die Permission.
+     */
+    protected function applyYcomMediaAuthDefaults(string $filename): void
+    {
+        if (!YcomAuthSettings::isEnabled()) {
+            return;
+        }
+        if (!rex_backend_login::hasSession()) {
+            return;
+        }
+        if (!YcomAuthSettings::userMayManage(rex::getUser())) {
+            return;
+        }
+
+        $defaults = YcomAuthSettings::getSessionDefaults();
+
+        try {
+            $sql = rex_sql::factory();
+            $sql->setTable(rex::getTable('media'));
+            $sql->setWhere(['filename' => $filename]);
+            $sql->setValue('ycom_auth_type', $defaults['ycom_auth_type']);
+
+            if (YcomAuthSettings::isGroupSupportAvailable()) {
+                $sql->setValue('ycom_group_type', $defaults['ycom_group_type']);
+                $sql->setValue('ycom_groups', implode(',', $defaults['ycom_groups']));
+            }
+
             $sql->update();
             rex_media_cache::delete($filename);
         } catch (rex_sql_exception $e) {

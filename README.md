@@ -12,6 +12,7 @@ Multiuploader für REDAXO basierend auf [Uppy 5.0](https://uppy.io/).
 - ✅ **Image Editor**: Integrierte Bildbearbeitung (Zuschneiden, Drehen, Spiegeln) mit festen Seitenverhältnissen
 - ✅ **Webcam-Integration**: Direkte Foto-Aufnahme im Browser
 - ✅ **Metadaten-Verwaltung**: Automatische Erkennung und Editor für MetaInfo-Felder (inkl. Mehrsprachigkeit)
+- ✅ **YCom-Medienberechtigungen** (optional): Frontend-Sichtbarkeit pro Upload-Sitzung vorbelegen (siehe unten)
 - ✅ **Dark Theme**: Automatische Erkennung und manuelle Umschaltung
 - ✅ **Lokaler Build**: Keine externen CDN-Abhängigkeiten (DSGVO-konform)
 
@@ -249,6 +250,28 @@ Mit `data-allow-mediapool="true"` wird ein zusätzlicher Button "Aus Medienpool 
 - Unterstützt Einzelauswahl (max_files=1) und Mehrfachauswahl
 - Respektiert die `max-files` Einschränkung automatisch
 - Zeigt eine Anzahl-Anzeige (z.B. "Anzahl: 2/5") neben den Buttons
+
+## YCom-Medienberechtigungen beim Upload (optional)
+
+Wenn das Plugin **`ycom/media_auth`** aktiv ist, kann auf der Upload-Seite ein optionales Panel eingeblendet werden, mit dem berechtigte Backend-User die Frontend-Sichtbarkeit für alle in der aktuellen Sitzung neu hochgeladenen Dateien vorbelegen können.
+
+**Aktivieren:**
+
+1. **Uppy → Einstellungen** öffnen.
+2. Schalter **„YCom-Medienberechtigungen beim Upload setzen"** aktivieren (erscheint nur, wenn `ycom/media_auth` installiert ist).
+3. In der Benutzerverwaltung den gewünschten Backend-Usern die Permission **`uppy[ycom_media_auth]`** zuweisen (oder Admin sein).
+
+**Bedienung:**
+
+- Auf der Upload-Seite erscheint nach der Kategorieauswahl das ausklappbare Panel **„YCom-Medienberechtigungen (optional)"**.
+- Auswahlmöglichkeiten:
+  - **Frontend-Sichtbarkeit**: `Alle (öffentlich)` oder `Nur eingeloggte YCom-Benutzer`.
+  - **Gruppenprüfung** (nur sichtbar bei „nur eingeloggte" und wenn `ycom/group` aktiv ist): „in allen Gruppen", „in einer der Gruppen", „in keiner Gruppe", „für alle Gruppen".
+  - **YCom-Gruppen**: Mehrfachauswahl der zu prüfenden Gruppen (nur sichtbar, wenn ein konkreter Gruppentyp gewählt ist).
+- Die Werte werden pro Backend-Session gespeichert und automatisch auf jede neu hochgeladene Datei in den Spalten `ycom_auth_type`, `ycom_group_type` und `ycom_groups` von `rex_media` geschrieben.
+- Standard-Verhalten ohne Auswahl: alle Dateien sind öffentlich (`ycom_auth_type = 0`).
+
+**Sicherheit:** Server- und clientseitig wird stets geprüft, ob das Plugin verfügbar ist, das Setting aktiv ist, eine Backend-Session besteht und die Permission gesetzt ist. Anderenfalls hat das Panel keine Wirkung.
 
 ## Sicherheit: Manipulationsschutz (Signierte Uploads)
 

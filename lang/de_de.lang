@@ -82,3 +82,18 @@ uppy_enable_webcam_notice = Ermöglicht die Aufnahme von Fotos über die Webcam 
 uppy_enable_debug_logging = Debug-Logging aktivieren
 uppy_enable_debug_logging_notice = Aktiviert ausführliche Debug-Logs. Erfordert zusätzlich den REDAXO Debug-Modus (System).
 uppy_docs_frontend = Frontend Nutzung
+
+# YCom Media Auth Defaults (Upload-Seite)
+uppy_perm_ycom_media_auth = Uppy: YCom-Medien-Berechtigungen für Uploads setzen
+uppy_ycom_auth_type = Frontend-Sichtbarkeit (YCom)
+uppy_ycom_auth_type_note = Wird automatisch auf alle in dieser Sitzung neu hochgeladenen Dateien angewendet.
+uppy_ycom_auth_all = Alle (öffentlich)
+uppy_ycom_auth_only_logged_in = Nur eingeloggte YCom-Benutzer
+uppy_ycom_group_type = Gruppenprüfung
+uppy_ycom_groups = YCom-Gruppen
+uppy_ycom_groups_note = Mehrfachauswahl möglich. Wird zusammen mit der Gruppenprüfung ausgewertet.
+uppy_ycom_auth_panel_title = YCom-Medienberechtigungen (optional)
+uppy_ycom_auth_panel_intro = Optional: Lege fest, welche Frontend-Sichtbarkeit alle Dateien dieser Upload-Sitzung erhalten sollen. Wirkt sich nur aus, solange Werte gesetzt sind.
+uppy_ycom_media_auth_defaults_enabled = YCom-Medienberechtigungen beim Upload setzen
+uppy_ycom_media_auth_defaults_enabled_notice = Aktiviert auf der Upload-Seite ein optionales Panel, mit dem berechtigte Backend-User (Permission "uppy[ycom_media_auth]") YCom-Medienberechtigungen für die in der Sitzung neu hochgeladenen Dateien vorbelegen können. Voraussetzung: Plugin ycom/media_auth.
+uppy_ycom_auth_reset = Sitzungs-Defaults zurücksetzen

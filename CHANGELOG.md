@@ -1,5 +1,23 @@
 # Changelog
 
+## Version 2.7.0 (2026-XX-XX)
+
+### 🎉 Neue Features
+- **YCom-Medienberechtigungen beim Upload setzen**: Optionales, ausklappbares Panel auf der Upload-Seite, mit dem berechtigte Backend-User die Frontend-Sichtbarkeit (`ycom_auth_type`, `ycom_group_type`, `ycom_groups`) für alle in der Sitzung neu hochgeladenen Dateien vorbelegen können.
+  - Voraussetzung: Plugin `ycom/media_auth` aktiv.
+  - In den Einstellungen aktivierbar via Schalter **„YCom-Medienberechtigungen beim Upload setzen“**.
+  - Eigene Backend-Permission `uppy[ycom_media_auth]` (oder Admin) zur Steuerung, wer das Panel sehen und nutzen darf.
+  - Werte werden pro Backend-Session gespeichert und automatisch auf jede neue Datei angewendet (Standard- und Chunk-Upload).
+  - Gruppenfelder erscheinen nur, wenn `ycom/group` verfügbar ist und ein passender Auth-/Gruppentyp gewählt ist.
+  - Status-Badge im Panel-Header zeigt jederzeit, ob aktuell „Alle (öffentlich)“ oder „Nur eingeloggte“ als Default greift; Reset-Button setzt die Sitzungs-Defaults sofort zurück (UI + Session).
+- **Info-Center Widget**: Wenn das AddOn `info_center` installiert ist, registriert Uppy ein Dashboard-Widget mit Kategorieauswahl, Drag&Drop-Bereich und direktem Link zur kompletten Upload-Seite.
+
+### 🐛 Bugfixes
+- **Custom-Widget-Modus**: Upload-Endpoint wird nun explizit auf den Backend-Controller gesetzt, damit die Backend-Session-Cookies mitgesendet werden. Dadurch greifen YCom-Auth-Defaults und sonstige Backend-User-bezogene Logik auch im Custom-Widget korrekt.
+
+### 🔒 Security
+- Strikte Doppelprüfung der YCom-Auth-Defaults: Plugin aktiv **und** Setting aktiviert **und** Backend-Session **und** Permission – server- wie clientseitig.
+
 ## Version 2.6.0 (2026-02-19)
 
 ### 🎉 Neue Features

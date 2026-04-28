@@ -13,6 +13,7 @@ if (rex_post('config-submit', 'boolean')) {
         ['chunk_size', 'int'],
         ['replace_mediapool', 'bool'],
         ['ycom_auth_enabled', 'bool'],
+        ['ycom_media_auth_defaults_enabled', 'bool'],
         ['auth_disable_checks', 'bool'],
         ['enable_resize', 'bool'],
         ['resize_width', 'int'],
@@ -286,6 +287,15 @@ if (rex_addon::get('ycom')->isAvailable()) {
     $n['field'] = '<input type="checkbox" id="uppy-ycom-auth" name="config[ycom_auth_enabled]" value="1" ' . (rex_config::get('uppy', 'ycom_auth_enabled', 0) ? 'checked' : '') . ' />';
     $n['note'] = $addon->i18n('uppy_ycom_auth_notice');
     $formElements[] = $n;
+
+    // Optionale UI auf der Upload-Seite zum Vorbelegen der YCom-Medien-Berechtigungen
+    if (rex_plugin::get('ycom', 'media_auth')->isAvailable()) {
+        $n = [];
+        $n['label'] = '<label for="uppy-ycom-media-auth-defaults">' . $addon->i18n('uppy_ycom_media_auth_defaults_enabled') . '</label>';
+        $n['field'] = '<input type="checkbox" id="uppy-ycom-media-auth-defaults" name="config[ycom_media_auth_defaults_enabled]" value="1" ' . (rex_config::get('uppy', 'ycom_media_auth_defaults_enabled', 0) ? 'checked' : '') . ' />';
+        $n['note'] = $addon->i18n('uppy_ycom_media_auth_defaults_enabled_notice');
+        $formElements[] = $n;
+    }
 }
 
 // EXPERTEN: Auth Checks deaktivieren
