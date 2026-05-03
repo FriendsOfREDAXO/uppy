@@ -3,7 +3,7 @@
 ## Version 2.8.0 (2026-05-04)
 
 ### ✨ Verbesserungen
-- **Optionale Medienanzeige bei Custom-Ordnern** (`upload_folder`) wiederhergestellt: Dateien koennen im Widget optional angezeigt und heruntergeladen werden.
+- **Optionale Medienanzeige bei Custom-Ordnern** (`upload_folder`) .Dateien koennen im Widget optional angezeigt und heruntergeladen werden.
 - **Lightbox fuer Bilder und Videos** im Widget: Vorschau per Klick (inkl. Video-Playback mit Controls).
 
 ### 🔒 Security
