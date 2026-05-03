@@ -1,5 +1,14 @@
 # Changelog
 
+## Version 2.8.0 (2026-05-04)
+
+### ✨ Verbesserungen
+- **Optionale Medienanzeige bei Custom-Ordnern** (`upload_folder`) wiederhergestellt: Dateien koennen im Widget optional angezeigt und heruntergeladen werden.
+- **Lightbox fuer Bilder und Videos** im Widget: Vorschau per Klick (inkl. Video-Playback mit Controls).
+
+### 🔒 Security
+- **Interner Backend-API-Endpunkt** fuer Dateiabruf aus Custom-Ordnern (`rex-api-call=uppy_file_access`) mit Backend-Session-Pflicht und Pfadvalidierung innerhalb der REDAXO-Basis.
+
 ## Version 2.7.0 (2026-XX-XX)
 
 ### 🎉 Neue Features

@@ -149,6 +149,10 @@ body.rex-theme-dark {
     overflow: hidden;
 }
 
+.uppy-custom-widget .uppy-clickable-preview {
+    cursor: zoom-in;
+}
+
 .uppy-custom-widget .uppy-thumbnail {
     width: 48px;
     height: 48px;
@@ -169,6 +173,10 @@ body.rex-theme-dark {
     font-size: 24px;
     color: var(--uppy-widget-text-secondary);
     flex-shrink: 0;
+}
+
+.uppy-custom-widget .uppy-video-icon i {
+    font-size: 22px;
 }
 
 .uppy-custom-widget .uppy-file-info {
@@ -494,4 +502,66 @@ body.rex-theme-dark .uppy-widget-modal-backdrop.is-visible {
 
 .uppy-widget-lang-label:first-child {
     margin-top: 0;
+}
+
+/* Image/Video Lightbox */
+.uppy-lightbox-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 11000;
+    background: rgba(0, 0, 0, 0.82);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.uppy-lightbox-panel {
+    position: relative;
+    width: min(1200px, 95vw);
+    max-height: 95vh;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.uppy-lightbox-close {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 36px;
+    height: 36px;
+    border: 0;
+    border-radius: 999px;
+    font-size: 24px;
+    line-height: 1;
+    background: #ffffff;
+    color: #111111;
+    cursor: pointer;
+}
+
+.uppy-lightbox-body {
+    width: 100%;
+    max-height: calc(95vh - 70px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.uppy-lightbox-image,
+.uppy-lightbox-video {
+    max-width: 100%;
+    max-height: calc(95vh - 70px);
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+}
+
+.uppy-lightbox-caption {
+    color: #f3f5f7;
+    font-size: 13px;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }

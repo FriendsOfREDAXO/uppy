@@ -153,8 +153,112 @@ export class UppyCustomWidget {
             enableImageEditor: this.input.dataset.enableImageEditor === 'true',
             enableWebcam: this.input.dataset.enableWebcam === 'true',
             enableSorting: this.input.dataset.enableSorting !== 'false',
+            enableFileLinks: this.input.dataset.enableFileLinks === 'true',
+            fileAccessMode: this.input.dataset.fileAccessMode || 'download',
+            fileAccessEndpoint: this.input.dataset.fileAccessEndpoint || '',
+            fileLinkViewLabel: this.input.dataset.linkViewLabel || 'Ansehen',
+            fileLinkDownloadLabel: this.input.dataset.linkDownloadLabel || 'Download',
             ...this.options
         };
+    }
+
+    buildFileAccessUrl(filename, mode = 'download') {
+        const config = this.getConfig();
+        if (!config.fileAccessEndpoint || !config.uploadDir || !filename) {
+            return '';
+        }
+
+        const separator = config.fileAccessEndpoint.indexOf('?') > -1 ? '&' : '?';
+        return `${config.fileAccessEndpoint}${separator}dir=${encodeURIComponent(config.uploadDir)}&file=${encodeURIComponent(filename)}&mode=${encodeURIComponent(mode)}`;
+    }
+
+    isImageFile(filename) {
+        return /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(filename);
+    }
+
+    isVideoFile(filename) {
+        return /\.(mp4|webm|mov|m4v|ogv|ogg)$/i.test(filename);
+    }
+
+    buildPreviewUrl(filename, config) {
+        if (!filename) {
+            return '';
+        }
+        if (config.uploadDir && config.enableFileLinks) {
+            return this.buildFileAccessUrl(filename, 'inline');
+        }
+        return `/media/${filename}`;
+    }
+
+    openMediaLightbox(url, type, filename) {
+        if (!url) {
+            return;
+        }
+
+        const existing = document.querySelector('.uppy-lightbox-backdrop');
+        if (existing) {
+            existing.remove();
+        }
+
+        const backdrop = document.createElement('div');
+        backdrop.className = 'uppy-lightbox-backdrop';
+
+        const panel = document.createElement('div');
+        panel.className = 'uppy-lightbox-panel';
+
+        const closeBtn = document.createElement('button');
+        closeBtn.type = 'button';
+        closeBtn.className = 'uppy-lightbox-close';
+        closeBtn.setAttribute('aria-label', 'Schließen');
+        closeBtn.innerHTML = '&times;';
+
+        const caption = document.createElement('div');
+        caption.className = 'uppy-lightbox-caption';
+        caption.textContent = filename || '';
+
+        const body = document.createElement('div');
+        body.className = 'uppy-lightbox-body';
+
+        if (type === 'video') {
+            const video = document.createElement('video');
+            video.className = 'uppy-lightbox-video';
+            video.src = url;
+            video.controls = true;
+            video.autoplay = true;
+            video.playsInline = true;
+            body.appendChild(video);
+        } else {
+            const img = document.createElement('img');
+            img.className = 'uppy-lightbox-image';
+            img.src = url;
+            img.alt = filename || '';
+            body.appendChild(img);
+        }
+
+        panel.appendChild(closeBtn);
+        panel.appendChild(body);
+        panel.appendChild(caption);
+        backdrop.appendChild(panel);
+        document.body.appendChild(backdrop);
+
+        const close = () => {
+            backdrop.remove();
+            document.removeEventListener('keydown', onKeyDown);
+        };
+
+        const onKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                close();
+            }
+        };
+
+        closeBtn.addEventListener('click', close);
+        backdrop.addEventListener('click', (e) => {
+            if (e.target === backdrop) {
+                close();
+            }
+        });
+        document.addEventListener('keydown', onKeyDown);
     }
 
     getIcon(name) {
@@ -353,13 +457,27 @@ export class UppyCustomWidget {
             const config = this.getConfig();
             const li = document.createElement('li');
             li.className = 'uppy-file-item';
-            
-            const isImage = /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(filename);
-            const thumbUrl = isImage ? `/media/${filename}` : '';
-            
-            const previewHtml = isImage 
-                ? `<img src="${thumbUrl}" class="uppy-thumbnail" alt="${filename}" onerror="this.style.display='none'">`
-                : `<div class="uppy-file-icon">${this.getIcon('file')}</div>`;
+
+            const isImage = this.isImageFile(filename);
+            const isVideo = this.isVideoFile(filename);
+            const isPreviewable = isImage || isVideo;
+            const previewType = isVideo ? 'video' : 'image';
+            const previewUrl = isPreviewable ? this.buildPreviewUrl(filename, config) : '';
+
+            let previewHtml = `<div class="uppy-file-icon">${this.getIcon('file')}</div>`;
+            if (isImage && previewUrl) {
+                previewHtml = `<img src="${previewUrl}" class="uppy-thumbnail" alt="${filename}" onerror="this.style.display='none'">`;
+            } else if (isVideo) {
+                previewHtml = `<div class="uppy-file-icon uppy-video-icon"><i class="fa fa-play-circle"></i></div>`;
+            }
+
+            const showLinks = config.enableFileLinks && !!config.uploadDir && !!config.fileAccessEndpoint;
+            const linkButtons = showLinks
+                ? `
+                    ${config.fileAccessMode === 'both' && isPreviewable ? `<button type="button" class="uppy-btn" data-action="view" title="${config.fileLinkViewLabel}"><i class="fa fa-eye"></i></button>` : ''}
+                    <a class="uppy-btn" href="${this.buildFileAccessUrl(filename, 'download')}" title="${config.fileLinkDownloadLabel}"><i class="fa fa-download"></i></a>
+                `
+                : '';
                 
             li.innerHTML = `
                 <div class="uppy-file-preview">
@@ -369,6 +487,7 @@ export class UppyCustomWidget {
                     </div>
                 </div>
                 <div class="uppy-actions">
+                    ${linkButtons}
                     <button type="button" class="uppy-btn uppy-btn-danger" data-action="remove" title="Löschen">${this.getIcon('remove')}</button>
                     ${!config.uploadDir ? `<button type="button" class="uppy-btn" data-action="edit" title="Metadaten bearbeiten">${this.getIcon('edit')}</button>` : ''}
                     ${config.enableSorting ? `
@@ -387,8 +506,22 @@ export class UppyCustomWidget {
                     if (action === 'up') this.moveFile(index, -1);
                     if (action === 'down') this.moveFile(index, 1);
                     if (action === 'edit') this.openMetadataModal(filename);
+                    if (action === 'view' && previewUrl) this.openMediaLightbox(previewUrl, previewType, filename);
                 });
             });
+
+            if (isPreviewable && previewUrl) {
+                const previewEl = li.querySelector('.uppy-file-preview');
+                if (previewEl) {
+                    previewEl.classList.add('uppy-clickable-preview');
+                    previewEl.addEventListener('click', (e) => {
+                        if (e.target.closest('.uppy-actions')) {
+                            return;
+                        }
+                        this.openMediaLightbox(previewUrl, previewType, filename);
+                    });
+                }
+            }
             
             this.listContainer.appendChild(li);
         });

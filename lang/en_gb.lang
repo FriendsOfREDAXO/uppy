@@ -59,6 +59,8 @@ uppy_error_unauthorized = Unauthorized
 uppy_yform_label = Upload File
 uppy_yform_notice = Maximum file size: {0} MB
 uppy_yform_media_in_use = Media is used in the following YForm entries:
+uppy_file_access_view = View
+uppy_file_access_download = Download
 
 # YForm Auto-Cleanup
 uppy_ycom_auth_enabled = YCom / Community Authentication

@@ -79,6 +79,8 @@ Dort findest du Anleitungen für:
 - `data-enable-image-editor="true"`: Image Editor aktivieren (optional)
 - `data-enable-webcam="true"`: Webcam-Integration aktivieren (optional)
 - `data-allow-mediapool="true"`: Medienpool-Auswahl Button aktivieren (optional)
+- `data-enable-file-links="true"`: Optionale Datei-Anzeige/Download fuer `upload_folder` aktivieren (nur Backend)
+- `data-file-access-mode="download|both"`: Nur Download oder Ansehen+Download (nur bei `data-enable-file-links="true"`)
 - `data-lang="de_DE"`: Sprache erzwingen (optional)
 - `max_files` - Maximale Anzahl Dateien (optional, Standard aus Einstellungen)
 - `max_filesize` - Maximale Dateigröße in MB (optional, Standard aus Einstellungen)
@@ -100,6 +102,15 @@ allow_mediapool: 1
 ```
 
 > **Info:** Beim Upload in einen Ordner wird automatisch geprüft, ob die Datei bereits existiert. Falls ja, wird ein Suffix angehängt (z.B. `bild_1.jpg`), um Überschreiben zu verhindern.
+
+### Optionale Medienanzeige bei `upload_folder`
+
+Wenn Dateien nicht in den Mediapool, sondern in einen eigenen Ordner (z.B. `public/redaxo/data/...`) hochgeladen werden, kann die Anzeige im Widget optional aktiviert werden:
+
+- **Download-Link je Datei**
+- **Optionaler View-Modus** (`file_access_mode=both`) mit Lightbox fuer Bilder und Videos
+
+Die Auslieferung erfolgt ueber einen internen Backend-API-Endpunkt (`rex-api-call=uppy_file_access`) mit Session-Pruefung und Pfadvalidierung.
 
 Die hochgeladenen Dateien werden als komma-separierte Liste der Dateinamen gespeichert. In der Listenansicht werden Vorschaubilder (bei Bildern) oder Icons (bei anderen Dateitypen) mit einem kompakten Design angezeigt.
 
@@ -123,7 +134,9 @@ $yform->setValueField('uppy_uploader', [
     'image/*,application/pdf', // Erlaubte Dateitypen
     '1',                    // Image Editor aktivieren (1/0)
     '0',                    // Webcam aktivieren (1/0)
-    '1'                     // Medienpool-Button aktivieren (1/0)
+    '1',                    // Medienpool-Button aktivieren (1/0)
+    '1',                    // Datei-Anzeige/Download fuer upload_folder aktivieren (1/0)
+    'both'                  // Zugriffstyp: download|both
 ]);
 ```
 
@@ -138,6 +151,8 @@ $yform->setValueField('uppy_uploader', [
 8. Image Editor (1 = aktiviert, 0 = deaktiviert)
 9. Webcam (1 = aktiviert, 0 = deaktiviert)
 10. Medienpool-Button (1 = aktiviert, 0 = deaktiviert)
+11. Datei-Anzeige/Download fuer Custom-Ordner (1 = aktiviert, 0 = deaktiviert)
+12. Zugriffstyp: `download` oder `both`
 
 ### Automatisches Cleanup
 

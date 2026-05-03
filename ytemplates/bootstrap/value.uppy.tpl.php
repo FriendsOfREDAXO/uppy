@@ -34,6 +34,11 @@ $allowedTypes = $this->getElement('allowed_types') !== '' ? $this->getElement('a
 $enableWebcam = $this->getElement('enable_webcam') !== '' ? (bool)$this->getElement('enable_webcam') : rex_config::get('uppy', 'enable_webcam', false);
 $enableImageEditor = $this->getElement('enable_image_editor') !== '' ? (bool)$this->getElement('enable_image_editor') : rex_config::get('uppy', 'enable_image_editor', false);
 $allowMediapool = $this->getElement('allow_mediapool') !== '' ? (bool)$this->getElement('allow_mediapool') : false;
+$showFileAccess = $this->getElement('show_file_access') !== '' ? (bool)$this->getElement('show_file_access') : false;
+$fileAccessMode = $this->getElement('file_access_mode') !== '' ? (string)$this->getElement('file_access_mode') : 'download';
+if (!in_array($fileAccessMode, ['download', 'both'], true)) {
+    $fileAccessMode = 'download';
+}
 
 // Signatur erstellen (für Sicherheit im Frontend)
 // WICHTIG: Die Werte müssen exakt denen in den data-Attributen entsprechen
@@ -48,6 +53,7 @@ $signature = \FriendsOfRedaxo\Uppy\Signature::create([
 // API-Endpoint: Immer Frontend index.php verwenden (wie FilePond)
 // Im Backend wird /redaxo/../index.php genutzt, im Frontend direkt /index.php
 $apiEndpoint = rex_url::frontendController(['rex-api-call' => 'uppy_uploader']);
+$fileAccessEndpoint = rex_url::backendController(['rex-api-call' => 'uppy_file_access']);
 ?>
 <div class="form-group">
     <label class="control-label" for="<?= $fieldId ?>"><?= rex_escape($this->getLabel()) ?></label>
@@ -67,6 +73,11 @@ $apiEndpoint = rex_url::frontendController(['rex-api-call' => 'uppy_uploader']);
         data-enable-webcam="<?= $enableWebcam ? '1' : '0' ?>"
         data-enable-image-editor="<?= $enableImageEditor ? '1' : '0' ?>"
         data-allow-mediapool="<?= $allowMediapool ? 'true' : 'false' ?>"
+        data-enable-file-links="<?= $showFileAccess ? 'true' : 'false' ?>"
+        data-file-access-mode="<?= rex_escape($fileAccessMode) ?>"
+        data-file-access-endpoint="<?= rex_escape($fileAccessEndpoint) ?>"
+        data-link-view-label="<?= rex_escape(rex_i18n::msg('uppy_file_access_view')) ?>"
+        data-link-download-label="<?= rex_escape(rex_i18n::msg('uppy_file_access_download')) ?>"
         data-uppy-signature="<?= $signature ?>"
     />
     

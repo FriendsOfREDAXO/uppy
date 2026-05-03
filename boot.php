@@ -13,6 +13,7 @@ $addon = rex_addon::get('uppy');
 rex_api_function::register('uppy_uploader', FriendsOfRedaxo\Uppy\UppyUploadHandler::class);
 rex_api_function::register('uppy_metadata', FriendsOfRedaxo\Uppy\UppyMetadataHandler::class);
 rex_api_function::register('uppy_ycom_auth', rex_api_uppy_ycom_auth::class);
+rex_api_function::register('uppy_file_access', rex_api_uppy_file_access::class);
 
 // Backend-Permission für die Verwaltung der YCom-Media-Auth-Defaults beim Upload
 rex_perm::register(\FriendsOfRedaxo\Uppy\YcomAuthSettings::PERM, $addon->i18n('uppy_perm_ycom_media_auth'));
