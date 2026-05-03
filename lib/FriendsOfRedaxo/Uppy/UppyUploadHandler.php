@@ -638,12 +638,7 @@ class UppyUploadHandler extends rex_api_function
      */
     protected function handleCustomFolderUpload(array $file, string $uploadDir): string
     {
-        // Sicherheit: Pfad bereinigen
-        $uploadDir = str_replace(['..', '\\'], '', $uploadDir);
-        $uploadDir = trim($uploadDir, '/');
-
-        // Basis-Pfad bestimmen (relativ zum Root der Installation)
-        $targetDir = rex_path::base($uploadDir);
+        $targetDir = $this->resolveCustomUploadDirectory($uploadDir);
 
         if (!is_dir($targetDir)) {
             if (!rex_dir::create($targetDir)) {
@@ -672,6 +667,57 @@ class UppyUploadHandler extends rex_api_function
         }
 
         return $filename;
+    }
+
+    /**
+     * Loest das Custom-Upload-Verzeichnis auf und erzwingt dabei:
+     * - innerhalb der Installation
+     * - ausserhalb des Webroots
+     */
+    protected function resolveCustomUploadDirectory(string $uploadDir): string
+    {
+        $uploadDir = trim(str_replace("\0", '', str_replace('\\', '/', $uploadDir)));
+
+        if ('' === $uploadDir) {
+            throw new rex_api_exception('Empty upload_dir is not allowed for custom folder upload');
+        }
+
+        $webRoot = rtrim(rex_path::base(), DIRECTORY_SEPARATOR);
+
+        $targetDir = $webRoot . '/' . ltrim($uploadDir, '/');
+        $targetDir = preg_replace('#/+#', '/', $targetDir);
+        if (!is_string($targetDir) || '' === $targetDir) {
+            throw new rex_api_exception('Invalid upload directory');
+        }
+
+        $targetDir = rtrim($targetDir, '/');
+        $parentDir = dirname($targetDir);
+
+        $realParent = realpath($parentDir);
+
+        if (false === $realParent) {
+            throw new rex_api_exception('Invalid upload directory path');
+        }
+
+        if (is_dir($targetDir)) {
+            $realTarget = realpath($targetDir);
+            if (false === $realTarget) {
+                throw new rex_api_exception('Could not resolve target directory');
+            }
+
+            return $realTarget;
+        }
+
+        if (!rex_dir::create($targetDir)) {
+            throw new rex_api_exception('Could not create target directory: ' . $uploadDir);
+        }
+
+        $realTarget = realpath($targetDir);
+        if (false === $realTarget) {
+            throw new rex_api_exception('Could not resolve created target directory');
+        }
+
+        return $realTarget;
     }
 
     /**

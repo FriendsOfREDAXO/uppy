@@ -112,6 +112,11 @@ Wenn Dateien nicht in den Mediapool, sondern in einen eigenen Ordner (z.B. `publ
 
 Die Auslieferung erfolgt ueber einen internen Backend-API-Endpunkt (`rex-api-call=uppy_file_access`) mit Session-Pruefung und Pfadvalidierung.
 
+**Wichtig zur Pfadangabe:**
+- `upload_folder` wird immer relativ zum Webroot aufgeloest und darf bewusst auch `..` enthalten.
+- Beispiele: `redaxo/data`, `../data/uploads`, `../../meine_daten`.
+- Damit kannst du je nach Hosting-Setup frei bestimmen, ob innerhalb oder oberhalb des Webroots gespeichert wird.
+
 Die hochgeladenen Dateien werden als komma-separierte Liste der Dateinamen gespeichert. In der Listenansicht werden Vorschaubilder (bei Bildern) oder Icons (bei anderen Dateitypen) mit einem kompakten Design angezeigt.
 
 **Listenansicht Features:**

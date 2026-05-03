@@ -7,7 +7,10 @@
 - **Lightbox fuer Bilder und Videos** im Widget: Vorschau per Klick (inkl. Video-Playback mit Controls).
 
 ### 🔒 Security
-- **Interner Backend-API-Endpunkt** fuer Dateiabruf aus Custom-Ordnern (`rex-api-call=uppy_file_access`) mit Backend-Session-Pflicht und Pfadvalidierung innerhalb der REDAXO-Basis.
+- **Interner Backend-API-Endpunkt** fuer Dateiabruf aus Custom-Ordnern (`rex-api-call=uppy_file_access`) mit Backend-Session-Pflicht und robuster Pfadauflösung relativ zum Webroot (inkl. `../`).
+
+### 🧭 Verhalten
+- `upload_folder` ist frei konfigurierbar relativ zum Webroot (z.B. `redaxo/data`, `../data/uploads`, `../../meine_daten`).
 
 ## Version 2.7.0 (2026-XX-XX)
 

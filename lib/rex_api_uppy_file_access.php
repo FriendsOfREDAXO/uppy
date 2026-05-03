@@ -26,8 +26,7 @@ class rex_api_uppy_file_access extends rex_api_function
             exit;
         }
 
-        $uploadDir = str_replace(['..', '\\'], '', $uploadDir);
-        $uploadDir = trim($uploadDir, '/');
+        $uploadDir = trim(str_replace("\0", '', str_replace('\\', '/', $uploadDir)));
         $filename = basename($filename);
 
         if ('' === $uploadDir || '' === $filename) {
@@ -36,19 +35,21 @@ class rex_api_uppy_file_access extends rex_api_function
             exit;
         }
 
-        $targetDir = rex_path::base($uploadDir);
-        $realBase = realpath(rex_path::base());
-        $realTargetDir = realpath($targetDir);
+        $webRoot = rtrim(rex_path::base(), DIRECTORY_SEPARATOR);
+        $targetDir = $webRoot . '/' . ltrim($uploadDir, '/');
+        $targetDir = preg_replace('#/+#', '/', $targetDir);
 
-        if (false === $realBase || false === $realTargetDir) {
-            rex_response::setStatus(rex_response::HTTP_NOT_FOUND);
-            rex_response::sendJson(['error' => 'directory_not_found']);
+        if (!is_string($targetDir) || '' === $targetDir) {
+            rex_response::setStatus(rex_response::HTTP_BAD_REQUEST);
+            rex_response::sendJson(['error' => 'invalid_parameters']);
             exit;
         }
 
-        if (0 !== strpos($realTargetDir, $realBase . DIRECTORY_SEPARATOR) && $realTargetDir !== $realBase) {
-            rex_response::setStatus(rex_response::HTTP_FORBIDDEN);
-            rex_response::sendJson(['error' => 'path_not_allowed']);
+        $realTargetDir = realpath($targetDir);
+
+        if (false === $realTargetDir) {
+            rex_response::setStatus(rex_response::HTTP_NOT_FOUND);
+            rex_response::sendJson(['error' => 'directory_not_found']);
             exit;
         }
 
