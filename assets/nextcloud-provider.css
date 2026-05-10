@@ -1,0 +1,194 @@
+/* Nextcloud Provider Styles */
+
+.uppy-nextcloud-button {
+    /* Macht Button sichtbar im Dashboard */
+}
+
+.uppy-nextcloud-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 100000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.uppy-nextcloud-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+}
+
+.uppy-nextcloud-content {
+    position: relative;
+    background: white;
+    border-radius: 8px;
+    max-width: 800px;
+    width: 90%;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+.uppy-nextcloud-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 1px solid #eee;
+}
+
+.uppy-nextcloud-header h3 {
+    margin: 0;
+    font-size: 20px;
+    color: #333;
+}
+
+.uppy-nextcloud-close {
+    background: none;
+    border: none;
+    font-size: 32px;
+    color: #999;
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s;
+}
+
+.uppy-nextcloud-close:hover {
+    color: #333;
+}
+
+.uppy-nextcloud-breadcrumb {
+    padding: 15px 20px;
+    background: #f8f8f8;
+    border-bottom: 1px solid #eee;
+    font-size: 14px;
+}
+
+.uppy-nextcloud-breadcrumb a {
+    color: #4d99d3;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.uppy-nextcloud-breadcrumb a:hover {
+    color: #2c5985;
+    text-decoration: underline;
+}
+
+.uppy-nextcloud-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+.uppy-nextcloud-loading,
+.uppy-nextcloud-error,
+.uppy-nextcloud-empty {
+    text-align: center;
+    padding: 40px;
+    color: #999;
+}
+
+.uppy-nextcloud-error {
+    color: #d9534f;
+}
+
+.uppy-nextcloud-filelist {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.uppy-nextcloud-file {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    border-bottom: 1px solid #eee;
+    transition: background 0.2s;
+}
+
+.uppy-nextcloud-file:hover {
+    background: #f8f8f8;
+}
+
+.uppy-nextcloud-icon {
+    font-size: 24px;
+    margin-right: 12px;
+}
+
+.uppy-nextcloud-name {
+    flex: 1;
+    font-size: 14px;
+    color: #333;
+}
+
+.uppy-nextcloud-size {
+    color: #999;
+    font-size: 13px;
+    margin-right: 12px;
+}
+
+.uppy-nextcloud-import-btn {
+    background: #4d99d3;
+    color: white;
+    border: none;
+    padding: 6px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background 0.2s;
+}
+
+.uppy-nextcloud-import-btn:hover {
+    background: #3d8ac3;
+}
+
+.uppy-nextcloud-import-btn:active {
+    background: #2c5985;
+}
+
+/* Dark Theme Support */
+@media (prefers-color-scheme: dark) {
+    .uppy-nextcloud-content {
+        background: #1f1f1f;
+        color: #e0e0e0;
+    }
+    
+    .uppy-nextcloud-header {
+        border-bottom-color: #333;
+    }
+    
+    .uppy-nextcloud-header h3 {
+        color: #e0e0e0;
+    }
+    
+    .uppy-nextcloud-breadcrumb {
+        background: #2a2a2a;
+        border-bottom-color: #333;
+    }
+    
+    .uppy-nextcloud-file {
+        border-bottom-color: #333;
+    }
+    
+    .uppy-nextcloud-file:hover {
+        background: #2a2a2a;
+    }
+    
+    .uppy-nextcloud-name {
+        color: #e0e0e0;
+    }
+}
