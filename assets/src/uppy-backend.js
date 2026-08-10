@@ -22,6 +22,8 @@ window.UPPY_BUNDLE_LOADED = true;
  * Initialisiert alle Uppy-Widgets auf der Seite
  */
 function initUppyWidgets() {
+    hideLegacyMediapoolReplaceField();
+
     // Standard Dashboard Widgets
     const widgets = document.querySelectorAll('input[data-widget="uppy"]:not([data-uppy-initialized])');
     if (widgets.length > 0) {
@@ -37,6 +39,41 @@ function initUppyWidgets() {
             new UppyCustomWidget(inputElement);
         });
     }
+}
+
+/**
+ * Verhindert doppelte UX auf der Mediapool-Detailseite:
+ * Wenn das Uppy-Replace-Panel aktiv ist, wird das Core-Dateitausch-Feld ausgeblendet.
+ */
+function hideLegacyMediapoolReplaceField() {
+    if (!document.getElementById('uppy-mediapool-replace')) {
+        return;
+    }
+
+    const legacyInputs = document.querySelectorAll('input[type="file"][name="file_new"]');
+    legacyInputs.forEach(function(legacyInput) {
+        const legacyGroup = legacyInput.closest('dl, .form-group, .rex-form-group, dd');
+        if (legacyGroup) {
+            const row = legacyGroup.closest('dl, .form-group, .rex-form-group') || legacyGroup;
+            row.style.display = 'none';
+            row.setAttribute('aria-hidden', 'true');
+        } else {
+            legacyInput.style.display = 'none';
+            legacyInput.setAttribute('aria-hidden', 'true');
+        }
+    });
+
+    const labels = document.querySelectorAll('dt, label, .control-label');
+    labels.forEach(function(label) {
+        const text = (label.textContent || '').trim().toLowerCase();
+        if (text === 'datei austauschen' || text === 'replace file') {
+            const row = label.closest('dl, .form-group, .rex-form-group');
+            if (row) {
+                row.style.display = 'none';
+                row.setAttribute('aria-hidden', 'true');
+            }
+        }
+    });
 }
 
 /**
@@ -190,6 +227,33 @@ function initializeUppyWidget(inputElement) {
     });
 }
 
+hideLegacyMediapoolReplaceField();
+
+function getAdditionalUploadParams(inputElement) {
+    const params = {};
+    if (!inputElement || !inputElement.dataset) {
+        return params;
+    }
+
+    const replaceFileId = inputElement.dataset.replaceFileId;
+    if (replaceFileId && /^\d+$/.test(replaceFileId) && parseInt(replaceFileId, 10) > 0) {
+        params.replace_file_id = replaceFileId;
+    }
+
+    return params;
+}
+
+function appendQueryParams(url, params) {
+    const endpoint = new URL(url, window.location.origin);
+    Object.keys(params || {}).forEach(function(key) {
+        const value = params[key];
+        if (value !== undefined && value !== null && String(value) !== '') {
+            endpoint.searchParams.set(key, String(value));
+        }
+    });
+    return endpoint.toString();
+}
+
 /**
  * Registriert Image Editor Plugin (MUSS vor Dashboard aufgerufen werden)
  */
@@ -291,6 +355,15 @@ function initializeUppyPlugins(uppy, config, inputElement, metaFields, valueInpu
                           `&upload_dir=${encodeURIComponent(uploadDir)}`;
     }
 
+    const uploadParamsProvider = () => {
+        const params = {
+            category_id: parseInt(inputElement.dataset.categoryId) || 0,
+            upload_dir: inputElement.dataset.uploadDir || ''
+        };
+
+        return Object.assign(params, getAdditionalUploadParams(inputElement));
+    };
+
     if (config.enable_chunks) {
         // Custom Chunk Uploader für große Dateien
         const chunkUploader = new ChunkUploader(uppy, {
@@ -298,7 +371,8 @@ function initializeUppyPlugins(uppy, config, inputElement, metaFields, valueInpu
             chunkSize: config.chunk_size,
             categoryId: () => parseInt(inputElement.dataset.categoryId) || 0,
             uploadDir: () => inputElement.dataset.uploadDir || '',
-            apiToken: tokenParam
+            apiToken: tokenParam,
+            requestParams: uploadParamsProvider
         });
         chunkUploader.install();
         
@@ -314,7 +388,11 @@ function initializeUppyPlugins(uppy, config, inputElement, metaFields, valueInpu
                 return window.location.origin + '/redaxo/index.php?rex-api-call=uppy_uploader&func=upload&api_token=' + tokenParam + 
                        '&category_id=' + categoryId + 
                        '&upload_dir=' + encodeURIComponent(uploadDir) + 
-                       signatureParams;
+                       signatureParams +
+                       (() => {
+                           const extra = getAdditionalUploadParams(inputElement);
+                           return Object.keys(extra).map((key) => '&' + encodeURIComponent(key) + '=' + encodeURIComponent(String(extra[key]))).join('');
+                       })();
             },
             formData: true,
             fieldName: 'file',
@@ -345,7 +423,7 @@ function initializeUppyPlugins(uppy, config, inputElement, metaFields, valueInpu
         
         // Vor Upload: Metadaten an Backend senden (prepare)
         uppy.on('file-added', function(file) {
-            prepareUpload(file, uppy, config);
+            prepareUpload(file, uppy, config, inputElement, signatureParams);
         });
     }
     
@@ -386,7 +464,7 @@ function initializeUppyFallback(container, config, inputElement, valueInput) {
 /**
  * Bereitet Upload vor: Sendet Metadaten an Backend
  */
-function prepareUpload(file, uppy, config) {
+function prepareUpload(file, uppy, config, inputElement, signatureParams) {
     // Eindeutige fileId generieren
     const fileId = 'uppy_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     
@@ -406,7 +484,10 @@ function prepareUpload(file, uppy, config) {
     formData.append('fileId', fileId);
     formData.append('metadata', JSON.stringify(metadata));
     
-    fetch(window.location.origin + '/redaxo/index.php?rex-api-call=uppy_uploader&func=prepare', {
+    const apiEndpoint = window.location.origin + '/redaxo/index.php?rex-api-call=uppy_uploader' + (signatureParams || '');
+    const prepareUrl = appendQueryParams(apiEndpoint, Object.assign({ func: 'prepare' }, getAdditionalUploadParams(inputElement)));
+
+    fetch(prepareUrl, {
         method: 'POST',
         headers: {
             'X-Requested-With': 'XMLHttpRequest'
@@ -433,10 +514,12 @@ function setupEventHandlers(uppy, config, inputElement, metaFields, valueInput) 
 
     // Upload erfolgreich
     uppy.on('upload-success', function(file, response) {
+        const isReplaceMode = !!(inputElement?.dataset?.replaceFileId);
         
         if (response.body && response.body.success && response.body.data) {
             const filename = response.body.data.filename;
             const title = response.body.data.title || '';
+            const wasReplaced = response.body.data.replaced === true;
             
             // Datei in Uppy-Meta speichern für spätere Verwendung
             uppy.setFileMeta(file.id, {
@@ -457,13 +540,20 @@ function setupEventHandlers(uppy, config, inputElement, metaFields, valueInput) 
             }
             
             // Hidden Input aktualisieren
-            if (targetInput) {
+            if (targetInput && !isReplaceMode) {
                 const currentValue = targetInput.value;
                 const files = currentValue ? currentValue.split(',') : [];
                 if (!files.includes(filename)) {
                     files.push(filename);
                     targetInput.value = files.join(',');
                 }
+            }
+
+            if (isReplaceMode && (wasReplaced || !!filename) && inputElement?.dataset?.reloadOnSuccess === 'true') {
+                const redirectUrl = inputElement.dataset.replaceRedirectUrl || window.location.href;
+                window.setTimeout(function() {
+                    window.location.href = redirectUrl;
+                }, 250);
             }
             
             // jQuery Event für YForm-Integration auslösen
@@ -488,6 +578,9 @@ function setupEventHandlers(uppy, config, inputElement, metaFields, valueInput) 
     
     // Alle Uploads abgeschlossen - zeige Übernehmen-Liste
     uppy.on('complete', function(result) {
+        if (inputElement?.dataset?.replaceFileId) {
+            return;
+        }
         const openerField = inputElement?.dataset?.uppyOpenerField || window.rex?.uppyOpenerInputField;
 
         // Zeige Liste wenn openerField gesetzt ist (auch ohne window.opener)
@@ -802,6 +895,7 @@ function setupMutationObserver() {
     
     const observer = new MutationObserver(function(mutations) {
         let hasNewWidgets = false;
+        hideLegacyMediapoolReplaceField();
         
         mutations.forEach(function(mutation) {
             mutation.addedNodes.forEach(function(node) {
@@ -1218,6 +1312,9 @@ if (typeof jQuery !== 'undefined') {
 
         initUppyWidgets();
         setupMutationObserver();
+        window.setTimeout(hideLegacyMediapoolReplaceField, 50);
+        window.setTimeout(hideLegacyMediapoolReplaceField, 250);
+        window.setTimeout(hideLegacyMediapoolReplaceField, 1000);
     });
 
 } else {

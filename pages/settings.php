@@ -12,6 +12,7 @@ if (rex_post('config-submit', 'boolean')) {
         ['enable_chunks', 'bool'],
         ['chunk_size', 'int'],
         ['replace_mediapool', 'bool'],
+        ['enable_mediapool_replace', 'bool'],
         ['ycom_auth_enabled', 'bool'],
         ['ycom_media_auth_defaults_enabled', 'bool'],
         ['auth_disable_checks', 'bool'],
@@ -278,6 +279,12 @@ $n = [];
 $n['label'] = '<label for="uppy-replace-mediapool">' . $addon->i18n('uppy_replace_mediapool') . '</label>';
 $n['field'] = '<input type="checkbox" id="uppy-replace-mediapool" name="config[replace_mediapool]" value="1" ' . (rex_config::get('uppy', 'replace_mediapool', false) ? 'checked' : '') . ' />';
 $n['note'] = $addon->i18n('uppy_replace_mediapool_notice');
+$formElements[] = $n;
+
+$n = [];
+$n['label'] = '<label for="uppy-enable-mediapool-replace">' . $addon->i18n('uppy_enable_mediapool_replace') . '</label>';
+$n['field'] = '<input type="checkbox" id="uppy-enable-mediapool-replace" name="config[enable_mediapool_replace]" value="1" ' . (rex_config::get('uppy', 'enable_mediapool_replace', true) ? 'checked' : '') . ' />';
+$n['note'] = $addon->i18n('uppy_enable_mediapool_replace_notice');
 $formElements[] = $n;
 
 // YCom Auth (nur wenn YCom verfügbar)

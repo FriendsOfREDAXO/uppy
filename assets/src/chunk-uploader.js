@@ -12,10 +12,60 @@ export class ChunkUploader {
             chunkSize: 5 * 1024 * 1024, // 5MB default
             categoryId: 0,
             uploadDir: '',
-            apiToken: ''
+            apiToken: '',
+            requestParams: null
         }, opts);
         
         this.uploaders = new Map();
+    }
+
+    getRequestParams() {
+        const baseParams = {};
+
+        const categoryId = typeof this.opts.categoryId === 'function'
+            ? this.opts.categoryId()
+            : this.opts.categoryId;
+        if (categoryId !== undefined && categoryId !== null && String(categoryId) !== '') {
+            baseParams.category_id = String(categoryId);
+        }
+
+        const uploadDir = typeof this.opts.uploadDir === 'function'
+            ? this.opts.uploadDir()
+            : this.opts.uploadDir;
+        if (uploadDir !== undefined && uploadDir !== null && String(uploadDir) !== '') {
+            baseParams.upload_dir = String(uploadDir);
+        }
+
+        const extraParams = typeof this.opts.requestParams === 'function'
+            ? this.opts.requestParams()
+            : (this.opts.requestParams || {});
+
+        Object.keys(extraParams || {}).forEach((key) => {
+            const value = extraParams[key];
+            if (value !== undefined && value !== null && String(value) !== '') {
+                baseParams[key] = String(value);
+            }
+        });
+
+        return baseParams;
+    }
+
+    buildUrl(func, additionalParams = {}) {
+        const params = {
+            ...this.getRequestParams(),
+            ...additionalParams,
+            func: func
+        };
+
+        const url = new URL(this.opts.endpoint, window.location.origin);
+        Object.keys(params).forEach((key) => {
+            const value = params[key];
+            if (value !== undefined && value !== null && String(value) !== '') {
+                url.searchParams.set(key, String(value));
+            }
+        });
+
+        return url.toString();
     }
 
     install() {
@@ -128,7 +178,7 @@ export class ChunkUploader {
                 formData.append('fileId', fileId);
                 formData.append('metadata', JSON.stringify(metadata));
                 
-                const url = `${this.opts.endpoint}&func=prepare`;
+                const url = this.buildUrl('prepare');
                 
                 try {
                     const response = await fetch(url, {
@@ -167,7 +217,7 @@ export class ChunkUploader {
         formData.append('metadata', JSON.stringify(metadata));
         
         // Endpoint URL enthält bereits Signatur-Parameter (siehe Constructor)
-        const url = `${this.opts.endpoint}&func=prepare`;
+        const url = this.buildUrl('prepare');
         
         const response = await fetch(url, {
             method: 'POST',
@@ -198,17 +248,8 @@ export class ChunkUploader {
             formData.append('totalChunks', totalChunks);
             formData.append('fieldName', 'file');
             
-            // Kategorie-ID dynamisch ermitteln falls es eine Funktion ist
-            const categoryId = typeof this.opts.categoryId === 'function' 
-                ? this.opts.categoryId() 
-                : this.opts.categoryId;
-
-            const uploadDir = typeof this.opts.uploadDir === 'function'
-                ? this.opts.uploadDir()
-                : this.opts.uploadDir;
-            
             // Endpoint URL enthält bereits Signatur-Parameter
-            const url = `${this.opts.endpoint}&func=chunk&category_id=${categoryId}&upload_dir=${encodeURIComponent(uploadDir)}`;
+            const url = this.buildUrl('chunk');
             
             const xhr = new XMLHttpRequest();
             xhr.open('POST', url, true);
@@ -267,17 +308,8 @@ export class ChunkUploader {
             formData.append('metadata', JSON.stringify(file.meta));
         }
         
-        // Kategorie-ID dynamisch ermitteln falls es eine Funktion ist
-        const categoryId = typeof this.opts.categoryId === 'function' 
-            ? this.opts.categoryId() 
-            : this.opts.categoryId;
-
-        const uploadDir = typeof this.opts.uploadDir === 'function'
-            ? this.opts.uploadDir()
-            : this.opts.uploadDir;
-            
         // Endpoint URL enthält bereits Signatur-Parameter
-        const url = `${this.opts.endpoint}&func=finalize&category_id=${categoryId}&upload_dir=${encodeURIComponent(uploadDir)}`;
+        const url = this.buildUrl('finalize');
         
         const response = await fetch(url, {
             method: 'POST',

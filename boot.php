@@ -202,6 +202,107 @@ if (rex_config::get('uppy', 'replace_mediapool', false)) {
     });
 }
 
+// Optional: Mediapool-Detailseite um Uppy-Dateiersatz (inkl. Chunk-Upload) erweitern
+if (rex::isBackend() && rex::getUser() && rex_config::get('uppy', 'enable_mediapool_replace', true)) {
+    rex_extension::register('MEDIA_DETAIL_SIDEBAR', static function (rex_extension_point $ep) use ($addon) {
+        $mediaRow = $ep->getParam('media');
+        if (!$mediaRow instanceof rex_sql) {
+            return $ep->getSubject();
+        }
+
+        $fileId = (int) $ep->getParam('id', 0);
+        if ($fileId <= 0) {
+            return $ep->getSubject();
+        }
+
+        $filename = (string) $mediaRow->getValue('filename');
+        if ('' === $filename) {
+            return $ep->getSubject();
+        }
+
+        $media = rex_media::get($filename);
+        if (!$media) {
+            return $ep->getSubject();
+        }
+
+        $user = rex::getUser();
+        if (!$user || !$user->getComplexPerm('media')->hasCategoryPerm($media->getCategoryId())) {
+            return $ep->getSubject();
+        }
+
+        $ext = '.' . strtolower((string) rex_file::extension($filename));
+        $allowedTypes = $ext;
+        if ('.jpg' === $ext || '.jpeg' === $ext) {
+            $allowedTypes = '.jpg,.jpeg';
+        }
+
+        $maxFilesize = (int) rex_config::get('uppy', 'max_filesize', 200);
+        $signature = \FriendsOfRedaxo\Uppy\Signature::create([
+            'category_id' => (int) $media->getCategoryId(),
+            'allowed_types' => $allowedTypes,
+            'max_filesize' => (string) $maxFilesize,
+            'upload_dir' => '',
+        ]);
+
+        $inputId = 'uppy-mediapool-replace-' . $fileId;
+        $redirectUrl = rex_url::backendPage('mediapool/media', [
+            'file_id' => $fileId,
+            'info' => rex_i18n::msg('pool_file_infos_updated'),
+        ], false);
+
+        $body = '<div id="uppy-mediapool-replace">'
+            . '<p class="text-muted uppy-mediapool-replace-note">'
+            . rex_escape($addon->i18n('uppy_mediapool_replace_notice'))
+            . '</p>'
+            . '<p class="uppy-mediapool-replace-current">'
+            . '<strong>' . rex_escape($addon->i18n('uppy_mediapool_replace_current_file')) . ':</strong> '
+            . '<span class="rex-word-break">' . rex_escape($filename) . '</span>'
+            . '</p>'
+            . '<input type="hidden"'
+            . ' id="' . rex_escape($inputId) . '"'
+            . ' data-widget="uppy"'
+            . ' data-max-files="1"'
+            . ' data-max-filesize="' . $maxFilesize . '"'
+            . ' data-allowed-types="' . rex_escape($allowedTypes) . '"'
+            . ' data-category-id="' . (int) $media->getCategoryId() . '"'
+            . ' data-replace-file-id="' . $fileId . '"'
+            . ' data-reload-on-success="true"'
+            . ' data-replace-redirect-url="' . rex_escape($redirectUrl) . '"'
+            . ' data-uppy-signature="' . rex_escape($signature) . '"'
+            . ' />'
+            . '</div>';
+
+        $fragment = new rex_fragment();
+        $fragment->setVar('title', $addon->i18n('uppy_mediapool_replace_title'));
+        $fragment->setVar('body', $body, false);
+        $section = $fragment->parse('core/page/section.php');
+
+        return (string) $ep->getSubject() . $section;
+    });
+
+    rex_extension::register('OUTPUT_FILTER', static function (rex_extension_point $ep): void {
+        if ('mediapool/media' !== rex_be_controller::getCurrentPage()) {
+            return;
+        }
+
+        $subject = $ep->getSubject();
+        if (!is_string($subject) || false === strpos($subject, 'name="file_new"')) {
+            return;
+        }
+
+        // Entfernt nur das exakte dt/dd-Paar "Datei austauschen" und lässt alle anderen Felder unangetastet.
+        $exchangeLabel = preg_quote(rex_i18n::msg('pool_file_exchange'), '#');
+        $subject = (string) preg_replace(
+            '#<dt>\s*<label[^>]*>\s*' . $exchangeLabel . '\s*</label>\s*</dt>\s*<dd>\s*<input[^>]*name="file_new"[^>]*>\s*</dd>#is',
+            '',
+            $subject,
+            1
+        );
+
+        $ep->setSubject($subject);
+    });
+}
+
 // Info-Center-Widget für schnellen Upload aus dem Dashboard
 if (rex::isBackend()
     && rex::getUser()

@@ -8,6 +8,7 @@ Multiuploader für REDAXO basierend auf [Uppy 5.0](https://uppy.io/).
 - ✅ **Moderne UI**: Responsive File-Upload-Oberfläche mit Drag & Drop
 - ✅ **Drag & Drop auf Widget**: Dateien direkt auf das Upload-Widget ziehen - Modal öffnet sich automatisch
 - ✅ **Chunk-Upload**: Unterstützung für sehr große Dateien durch Aufteilung in kleine Pakete (umgeht PHP `upload_max_filesize`)
+- ✅ **Datei-Ersetzen im Mediapool**: Bestehende Medien können direkt auf der Detailseite ersetzt werden (auch mit Chunk-Upload für große Dateien)
 - ✅ **Client-seitige Bildoptimierung**: Automatisches Resizing und EXIF-Korrektur vor dem Upload
 - ✅ **Image Editor**: Integrierte Bildbearbeitung (Zuschneiden, Drehen, Spiegeln) mit festen Seitenverhältnissen
 - ✅ **Webcam-Integration**: Direkte Foto-Aufnahme im Browser
@@ -38,6 +39,19 @@ Die globalen Einstellungen befinden sich unter **Uppy → Einstellungen**:
 - **Chunk-Upload**: Ermöglicht den Upload von Dateien, die größer sind als das PHP-Limit (`upload_max_filesize`).
 - **Bildoptimierung**: Aktiviert das client-seitige Verkleinern von Bildern (spart Bandbreite und Server-Ressourcen).
 - **Image Editor**: Aktiviert die Bildbearbeitungswerkzeuge.
+- **Datei-Ersetzen im Mediapool mit Uppy**: Fügt auf der Datei-Detailseite ein eigenes Uppy-Panel hinzu, um die aktuelle Datei zu ersetzen.
+
+### Mediapool-Datei ersetzen (neu)
+
+Auf der Seite **Medienpool → Datei bearbeiten** erscheint ein zusätzlicher Bereich **„Datei im Mediapool ersetzen“**.
+
+- Der Ersatz läuft über Uppy und unterstützt damit auch große Dateien via Chunk-Upload.
+- Der bestehende Mediapool-Dateiname bleibt erhalten, nur der Dateiinhalt wird ersetzt.
+- Das AddOn erlaubt clientseitig nur passende Endungen (z.B. bei `bild.jpg` nur `.jpg`/`.jpeg`).
+- Nach erfolgreichem Replace wird die Seite automatisch neu geladen und zeigt die REDAXO-Erfolgsmeldung.
+
+Hinweis:
+- Die serverseitige Prüfung von `rex_media_service::updateMedia()` bleibt aktiv (u.a. Endungs-/Mime-Prüfung und Rechte auf die Kategorie).
 
 ## Verwendung
 

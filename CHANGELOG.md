@@ -1,5 +1,19 @@
 # Changelog
 
+## Version 2.9.0 (2026-08-10)
+
+### 🎉 Neue Features
+- **Datei-Ersetzen im Mediapool mit Uppy**: Auf der Medien-Detailseite (`mediapool/media`) steht ein eigenes Uppy-Panel zum Ersetzen bestehender Dateien zur Verfügung.
+- **Chunk-Replace für große Dateien**: Auch das Ersetzen nutzt den Chunk-Workflow (`prepare` / `chunk` / `finalize`) und funktioniert damit zuverlässig für große Dateien.
+
+### ✨ Verbesserungen
+- **Sichere Rechteprüfung beim Replace**: Ersetzen ist nur für berechtigte Backend-User in erlaubten Mediapool-Kategorien möglich.
+- **UX nach erfolgreichem Replace**: Automatischer Reload auf die Detailseite mit REDAXO-Info-Meldung.
+- **Dark-Mode-angepasstes Panel**: Neue Replace-Panel-Styles folgen REDAXO Theme-Layern (Light, explizit Dark, Auto-Dark).
+
+### ⚙️ Einstellungen
+- Neue Option: **„Datei-Ersetzen im Mediapool mit Uppy“** zum Ein-/Ausschalten des Panels auf der Mediapool-Detailseite.
+
 ## Version 2.8.0 (2026-05-04)
 
 ### ✨ Verbesserungen

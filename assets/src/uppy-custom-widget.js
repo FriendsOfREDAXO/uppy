@@ -844,6 +844,16 @@ export class UppyCustomWidget {
             
             if (response.body && (response.body.success || response.body.status === 'ok')) {
                 const responseData = response.body.data || response.body;
+                const isReplaceMode = this.input.dataset.replaceFileId && parseInt(this.input.dataset.replaceFileId, 10) > 0;
+
+                if (isReplaceMode && this.input.dataset.reloadOnSuccess === 'true' && responseData.filename) {
+                    const redirectUrl = this.input.dataset.replaceRedirectUrl || window.location.href;
+                    window.setTimeout(() => {
+                        window.location.href = redirectUrl;
+                    }, 250);
+                    return;
+                }
+
                 this.addFile(responseData.filename);
                 
                 // Datei aus Uppy entfernen nach erfolgreichem Upload

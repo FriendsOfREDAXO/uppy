@@ -15,6 +15,7 @@ use rex_extension;
 use rex_extension_point;
 use rex_file;
 use rex_formatter;
+use rex_i18n;
 use rex_logger;
 use rex_media;
 use rex_media_cache;
@@ -304,12 +305,14 @@ class UppyUploadHandler extends rex_api_function
         }
 
         // Datei verarbeiten
+        $replaceFileId = rex_request('replace_file_id', 'int', 0);
         $filename = $this->processUploadedFile($file, $categoryId, $metadata);
 
         return [
             'success' => true,
             'data' => [
                 'filename' => $filename,
+                'replaced' => $replaceFileId > 0,
             ],
         ];
     }
@@ -477,6 +480,7 @@ class UppyUploadHandler extends rex_api_function
             'error' => 0,
         ];
 
+        $replaceFileId = rex_request('replace_file_id', 'int', 0);
         $filename = $this->processUploadedFile($file, $categoryId, $metadata);
 
         // Aufräumen
@@ -488,6 +492,7 @@ class UppyUploadHandler extends rex_api_function
             'success' => true,
             'data' => [
                 'filename' => $filename,
+                'replaced' => $replaceFileId > 0,
             ],
         ];
     }
@@ -580,6 +585,11 @@ class UppyUploadHandler extends rex_api_function
             throw new rex_api_exception('File too large');
         }
 
+        $replaceFileId = rex_request('replace_file_id', 'int', 0);
+        if ($replaceFileId > 0) {
+            return $this->replaceExistingMediaFile($replaceFileId, $file, $metadata);
+        }
+
         // NEU: Upload in einen bestimmten Ordner (nicht Mediapool)
         $uploadDir = rex_request('upload_dir', 'string', '');
         if ($uploadDir) {
@@ -629,6 +639,45 @@ class UppyUploadHandler extends rex_api_function
             'upload_dir' => $uploadDir,
             'is_custom_folder' => !empty($uploadDir)
         ]));
+
+        return $savedFilename;
+    }
+
+    /**
+     * Ersetzt eine bestehende Mediapool-Datei (Dateiinhalt) via rex_media_service::updateMedia.
+     */
+    protected function replaceExistingMediaFile(int $fileId, array $file, array $metadata): string
+    {
+        $media = rex_media::forId($fileId);
+        if (!$media) {
+            throw new rex_api_exception(rex_i18n::msg('pool_file_not_found'));
+        }
+
+        $user = rex::getUser();
+        if (!$user || !$user->getComplexPerm('media')->hasCategoryPerm($media->getCategoryId())) {
+            throw new rex_api_exception(rex_i18n::msg('no_permission'));
+        }
+
+        $data = [
+            'category_id' => $media->getCategoryId(),
+            'title' => $metadata['title'] ?? $media->getTitle(),
+            'file' => [
+                'name' => $file['name'],
+                'tmp_name' => $file['tmp_name'],
+                'error' => $file['error'] ?? 0,
+            ],
+        ];
+
+        $result = rex_media_service::updateMedia($media->getFileName(), $data);
+        if (!is_array($result) || !isset($result['filename'])) {
+            throw new rex_api_exception('Replace media failed');
+        }
+
+        $savedFilename = (string) $result['filename'];
+
+        if ([] !== $metadata) {
+            $this->saveMediaMetadata($savedFilename, $metadata);
+        }
 
         return $savedFilename;
     }

@@ -1,5 +1,5 @@
 package: uppy
-version: '2.8.1'
+version: '2.9.0'
 author: 'Friends Of REDAXO'
 supportpage: https://github.com/FriendsOfREDAXO/uppy
 requires:
@@ -54,6 +54,7 @@ default_config:
     enable_chunks: true
     chunk_size: 5
     replace_mediapool: false
+    enable_mediapool_replace: true
     metadata_fields: 'title,med_alt,med_copyright'
     api_token: ''
     enable_resize: true
