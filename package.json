@@ -18,7 +18,7 @@
     "@uppy/xhr-upload": "^5.2.0"
   },
   "devDependencies": {
-    "esbuild": "^0.27.2"
+    "esbuild": "^0.28.1"
   },
   "author": "KLXM Crossmedia GmbH",
   "license": "MIT"
