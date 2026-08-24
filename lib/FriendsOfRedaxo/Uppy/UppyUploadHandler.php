@@ -472,10 +472,25 @@ class UppyUploadHandler extends rex_api_function
         }
 
         // Datei zum Mediapool hinzufügen
+        // MIME-Type-Erkennung: $tmpFile hat keine Dateiendung (Pfad = addonData/upload/{fileId}),
+        // daher greift rex_file::mimeType()'s eigener Extension-Fallback nicht (z.B. CSS wird
+        // von mime_content_type() nur als "text/plain" erkannt). Fallback hier anhand des
+        // echten Dateinamens nachholen, sonst schlägt die Dateityp-Prüfung fälschlich fehl.
+        $mimeType = rex_file::mimeType($tmpFile);
+        if ('text/plain' === $mimeType) {
+            $mimeType = match (strtolower(pathinfo($fileName, PATHINFO_EXTENSION))) {
+                'css' => 'text/css',
+                'js' => 'application/javascript',
+                'svg' => 'image/svg+xml',
+                'vtt' => 'text/vtt',
+                default => $mimeType,
+            };
+        }
+
         $file = [
             'name' => $fileName,
             'tmp_name' => $tmpFile,
-            'type' => rex_file::mimeType($tmpFile),
+            'type' => $mimeType,
             'size' => filesize($tmpFile),
             'error' => 0,
         ];
@@ -585,62 +600,84 @@ class UppyUploadHandler extends rex_api_function
             throw new rex_api_exception('File too large');
         }
 
-        $replaceFileId = rex_request('replace_file_id', 'int', 0);
-        if ($replaceFileId > 0) {
-            return $this->replaceExistingMediaFile($replaceFileId, $file, $metadata);
+        // Temp-Datei braucht eine korrekte Dateiendung: REDAXO-Core
+        // (rex_mediapool::isAllowedMimeType, rex_media_service::addMedia) bestimmt den
+        // MIME-Type über rex_file::mimeType() am physischen Pfad. Sowohl die reassemblierte
+        // Chunk-Upload-Datei als auch PHP's eigene $_FILES-Tempdatei haben keine Endung,
+        // wodurch generische Text-Typen (CSS/JS/SVG/VTT) nur als text/plain erkannt und
+        // von der Mediapool-Prüfung fälschlich abgelehnt werden.
+        $tmpFileWithExt = null;
+        $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
+        if ('' !== $ext && !str_ends_with($file['tmp_name'], '.' . $ext) && is_file($file['tmp_name'])) {
+            $candidate = $file['tmp_name'] . '.' . $ext;
+            if (copy($file['tmp_name'], $candidate)) {
+                $file['tmp_name'] = $candidate;
+                $tmpFileWithExt = $candidate;
+            }
         }
 
-        // NEU: Upload in einen bestimmten Ordner (nicht Mediapool)
-        $uploadDir = rex_request('upload_dir', 'string', '');
-        if ($uploadDir) {
-            return $this->handleCustomFolderUpload($file, $uploadDir);
+        try {
+            $replaceFileId = rex_request('replace_file_id', 'int', 0);
+            if ($replaceFileId > 0) {
+                return $this->replaceExistingMediaFile($replaceFileId, $file, $metadata);
+            }
+
+            // NEU: Upload in einen bestimmten Ordner (nicht Mediapool)
+            $uploadDir = rex_request('upload_dir', 'string', '');
+            if ($uploadDir) {
+                return $this->handleCustomFolderUpload($file, $uploadDir);
+            }
+
+            // Datei zum Mediapool hinzufügen
+            // rex_media_service::addMedia erwartet diese Struktur:
+            $data = [
+                'title' => $metadata['title'] ?? pathinfo($file['name'], PATHINFO_FILENAME),
+                'category_id' => $categoryId,
+                'file' => [
+                    'name' => $file['name'],
+                    'path' => $file['tmp_name'], // wird als Fallback für tmp_name verwendet
+                    'tmp_name' => $file['tmp_name'],
+                    'error' => $file['error'] ?? 0,
+                ],
+            ];
+
+            $return = rex_media_service::addMedia($data, true);
+
+            if (!is_array($return) || !isset($return['filename'])) {
+                $error = is_array($return) && isset($return['message']) ? $return['message'] : 'Upload failed';
+
+                // Log detailed error for debugging
+                rex_logger::logError('UPPY_UPLOAD_ERROR', 'Upload failed for file: ' . $file['name'] . '. Error: ' . $error, [], __FILE__);
+
+                throw new rex_api_exception($error);
+            }
+
+            $savedFilename = $return['filename'];
+
+            // Metadaten speichern
+            if (!empty($metadata)) {
+                $this->saveMediaMetadata($savedFilename, $metadata);
+            }
+
+            // YCom Media Auth Defaults aus Backend-Session anwenden
+            $this->applyYcomMediaAuthDefaults($savedFilename);
+
+            // Extension Point: UPPY_UPLOAD_COMPLETE
+            // Ermöglicht das Eingreifen nach erfolgreichem Upload
+            $savedFilename = rex_extension::registerPoint(new rex_extension_point('UPPY_UPLOAD_COMPLETE', $savedFilename, [
+                'original_file' => $file,
+                'category_id' => $categoryId,
+                'metadata' => $metadata,
+                'upload_dir' => $uploadDir,
+                'is_custom_folder' => !empty($uploadDir)
+            ]));
+
+            return $savedFilename;
+        } finally {
+            if (null !== $tmpFileWithExt) {
+                rex_file::delete($tmpFileWithExt);
+            }
         }
-
-        // Datei zum Mediapool hinzufügen
-        // rex_media_service::addMedia erwartet diese Struktur:
-        $data = [
-            'title' => $metadata['title'] ?? pathinfo($file['name'], PATHINFO_FILENAME),
-            'category_id' => $categoryId,
-            'file' => [
-                'name' => $file['name'],
-                'path' => $file['tmp_name'], // wird als Fallback für tmp_name verwendet
-                'tmp_name' => $file['tmp_name'],
-                'error' => $file['error'] ?? 0,
-            ],
-        ];
-
-        $return = rex_media_service::addMedia($data, true);
-
-        if (!is_array($return) || !isset($return['filename'])) {
-            $error = is_array($return) && isset($return['message']) ? $return['message'] : 'Upload failed';
-
-            // Log detailed error for debugging
-            rex_logger::logError('UPPY_UPLOAD_ERROR', 'Upload failed for file: ' . $file['name'] . '. Error: ' . $error, [], __FILE__);
-
-            throw new rex_api_exception($error);
-        }
-
-        $savedFilename = $return['filename'];
-
-        // Metadaten speichern
-        if (!empty($metadata)) {
-            $this->saveMediaMetadata($savedFilename, $metadata);
-        }
-
-        // YCom Media Auth Defaults aus Backend-Session anwenden
-        $this->applyYcomMediaAuthDefaults($savedFilename);
-
-        // Extension Point: UPPY_UPLOAD_COMPLETE
-        // Ermöglicht das Eingreifen nach erfolgreichem Upload
-        $savedFilename = rex_extension::registerPoint(new rex_extension_point('UPPY_UPLOAD_COMPLETE', $savedFilename, [
-            'original_file' => $file,
-            'category_id' => $categoryId,
-            'metadata' => $metadata,
-            'upload_dir' => $uploadDir,
-            'is_custom_folder' => !empty($uploadDir)
-        ]));
-
-        return $savedFilename;
     }
 
     /**

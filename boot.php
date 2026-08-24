@@ -54,6 +54,7 @@ if (rex_addon::get('mediapool')->isAvailable()) {
         'text/xml' => ['ext' => 'xml', 'alt' => ['application/xml']],
         'text/vtt' => ['ext' => 'vtt'],
         'text/srt' => ['ext' => 'srt', 'alt' => ['text/plain']],
+        'text/css' => ['ext' => 'css', 'alt' => ['text/plain']],
 
         // Archive
         'application/zip' => ['ext' => 'zip', 'alt' => ['application/x-zip-compressed']],
@@ -117,12 +118,28 @@ if (rex_addon::get('mediapool')->isAvailable()) {
         $changed = false;
 
         foreach ($configuredTypes as $mime) {
+            if ('' === $mime || str_ends_with($mime, '/*') || !str_contains($mime, '/')) {
+                // Wildcards (z.B. image/*) und leere/ungültige Einträge lassen sich nicht auf
+                // eine einzelne Dateiendung abbilden und werden hier übersprungen.
+                continue;
+            }
+
             if (isset($uppyMimeMap[$mime])) {
                 $ext = $uppyMimeMap[$mime]['ext'];
-                if (!isset($mediapoolMimes[$ext])) {
-                    $mediapoolMimes[$ext] = array_merge([$mime], $uppyMimeMap[$mime]['alt'] ?? []);
-                    $changed = true;
-                }
+                $alt = $uppyMimeMap[$mime]['alt'] ?? [];
+            } else {
+                // Unbekannter, in den Settings frei eingetragener MIME-Type: Dateiendung
+                // heuristisch aus dem Subtype ableiten (text/css -> css,
+                // application/x-foo -> foo, image/svg+xml -> svg).
+                $subtype = substr($mime, strpos($mime, '/') + 1);
+                $subtype = preg_replace('#^(x-|vnd\.)#', '', $subtype);
+                $ext = mb_strtolower(trim(strtok($subtype, '+;')));
+                $alt = ['text/plain', 'application/octet-stream'];
+            }
+
+            if ('' !== $ext && !isset($mediapoolMimes[$ext])) {
+                $mediapoolMimes[$ext] = array_merge([$mime], $alt);
+                $changed = true;
             }
         }
 

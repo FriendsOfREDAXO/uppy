@@ -1,5 +1,14 @@
 # Changelog
 
+## Version 2.9.1 (2026-08-24)
+
+### 🐛 Bugfixes
+- **Text-basierte MIME-Types (z.B. `text/css`) wurden beim Upload fälschlich abgelehnt** (`400 File type not allowed` bzw. `Dateityp nicht zulässig`), obwohl sie in den Einstellungen als erlaubter Typ hinterlegt waren:
+  - Die zusammengeführte Datei aus Chunk-Uploads (und die PHP-eigene Upload-Tempdatei) besaß keine Dateiendung. Generische Text-Typen wie CSS werden von `mime_content_type()` nur als `text/plain` erkannt und benötigen für die korrekte Zuordnung die Dateiendung – die fehlte am Temp-Pfad.
+  - Vor der Übergabe an `rex_media_service::addMedia()`/`updateMedia()` wird die Temp-Datei jetzt bei Bedarf auf einen Pfad mit korrekter Endung kopiert (und danach wieder aufgeräumt), damit auch REDAXO-Core (`rex_mediapool::isAllowedMimeType()`) den MIME-Type richtig erkennt.
+  - `text/css` fehlte zusätzlich in der internen Mapping-Tabelle, über die Uppy erlaubte MIME-Types beim Boot an den Mediapool (`allowed_mime_types`) weiterreicht – dadurch wurde `css` nie als bekannte Endung registriert.
+- **Beliebige eigene MIME-Types** (Feld „Eigene MIME-Types“ in den Einstellungen) werden jetzt automatisch mit einer aus dem Subtype abgeleiteten Dateiendung an den Mediapool gemeldet, auch wenn sie nicht in der festen Mapping-Tabelle stehen (z.B. `text/css` → `css`, `application/x-foo` → `foo`). Für bekannte Sonderfälle (z.B. `application/vnd.ms-excel` → `xls`) bleibt die feste Tabelle maßgeblich.
+
 ## Version 2.9.0 (2026-08-10)
 
 ### 🎉 Neue Features
