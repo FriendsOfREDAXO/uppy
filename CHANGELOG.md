@@ -1,5 +1,11 @@
 # Changelog
 
+## Version 2.9.3 (2026-08-31)
+
+### 🐛 Bugfixes
+- **Irreführender 500-Fehler bei fehlgeschlagener Signaturprüfung im Frontend-Upload**: `UppyUploadHandler` rief bei ungültiger Signatur bzw. fehlgeschlagenem Mediapool-Upload `rex_logger::logError()` mit falschen Argumenttypen auf (String statt `int` für `$errno`). Dadurch flog beim Loggen selbst eine `InvalidArgumentException` (`logger.php:72`), die die eigentliche, aussagekräftige Fehlermeldung ("Security violation: Invalid signature" bzw. den Mediapool-Fehler) verdeckte und stattdessen als nichtssagender 500er ankam. Betroffen waren `UppyUploadHandler.php` (Signatur- und Upload-Fehler) sowie `install.php` (Verzeichnis-Anlage). Alle drei Stellen nutzen jetzt korrekt `rex_logger::factory()->log('error', ...)`.
+- **Falsche Pipe-Notation in `frontend_usage.md`**: Die Doku beschrieb `uppy_uploader|name|Label|MinFiles|MaxFiles|AllowedTypes` – ein `MinFiles`-Feld existiert im YForm-Value-Typ gar nicht. Die tatsächliche Reihenfolge ist `name|label|category_id|upload_folder|max_files|max_filesize|allowed_types|...` (siehe `getDescription()`/`getDefinitions()` in `lib/yform/value/uppy_uploader.php`). Nach der bisherigen Doku landeten z.B. bei `uppy_uploader|uploads|Label|1|5|image/*` die Werte `1` und `5` fälschlich in `category_id`/`upload_folder` statt in einem Min/Max-Files-Paar – das führte in der Praxis zu falsch signierten Requests und in der Folge zum oben genannten 500er. Doku korrigiert (beide Varianten: Pipe-Notation und `setValueField`).
+
 ## Version 2.9.1 (2026-08-24)
 
 ### 🐛 Bugfixes

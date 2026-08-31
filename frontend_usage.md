@@ -50,20 +50,22 @@ if ($apiToken = rex_config::get('uppy', 'api_token')) {
 In der YForm-Definition verwendest du den Typ `uppy_uploader`.
 
 **Syntax:**
-`uppy_uploader|name|Label|MinFiles|MaxFiles|AllowedTypes`
+`uppy_uploader|name|label|[category_id]|[upload_folder]|[max_files]|[max_filesize]|[allowed_types]|[enable_webcam]|[enable_image_editor]|[allow_mediapool]|[show_file_access]|[file_access_mode]`
 
 **Beispiel:**
 ```text
 text|name|Name:*
 email|email|E-Mail:*
-# Uppy Feld: Pflichtfeld (mind. 1), Max 5 Dateien, Nur Bilder
-uppy_uploader|uploads|Dateien hochladen|1|5|image/*
+# Uppy Feld: Mediapool-Kategorie 1, Max 5 Dateien, Nur Bilder
+uppy_uploader|uploads|Dateien hochladen|1||5||image/*
 validate|empty|name|Bitte Namen angeben
 validate|empty|email|Bitte E-Mail angeben
 action|db|rex_my_table
 # Optional: Als E-Mail Anhang versenden
 action|uppy2email|uploads|attachments
 ```
+
+> Es gibt kein `MinFiles`-Feld. Die Reihenfolge ist `category_id`, `upload_folder`, `max_files`, `max_filesize`, `allowed_types`, ... (siehe `getDescription()` in `lib/yform/value/uppy_uploader.php`). Werte, die weggelassen werden sollen, bleiben als leeres Pipe-Segment stehen (`||`).
 
 ---
 
@@ -80,13 +82,15 @@ $yform = new rex_yform();
 $yform->setValueField('text', ['name', 'Dein Name']);
 
 // Uppy Feld hinzufügen
-// Format: ['name', 'Label', 'MinFiles', 'MaxFiles', 'AllowedTypes']
+// Format: ['name', 'label', 'category_id', 'upload_folder', 'max_files', 'max_filesize', 'allowed_types']
 $yform->setValueField('uppy_uploader', [
     'uploads',           // name
-    'Dokumente',         // Label
-    0,                   // MinFiles (0 = Optional)
-    10,                  // MaxFiles
-    '.pdf,.jpg,.png'     // AllowedTypes
+    'Dokumente',         // label
+    0,                   // category_id (0 = keine feste Mediapool-Kategorie)
+    '',                  // upload_folder (leer = Mediapool)
+    10,                  // max_files
+    200,                 // max_filesize (MB)
+    '.pdf,.jpg,.png'     // allowed_types
 ]);
 
 // ... Validierungen & Actions ...

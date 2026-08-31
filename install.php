@@ -13,7 +13,7 @@ $dirs = [$uploadDir, $chunksDir, $metadataDir];
 
 foreach ($dirs as $dir) {
     if (!rex_dir::create($dir)) {
-        rex_logger::logError('UPPY_INSTALL', 'Konnte Verzeichnis nicht erstellen: ' . $dir, [], __FILE__);
+        rex_logger::factory()->log('error', 'UPPY_INSTALL: Konnte Verzeichnis nicht erstellen: ' . $dir, [], __FILE__, __LINE__);
         $this->setProperty('installmsg', 'Fehler beim Erstellen der Upload-Verzeichnisse');
         return false;
     }
