@@ -158,6 +158,7 @@ export class UppyCustomWidget {
             fileAccessEndpoint: this.input.dataset.fileAccessEndpoint || '',
             fileLinkViewLabel: this.input.dataset.linkViewLabel || 'Ansehen',
             fileLinkDownloadLabel: this.input.dataset.linkDownloadLabel || 'Download',
+            compact: this.input.dataset.compact === 'true',
             ...this.options
         };
     }
@@ -268,68 +269,79 @@ export class UppyCustomWidget {
             up: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>',
             down: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>',
             remove: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>',
-            edit: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>'
+            edit: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>',
+            upload: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>'
         };
         return icons[name] || '';
     }
 
     renderUI() {
+        const config = this.getConfig();
+        this.compact = config.compact;
+
         this.container = document.createElement('div');
-        this.container.className = 'uppy-custom-widget';
-        
+        this.container.className = 'uppy-custom-widget' + (this.compact ? ' uppy-custom-widget-compact' : '');
+
+        // Im Kompakt-Modus wird die Liste nur intern für die Datei-Verwaltung
+        // gebraucht (getFiles/addFile), aber nicht sichtbar gerendert.
         this.listContainer = document.createElement('ul');
         this.listContainer.className = 'uppy-file-list';
-        this.container.appendChild(this.listContainer);
-        
+        if (!this.compact) {
+            this.container.appendChild(this.listContainer);
+        }
+
         // Button Container für mehrere Buttons mit File Count Info
         this.buttonContainer = document.createElement('div');
         this.buttonContainer.className = 'uppy-button-group';
         this.buttonContainer.style.display = 'flex';
         this.buttonContainer.style.gap = '8px';
         this.buttonContainer.style.alignItems = 'center';
-        
+
         this.addBtn = document.createElement('button');
         this.addBtn.type = 'button';
-        this.addBtn.className = 'uppy-btn uppy-btn-primary';
-        this.addBtn.innerHTML = this.getIcon('add') + ' Dateien hochladen';
+        this.addBtn.className = this.compact ? 'uppy-btn uppy-btn-primary uppy-compact-trigger' : 'uppy-btn uppy-btn-primary';
+        this.addBtn.innerHTML = this.getIcon(this.compact ? 'upload' : 'add');
+        this.addBtn.appendChild(document.createTextNode(' ' + (this.input.dataset.compactLabel || 'Dateien hochladen')));
         this.addBtn.addEventListener('click', () => {
             if (this.uppy) {
                 this.uppy.getPlugin('Dashboard').openModal();
             }
         });
         this.buttonContainer.appendChild(this.addBtn);
-        
-        // Medienpool-Button nur wenn Attribut gesetzt ist
-        if (this.input.dataset.allowMediapool === 'true') {
-            this.mediapoolBtn = document.createElement('button');
-            this.mediapoolBtn.type = 'button';
-            this.mediapoolBtn.className = 'uppy-btn uppy-btn-secondary';
-            this.mediapoolBtn.innerHTML = '<i class="fa fa-folder-open"></i> Aus Medienpool wählen';
-            this.mediapoolBtn.addEventListener('click', () => this.openMediapoolSelection());
-            this.buttonContainer.appendChild(this.mediapoolBtn);
+
+        if (!this.compact) {
+            // Medienpool-Button nur wenn Attribut gesetzt ist
+            if (this.input.dataset.allowMediapool === 'true') {
+                this.mediapoolBtn = document.createElement('button');
+                this.mediapoolBtn.type = 'button';
+                this.mediapoolBtn.className = 'uppy-btn uppy-btn-secondary';
+                this.mediapoolBtn.innerHTML = '<i class="fa fa-folder-open"></i> Aus Medienpool wählen';
+                this.mediapoolBtn.addEventListener('click', () => this.openMediapoolSelection());
+                this.buttonContainer.appendChild(this.mediapoolBtn);
+            }
+
+            // Liste leeren Button
+            this.clearBtn = document.createElement('button');
+            this.clearBtn.type = 'button';
+            this.clearBtn.className = 'uppy-btn uppy-btn-danger';
+            this.clearBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg> Liste leeren';
+            this.clearBtn.style.display = 'none'; // Initial versteckt
+            this.clearBtn.addEventListener('click', () => {
+                if (confirm('Möchten Sie alle Dateien aus der Liste entfernen?')) {
+                    this.setFiles([]);
+                }
+            });
+            this.buttonContainer.appendChild(this.clearBtn);
+
+            // File count info neben die Buttons
+            this.fileCountInfo = document.createElement('div');
+            this.fileCountInfo.className = 'uppy-file-count-info';
+            this.fileCountInfo.style.cssText = 'font-size: 12px; padding: 4px 8px; border-radius: 3px; background-color: #333; color: #fff; margin-left: auto;';
+            this.buttonContainer.appendChild(this.fileCountInfo);
         }
 
-        // Liste leeren Button
-        this.clearBtn = document.createElement('button');
-        this.clearBtn.type = 'button';
-        this.clearBtn.className = 'uppy-btn uppy-btn-danger';
-        this.clearBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg> Liste leeren';
-        this.clearBtn.style.display = 'none'; // Initial versteckt
-        this.clearBtn.addEventListener('click', () => {
-            if (confirm('Möchten Sie alle Dateien aus der Liste entfernen?')) {
-                this.setFiles([]);
-            }
-        });
-        this.buttonContainer.appendChild(this.clearBtn);
-        
-        // File count info neben die Buttons
-        this.fileCountInfo = document.createElement('div');
-        this.fileCountInfo.className = 'uppy-file-count-info';
-        this.fileCountInfo.style.cssText = 'font-size: 12px; padding: 4px 8px; border-radius: 3px; background-color: #333; color: #fff; margin-left: auto;';
-        this.buttonContainer.appendChild(this.fileCountInfo);
-        
         this.container.appendChild(this.buttonContainer);
-        
+
         this.input.parentNode.insertBefore(this.container, this.input.nextSibling);
     }
 

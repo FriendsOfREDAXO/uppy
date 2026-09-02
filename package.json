@@ -1,24 +1,24 @@
 {
   "name": "redaxo-uppy",
-  "version": "2.9.0",
+  "version": "2.10.0",
   "description": "Uppy integration for REDAXO CMS",
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "npm run build:js && npm run build:css",
+    "build": "npm run build:css && npm run build:js",
     "build:js": "node build.js",
     "build:css": "cp node_modules/@uppy/core/dist/style.min.css assets/css/uppy-core.min.css && cp node_modules/@uppy/dashboard/dist/style.min.css assets/css/uppy-dashboard.min.css && cp node_modules/@uppy/webcam/dist/style.min.css assets/css/uppy-webcam.min.css && cp node_modules/@uppy/image-editor/dist/style.min.css assets/css/uppy-image-editor.min.css"
   },
   "dependencies": {
-    "@uppy/core": "^5.2.0",
-    "@uppy/dashboard": "^5.1.1",
-    "@uppy/image-editor": "^4.2.0",
-    "@uppy/locales": "^5.1.1",
-    "@uppy/webcam": "^5.1.0",
-    "@uppy/xhr-upload": "^5.2.0"
+    "@uppy/core": "^6.0.0",
+    "@uppy/dashboard": "^6.0.0",
+    "@uppy/image-editor": "^5.0.0",
+    "@uppy/locales": "^5.2.0",
+    "@uppy/webcam": "^6.0.0",
+    "@uppy/xhr-upload": "^6.0.0"
   },
   "devDependencies": {
-    "esbuild": "^0.28.1"
+    "esbuild": "^0.28.2"
   },
   "author": "KLXM Crossmedia GmbH",
   "license": "MIT"

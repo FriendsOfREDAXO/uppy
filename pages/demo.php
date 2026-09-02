@@ -50,13 +50,49 @@ $content = '
                 </div>
                 <div class="col-md-6">
                     <h4>Code</h4>
-                    <pre><code class="language-html">&lt;input 
-    type="hidden" 
-    name="rex_input_value" 
+                    <pre><code class="language-html">&lt;input
+    type="hidden"
+    name="rex_input_value"
     value=""
     data-widget="uppy"
-    data-category-id="0" 
+    data-category-id="0"
 /&gt;</code></pre>
+                </div>
+            </div>
+
+            <hr>
+
+            <h3>Kompakt-Modus (nur Button)</h3>
+            <p>Mit <code>data-compact="true"</code> wird statt der großen Dropzone nur ein einzelner Button angezeigt, der das Dashboard als Modal öffnet. Gedacht für Stellen mit wenig Platz, z.B. Sidebars – wird u.a. für das "Datei ersetzen"-Panel auf der Mediapool-Detailseite genutzt.</p>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>Beispiel:</label>
+                        <input
+                            type="hidden"
+                            name="demo_compact"
+                            value=""
+                            data-widget="uppy"
+                            data-category-id="0"
+                            data-max-files="1"
+                            data-compact="true"
+                            data-compact-label="Datei hochladen"
+                        />
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <h4>Code</h4>
+                    <pre><code class="language-html">&lt;input
+    type="hidden"
+    name="rex_input_value"
+    value=""
+    data-widget="uppy"
+    data-max-files="1"
+    data-compact="true"
+    data-compact-label="Datei hochladen"
+/&gt;</code></pre>
+                    <p class="help-block">Per PHP-Helper: <code>Utils::field(\'name\', [\'compact\' => true, \'compact_label\' => \'Datei hochladen\']);</code></p>
                 </div>
             </div>
         </div>

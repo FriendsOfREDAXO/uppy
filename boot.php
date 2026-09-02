@@ -286,6 +286,8 @@ if (rex::isBackend() && rex::getUser() && rex_config::get('uppy', 'enable_mediap
             . ' data-reload-on-success="true"'
             . ' data-replace-redirect-url="' . rex_escape($redirectUrl) . '"'
             . ' data-uppy-signature="' . rex_escape($signature) . '"'
+            . ' data-compact="true"'
+            . ' data-compact-label="' . rex_escape($addon->i18n('uppy_mediapool_replace_button')) . '"'
             . ' />'
             . '</div>';
 

@@ -18,6 +18,10 @@ if (German && German.strings) {
 
 window.UPPY_BUNDLE_LOADED = true;
 
+// Selbstgebautes Upload-Icon (Pfeil in Tray) für den Kompakt-Trigger-Button,
+// im selben Stil (24er Grid, stroke-basiert) wie die Icons in uppy-custom-widget.js.
+const UPPY_UPLOAD_ICON = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>';
+
 /**
  * Initialisiert alle Uppy-Widgets auf der Seite
  */
@@ -106,14 +110,32 @@ function initializeUppyWidget(inputElement) {
     }
     
     inputElement.style.display = 'none';
-    
+
+    // Kompakt-Modus: statt der großen Inline-Dashboard-Dropzone nur ein Button,
+    // der das Dashboard als Modal öffnet (z.B. für das "Datei ersetzen"-Panel
+    // auf der Mediapool-Detailseite, wo nur eine Datei ersetzt werden kann).
+    const isCompact = inputElement.dataset.compact === 'true';
+
     // Container für Uppy Dashboard erstellen
     const container = document.createElement('div');
-    container.className = 'uppy-wrapper';
-    container.style.minHeight = '350px';
-    container.style.marginBottom = '30px';
+    container.className = 'uppy-wrapper' + (isCompact ? ' uppy-wrapper-compact' : '');
+
+    let compactTrigger = null;
+    if (isCompact) {
+        compactTrigger = document.createElement('button');
+        compactTrigger.type = 'button';
+        // Native REDAXO-Button-Klassen (be_style) statt eigener Farben: passt sich
+        // damit automatisch an Theme/Dark-Mode an, genau wie die übrigen Backend-Buttons.
+        compactTrigger.className = 'btn btn-primary uppy-compact-trigger';
+        compactTrigger.innerHTML = UPPY_UPLOAD_ICON;
+        compactTrigger.appendChild(document.createTextNode(' ' + (inputElement.dataset.compactLabel || 'Datei hochladen')));
+        container.appendChild(compactTrigger);
+    } else {
+        container.style.minHeight = '350px';
+        container.style.marginBottom = '30px';
+    }
     inputElement.parentNode.insertBefore(container, inputElement.nextSibling);
-    
+
     // Konfiguration aus data-Attributen oder Defaults
     const config = {
         apiToken: inputElement.dataset.apiToken || '', // Im Backend optional (User ist bereits authentifiziert)
@@ -191,10 +213,10 @@ function initializeUppyWidget(inputElement) {
         
         // Dashboard Plugin - MIT metaFields damit Edit-Button erscheint
         const dashboardOptions = {
-            inline: true,
-            target: container,
-            width: '100%',
-            height: 'auto',
+            inline: !isCompact,
+            target: isCompact ? 'body' : container,
+            width: isCompact ? 750 : '100%',
+            height: isCompact ? 550 : 'auto',
             showProgressDetails: true,
             proudlyDisplayPoweredByUppy: false,
             note: getTranslation(config.locale, 'note', config.maxFiles),
@@ -202,7 +224,12 @@ function initializeUppyWidget(inputElement) {
             // metaFields MÜSSEN angegeben werden, sonst gibt es keinen Edit-Button
             metaFields: dashboardMetaFields.length > 0 ? dashboardMetaFields : undefined
         };
-        
+
+        if (isCompact && compactTrigger) {
+            dashboardOptions.trigger = compactTrigger;
+            dashboardOptions.closeModalOnClickOutside = true;
+        }
+
         // Wenn Image Editor aktiv ist, automatisch öffnen bei Bild-Upload (nur Einzel-Uploads)
         if (enableImageEditor && config.maxFiles === 1) {
             dashboardOptions.autoOpen = 'imageEditor';
@@ -223,7 +250,7 @@ function initializeUppyWidget(inputElement) {
     }).catch(function(error) {
 
         // Fallback: Uppy ohne Metadaten-Felder initialisieren
-        initializeUppyFallback(container, config, inputElement, valueInput);
+        initializeUppyFallback(container, config, inputElement, valueInput, compactTrigger);
     });
 }
 
@@ -434,7 +461,7 @@ function initializeUppyPlugins(uppy, config, inputElement, metaFields, valueInpu
 /**
  * Fallback-Initialisierung ohne Metadaten
  */
-function initializeUppyFallback(container, config, inputElement, valueInput) {
+function initializeUppyFallback(container, config, inputElement, valueInput, compactTrigger) {
     const uppy = new Uppy({
         id: 'uppy-' + Math.random().toString(36).substr(2, 9),
         autoProceed: false,
@@ -446,17 +473,25 @@ function initializeUppyFallback(container, config, inputElement, valueInput) {
         },
         locale: config.locale === 'de-DE' ? German : undefined
     });
-    
-    uppy.use(Dashboard, {
-        inline: true,
-        target: container,
-        width: '100%',
-        height: 350,
+
+    const isCompact = inputElement.dataset.compact === 'true';
+    const dashboardOptions = {
+        inline: !isCompact,
+        target: isCompact ? 'body' : container,
+        width: isCompact ? 750 : '100%',
+        height: isCompact ? 550 : 350,
         showProgressDetails: true,
         proudlyDisplayPoweredByUppy: false,
         note: getTranslation(config.locale, 'note')
-    });
-    
+    };
+
+    if (isCompact && compactTrigger) {
+        dashboardOptions.trigger = compactTrigger;
+        dashboardOptions.closeModalOnClickOutside = true;
+    }
+
+    uppy.use(Dashboard, dashboardOptions);
+
     addCompressorPlugin(uppy, config);
     initializeUppyPlugins(uppy, config, inputElement, undefined, valueInput);
 }

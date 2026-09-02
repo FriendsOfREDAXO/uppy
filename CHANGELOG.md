@@ -1,5 +1,31 @@
 # Changelog
 
+## Version 2.10.0 (2026-09-02)
+
+### 🐛 Bugfixes
+- **`Utils::ensureApiSession()` konnte im Frontend mit einer `rex_exception` abbrechen**: Die Methode rief `rex_set_session()` auf, ohne vorher sicherzustellen, dass überhaupt eine PHP-Session aktiv ist. `rex_set_session()`/`rex_request::setSession()` wirft aber `Session not started, call rex_login::startSession() before!`, wenn `session_status() !== PHP_SESSION_ACTIVE` ist – z.B. beim allerersten Aufruf einer Seite ohne bestehende Session-Cookie. Die YForm-Vorlage (`value.uppy.tpl.php`) hatte diesen `rex_login::startSession()`-Aufruf bereits korrekt, `Utils::ensureApiSession()` (für eigene, nicht-YForm-Templates) jedoch nicht. Behoben.
+
+### 🎉 Neue Features
+- **Einfache Frontend-Integration ohne YForm**: Neue PHP-API für den direkten Einsatz in Modulen/Templates, ohne Pipe-Notation, data-Attribute oder Signaturberechnung von Hand:
+  - `FriendsOfRedaxo\Uppy\Utils::init()` setzt (falls konfiguriert) den Session-Token und gibt CSS-/JS-Tags in einem Aufruf aus.
+  - `FriendsOfRedaxo\Uppy\Utils::assets()` / `Utils::ensureApiSession()` für getrennte Steuerung.
+  - `FriendsOfRedaxo\Uppy\Utils::field($name, $options, $value)` rendert das komplette Upload-Feld (inkl. Sicherheits-Signatur) aus einem Options-Array (`category_id`, `upload_folder`, `max_files`, `max_filesize`, `allowed_types`, `enable_webcam`, `enable_image_editor`, `allow_mediapool`, `show_file_access`, `file_access_mode`).
+  - Neue Klasse `FriendsOfRedaxo\Uppy\Field` kapselt die Attribut-/Signatur-Logik; der YForm-Value-Typ (`ytemplates/bootstrap/value.uppy.tpl.php`) nutzt jetzt dieselbe Klasse, damit YForm- und Non-YForm-Einbindung nicht mehr auseinanderlaufen können.
+  - `Utils::assets()` lädt bewusst das schlanke `uppy-frontend-bundle.css` statt des größeren Backend-Bundles mit Dark-Mode-/Dashboard-Styles.
+  - Rechteprüfungen bleiben unverändert serverseitig in `UppyUploadHandler::isAuthorized()`/`Signature::verify()` – die neue API ändert nur, wie die nötigen HTML-/Session-Bausteine erzeugt werden.
+- **Kompakter Button-Modus**: Neue Option `data-compact="true"` (bzw. `Utils::field(..., ['compact' => true])`) reduziert das Upload-Widget auf einen einzelnen Button statt großer Dropzone/Leerer-Zustand-Box. Implementiert in beiden Rendering-Pfaden des AddOns: im `UppyCustomWidget` (`.uppy-upload-widget`, z.B. YForm-Felder) und in der nativen Inline-Dashboard-Initialisierung für `input[data-widget="uppy"]` in `uppy-backend.js` (dort öffnet der Button das Dashboard per `trigger`-Option als Modal statt es mit `inline: true` fest einzubetten). Genutzt für das "Datei ersetzen"-Panel auf der Mediapool-Detailseite, das dadurch spürbar kompakter in der Sidebar sitzt statt eine ganzseitige Dropzone zu zeigen.
+  - Der Button im Backend-Pfad (`uppy-backend.js`) nutzt jetzt REDAXO's eigene `.btn.btn-primary`-Klassen aus `be_style` statt eigener Farben – dadurch passt er sich automatisch an Theme und Dark-Mode an, genau wie alle anderen Backend-Buttons. Der `UppyCustomWidget`-Kompaktbutton (auch im Frontend nutzbar, wo `be_style` nicht existiert) behält seine eigenständige `.uppy-btn`-Farbgebung.
+  - Selbstgebautes Upload-Icon (Pfeil in Tray, inline SVG im selben Feather-artigen Stil wie die übrigen Widget-Icons) statt keinem/Plus-Icon, in beiden Rendering-Pfaden.
+  - Demo-Seite (`pages/demo.php`, Tab "Standard") um ein Live-Beispiel des Kompakt-Modus samt HTML- und `Utils::field()`-Code ergänzt.
+
+### 📦 Abhängigkeiten
+- Uppy-Pakete aktualisiert: `@uppy/core`, `@uppy/dashboard`, `@uppy/webcam`, `@uppy/xhr-upload` auf `6.0.0`, `@uppy/image-editor` auf `5.0.0`, `@uppy/locales` auf `5.2.0`. Die Major-Änderungen (Merge von `@uppy/utils`/`@uppy/store-default`/`@uppy/companion-client`/`@uppy/provider-views` in `@uppy/core`, Companion-Token-Handling) betreffen keine der hier verwendeten APIs.
+- Build-Skript korrigiert: `npm run build` erzeugt jetzt erst die CSS-Kopien aus `node_modules` (`build:css`) und bündelt danach (`build:js`) – vorher lief die Reihenfolge umgekehrt, wodurch ein CSS-Bundle nach einem Paket-Update kurzzeitig die alten Vendor-Styles enthalten konnte.
+- Verwaistes, nicht mehr erzeugtes `assets/dist/uppy-frontend-bundle.js` (samt Sourcemap) entfernt – `build.js` baut seit Längerem nur noch `uppy-backend-bundle.js` und `uppy-custom-widget-bundle.js`, die alte Datei war nirgends mehr referenziert und wäre bei Verwendung veraltet gewesen.
+
+### 📝 Dokumentation
+- `frontend_usage.md` und `FRONTEND_SETUP.md` überarbeitet: neue "Variante 0" (direkter PHP-Helper) als einfachster Einstieg, falsche/widersprüchliche Beispiele entfernt (u.a. ein Beispiel, das den API-Token per `data-api-token` offenlegte, obwohl direkt darüber genau davor gewarnt wurde) und das zuvor empfohlene, tatsächlich unnötige manuelle Re-Init-`<script>` gestrichen (das Custom-Widget-Bundle initialisiert `.uppy-upload-widget`-Felder bereits selbst beim Laden).
+
 ## Version 2.9.3 (2026-08-31)
 
 ### 🐛 Bugfixes

@@ -1,20 +1,14 @@
 <?php
 /**
  * YForm Template: Uppy File Upload Widget
- * 
+ *
  * Verfügbare Variablen:
  * @var rex_yform_value_uppy_uploader $this
  */
 
 // Authentifizierung: Token in Session schreiben für Frontend-Uploads
 if (!rex::isBackend()) {
-    $apiToken = rex_config::get('uppy', 'api_token');
-    if ($apiToken) {
-        if (session_status() !== PHP_SESSION_ACTIVE) {
-            \rex_login::startSession();
-        }
-        rex_set_session('uppy_token', $apiToken);
-    }
+    \FriendsOfRedaxo\Uppy\Utils::ensureApiSession();
 }
 
 // Konfiguration aus YForm-Feld
@@ -22,65 +16,24 @@ $fieldName = $this->getName();
 $fieldValue = $this->getValue();
 $fieldId = 'yform-uppy-' . $fieldName;
 
-// Parameter aus YForm-Feld-Definition
-$categoryId = $this->getElement('category_id') !== '' ? (int)$this->getElement('category_id') : rex_config::get('uppy', 'category_id', 1);
-$uploadFolder = $this->getElement('upload_folder') ?? '';
-
-// Bei max_files: 0 ist gültig (unbegrenzt), daher !== '' prüfen
-$maxFiles = $this->getElement('max_files') !== '' ? (int)$this->getElement('max_files') : rex_config::get('uppy', 'max_files', 10);
-
-$maxFilesize = $this->getElement('max_filesize') !== '' ? (int)$this->getElement('max_filesize') : rex_config::get('uppy', 'max_filesize', 200);
-$allowedTypes = $this->getElement('allowed_types') !== '' ? $this->getElement('allowed_types') : rex_config::get('uppy', 'allowed_types', '*');
-$enableWebcam = $this->getElement('enable_webcam') !== '' ? (bool)$this->getElement('enable_webcam') : rex_config::get('uppy', 'enable_webcam', false);
-$enableImageEditor = $this->getElement('enable_image_editor') !== '' ? (bool)$this->getElement('enable_image_editor') : rex_config::get('uppy', 'enable_image_editor', false);
-$allowMediapool = $this->getElement('allow_mediapool') !== '' ? (bool)$this->getElement('allow_mediapool') : false;
-$showFileAccess = $this->getElement('show_file_access') !== '' ? (bool)$this->getElement('show_file_access') : false;
-$fileAccessMode = $this->getElement('file_access_mode') !== '' ? (string)$this->getElement('file_access_mode') : 'download';
-if (!in_array($fileAccessMode, ['download', 'both'], true)) {
-    $fileAccessMode = 'download';
+// max_files/max_filesize/... bleiben leer statt 0, wenn im YForm-Feld nichts eingetragen ist -
+// Field::render() greift dann selbst auf die globalen uppy-Einstellungen zurück.
+$options = [];
+foreach (['category_id', 'upload_folder', 'max_files', 'max_filesize', 'allowed_types', 'enable_webcam', 'enable_image_editor', 'allow_mediapool', 'show_file_access', 'file_access_mode'] as $key) {
+    $elementValue = $this->getElement($key);
+    if ($elementValue !== '' && $elementValue !== null) {
+        $options[$key] = $elementValue;
+    }
 }
+$options['id'] = $fieldId;
 
-// Signatur erstellen (für Sicherheit im Frontend)
-// WICHTIG: Die Werte müssen exakt denen in den data-Attributen entsprechen
-$signature = \FriendsOfRedaxo\Uppy\Signature::create([
-    'category_id' => $categoryId,
-    'allowed_types' => $allowedTypes,
-    'max_filesize' => $maxFilesize, // MB-Wert (wie im data-Attribut)
-    'upload_dir' => $uploadFolder
-]);
-
-// HTML Output
-// API-Endpoint: Immer Frontend index.php verwenden (wie FilePond)
-// Im Backend wird /redaxo/../index.php genutzt, im Frontend direkt /index.php
-$apiEndpoint = rex_url::frontendController(['rex-api-call' => 'uppy_uploader']);
-$fileAccessEndpoint = rex_url::backendController(['rex-api-call' => 'uppy_file_access']);
+$fieldHtml = \FriendsOfRedaxo\Uppy\Field::render($this->getFieldName(), $options, $fieldValue);
 ?>
 <div class="form-group">
     <label class="control-label" for="<?= $fieldId ?>"><?= rex_escape($this->getLabel()) ?></label>
-    
-    <input 
-        type="hidden" 
-        id="<?= $fieldId ?>" 
-        name="<?= $this->getFieldName() ?>" 
-        value="<?= rex_escape($fieldValue) ?>"
-        class="uppy-upload-widget"
-        data-api-endpoint="<?= rex_escape($apiEndpoint) ?>"
-        data-category-id="<?= (int)$categoryId ?>"
-        data-upload-dir="<?= rex_escape($uploadFolder) ?>"
-        data-max-files="<?= (int)$maxFiles ?>"
-        data-max-filesize="<?= (int)$maxFilesize ?>"
-        data-allowed-types="<?= rex_escape($allowedTypes) ?>"
-        data-enable-webcam="<?= $enableWebcam ? '1' : '0' ?>"
-        data-enable-image-editor="<?= $enableImageEditor ? '1' : '0' ?>"
-        data-allow-mediapool="<?= $allowMediapool ? 'true' : 'false' ?>"
-        data-enable-file-links="<?= $showFileAccess ? 'true' : 'false' ?>"
-        data-file-access-mode="<?= rex_escape($fileAccessMode) ?>"
-        data-file-access-endpoint="<?= rex_escape($fileAccessEndpoint) ?>"
-        data-link-view-label="<?= rex_escape(rex_i18n::msg('uppy_file_access_view')) ?>"
-        data-link-download-label="<?= rex_escape(rex_i18n::msg('uppy_file_access_download')) ?>"
-        data-uppy-signature="<?= $signature ?>"
-    />
-    
+
+    <?= $fieldHtml ?>
+
     <?php if ($notice = $this->getElement('notice')): ?>
     <p class="help-block"><?= rex_escape($notice) ?></p>
     <?php endif; ?>

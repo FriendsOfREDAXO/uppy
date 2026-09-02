@@ -22,6 +22,7 @@ uppy_enable_mediapool_replace_notice = Adds a Uppy panel on the media detail pag
 uppy_mediapool_replace_title = Replace file in Mediapool
 uppy_mediapool_replace_notice = Select exactly one file with a matching file extension. The Mediapool filename stays unchanged.
 uppy_mediapool_replace_current_file = Current file
+uppy_mediapool_replace_button = Upload new file
 uppy_enable_resize = Resize images on upload
 uppy_enable_resize_notice = Images are optimized client-side before upload
 uppy_resize_width = Maximum Width (px)

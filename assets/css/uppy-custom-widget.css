@@ -276,6 +276,29 @@ body.rex-theme-dark {
     border: 1px solid var(--uppy-widget-border);
 }
 
+/* Kompakt-Modus: nur ein Button, keine Karte/Zähler/Leerer-Zustand */
+.uppy-custom-widget-compact {
+    margin-bottom: 0;
+}
+
+.uppy-custom-widget-compact .uppy-button-group {
+    background: none;
+    padding: 0;
+    border: none;
+}
+
+/* Icon + Label sauber ausrichten, egal ob eigener .uppy-btn oder nativer
+   REDAXO .btn (siehe uppy-backend.js) - top-level, nicht an .uppy-custom-widget gebunden. */
+.uppy-compact-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.uppy-compact-trigger svg {
+    flex-shrink: 0;
+}
+
 .uppy-custom-widget .uppy-empty-state {
     padding: 20px;
     text-align: center;

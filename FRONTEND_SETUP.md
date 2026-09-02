@@ -17,45 +17,30 @@ Die Response vom Upload-Handler wird nicht korrekt verarbeitet. Dies kann mehrer
 ### 1. API-Token sicher setzen
 
 **WICHTIG:** Der API-Token darf **niemals** im HTML-Code ausgegeben werden (z.B. als `data-api-token`), da er sonst für jeden Besucher sichtbar ist!
-Nutzen Sie stattdessen die PHP-Session.
+Nutzen Sie stattdessen die PHP-Session - dafür gibt es `Utils::init()`, das den Token
+in die Session schreibt **und** die passenden CSS-/JS-Tags ausgibt (siehe
+[frontend_usage.md](frontend_usage.md)):
 
 ```php
 <?php
-// WICHTIG: EINMALIG am Anfang des Templates/Moduls ausführen (vor der HTML-Ausgabe)
-// Dies setzt den Token in die verschlüsselte PHP-Session.
-\FriendsOfRedaxo\Uppy\Utils::ensureApiSession();
+use FriendsOfRedaxo\Uppy\Utils;
 
-$uppy = rex_addon::get('uppy');
+// EINMALIG am Anfang des Templates/Moduls ausführen (vor der HTML-Ausgabe)
+echo Utils::init();
 ?>
 
-<!-- CSS im <head> -->
-<link rel="stylesheet" href="<?= $uppy->getAssetsUrl('dist/uppy-frontend-bundle.css') ?>">
-
-<!-- HTML-Element für Uppy -->
-<input 
-    type="hidden" 
-    class="uppy-upload-widget"
-    name="my_upload_field" 
-    value=""
-    data-widget="uppy" 
-    data-category-id="0"
-    data-max-files="5"
-    data-max-filesize="10"
-    data-allowed-types="image/jpeg,image/png,application/pdf"
->
-
-<!-- JavaScript am Ende des <body> -->
-<script src="<?= $uppy->getAssetsUrl('dist/uppy-custom-widget-bundle.js') ?>"></script>
-<script>
-// Widget initialisieren
-document.addEventListener('DOMContentLoaded', function() {
-    const widget = document.querySelector('.uppy-upload-widget');
-    if (widget && !widget.dataset.uppyInitialized) {
-        new UppyCustomWidget.UppyCustomWidget(widget);
-    }
-});
-</script>
+<!-- Feld-Markup: keine data-Attribute von Hand pflegen, keine eigene Signatur -->
+<?= Utils::field('my_upload_field', [
+    'category_id'   => 0,
+    'max_files'     => 5,
+    'max_filesize'  => 10,
+    'allowed_types' => 'image/jpeg,image/png,application/pdf',
+]) ?>
 ```
+
+Das im JS-Bundle enthaltene Custom-Widget initialisiert Felder mit
+`class="uppy-upload-widget"` (das `Utils::field()` automatisch setzt) beim Laden der
+Seite selbst - ein eigenes Init-`<script>` im Template ist nicht nötig.
 
 ### 2. Debug-Modus aktivieren
 
@@ -114,36 +99,30 @@ Wenn Sie YCom verwenden und Benutzer eingeloggt sind, funktioniert Uppy auch ohn
 
 ```php
 <?php
+use FriendsOfRedaxo\Uppy\Utils;
+
 // Prüfen ob Benutzer eingeloggt ist
 if (!rex_ycom_auth::getUser()) {
     echo 'Bitte melden Sie sich an, um Dateien hochzuladen.';
     exit;
 }
 
-$uppy = rex_addon::get('uppy');
+echo Utils::assets(); // kein Token nötig -> ensureApiSession()/init() kann hier entfallen
 ?>
 
-<input 
-    type="hidden" 
-    class="uppy-upload-widget"
-    name="my_upload_field" 
-    value=""
-    data-widget="uppy" 
-    data-category-id="0"
-    data-max-files="5"
-    data-max-filesize="10"
-    data-allowed-types="image/jpeg,image/png"
->
+<?= Utils::field('my_upload_field', [
+    'category_id'   => 0,
+    'max_files'     => 5,
+    'max_filesize'  => 10,
+    'allowed_types' => 'image/jpeg,image/png',
+]) ?>
 ```
 
 ### 5. Vollständiges Beispiel mit Formular
 
 ```php
 <?php
-// Am Anfang des Templates
-rex_set_session('uppy_token', rex_config::get('uppy', 'api_token'));
-$uppy = rex_addon::get('uppy');
-$apiToken = rex_config::get('uppy', 'api_token');
+use FriendsOfRedaxo\Uppy\Utils;
 
 // Formular-Verarbeitung
 if (rex_post('submit', 'string')) {
@@ -174,47 +153,36 @@ if (rex_post('submit', 'string')) {
 <head>
     <meta charset="UTF-8">
     <title>Uppy Frontend Upload</title>
-    <link rel="stylesheet" href="<?= $uppy->getAssetsUrl('dist/uppy-frontend-bundle.css') ?>">
+    <?= Utils::assets() ?>
 </head>
 <body>
     <h1>Dateien hochladen</h1>
-    
+
+    <?php Utils::ensureApiSession(); // Token in die Session schreiben, bevor das Formular ausgegeben wird ?>
     <form method="post">
         <label>Bilder hochladen:</label>
-        <input 
-            type="hidden" 
-            class="uppy-upload-widget"
-            name="my_upload_field" 
-            value=""
-            data-widget="uppy" 
-            data-api-token="<?= htmlspecialchars($apiToken) ?>"
-            data-category-id="0"
-            data-max-files="5"
-            data-max-filesize="10"
-            data-allowed-types="image/jpeg,image/png"
-        >
-        
+        <?= Utils::field('my_upload_field', [
+            'category_id'   => 0,
+            'max_files'     => 5,
+            'max_filesize'  => 10,
+            'allowed_types' => 'image/jpeg,image/png',
+        ]) ?>
+
         <button type="submit" name="submit" value="1">Formular absenden</button>
     </form>
-    
-    <script src="<?= $uppy->getAssetsUrl('dist/uppy-custom-widget-bundle.js') ?>"></script>
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const widget = document.querySelector('.uppy-upload-widget');
-        if (widget && !widget.dataset.uppyInitialized) {
-            new UppyCustomWidget.UppyCustomWidget(widget);
-        }
-    });
-    </script>
 </body>
 </html>
 ```
 
+Kein eigenes Init-`<script>` nötig - `Utils::assets()` lädt das Custom-Widget-Bundle,
+das Felder mit `class="uppy-upload-widget"` (von `Utils::field()` gesetzt) selbst
+initialisiert.
+
 ## Debugging-Checkliste
 
 1. ✅ API-Token ist in den Einstellungen generiert
-2. ✅ `data-api-token` Attribut ist gesetzt
-3. ✅ Session-Token ist gesetzt via `rex_set_session()`
+2. ✅ `Utils::init()` bzw. `Utils::ensureApiSession()` läuft vor der Formular-Ausgabe
+3. ✅ Session-Token stimmt mit dem konfigurierten Token überein
 4. ✅ Debug-Logging ist aktiviert
 5. ✅ Browser Console zeigt Response-Struktur
 6. ✅ REDAXO Log zeigt keine PHP-Fehler

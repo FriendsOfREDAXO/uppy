@@ -1,50 +1,78 @@
-# Uppy im Frontend mit YForm
+# Uppy im Frontend
 
-Diese Anleitung beschränkt sich auf die Nutzung innerhalb von **YForm**.
+Es gibt zwei Wege, Uppy im Frontend einzusetzen: **direkt per PHP-Helper** (kein YForm
+nötig, empfohlen für einfache Upload-Formulare) oder **eingebettet in YForm**
+(Pipe-Notation, `setValueField`, YORM-Datasets).
 
 ## Voraussetzungen (Immer erforderlich)
 
-Damit Uppy im Frontend funktioniert, müssen zwei Dinge erledigt sein:
+Damit Uppy im Frontend funktioniert, müssen zwei Dinge erledigt sein: Assets einbinden
+und ein Session-Token für nicht angemeldete Besucher setzen. Beides erledigt ein
+einziger Aufruf ganz oben im Template:
 
-### 1. Assets einbinden
-Da YForm im Frontend keine Assets automatisch lädt, musst du CSS und JS manuell einbinden.
-
-**Empfohlener Ort für CSS** (im `<head>` deines Templates):
-```html
-<link rel="stylesheet" href="/assets/addons/uppy/dist/uppy-backend-bundle.css">
-```
-
-**Empfohlener Ort für JS** (am Ende des `<body>` oder mit `defer`):
-```html
-<!-- Uppy Core & Plugins -->
-<script src="/assets/addons/uppy/dist/uppy-backend-bundle.js"></script>
-
-<!-- YForm Integration (Initialisiert die Felder automatisch) -->
-<script src="/assets/addons/uppy/dist/uppy-custom-widget-bundle.js"></script>
-```
-
-### 2. Session Token setzen
-Damit Gäste Dateien hochladen dürfen, muss ein Token in der Session existieren. **Führe diesen PHP-Code vor der Ausgabe des Formulars aus** (z.B. oben im Template oder Header-Fragment):
-
-**Empfohlen (Helper):**
 ```php
 <?php
-\FriendsOfRedaxo\Uppy\Utils::ensureApiSession();
+// Setzt (falls konfiguriert) den API-Token in die Session und gibt CSS/JS-Tags zurück.
+// Die serverseitige Rechteprüfung (Token/Signatur/YCom) bleibt davon unberührt -
+// ohne konfigurierten Token in den Uppy-Einstellungen passiert hier gar nichts.
+echo \FriendsOfRedaxo\Uppy\Utils::init();
 ?>
 ```
 
-**Alternative (Manuell):**
-```php
-<?php
-if ($apiToken = rex_config::get('uppy', 'api_token')) {
-    rex_set_session('uppy_token', $apiToken);
-}
-?>
+Das gibt aus:
+```html
+<link rel="stylesheet" href="/assets/addons/uppy/dist/uppy-frontend-bundle.css?v=...">
+<script src="/assets/addons/uppy/dist/uppy-custom-widget-bundle.js?v=..." defer></script>
 ```
+
+`Utils::init()` lädt bewusst das schlanke Frontend-CSS-Bundle (nicht das größere
+Backend-Bundle mit Dark-Mode/Dashboard-Styles) und das Custom-Widget-JS, das jedes
+Feld mit `class="uppy-upload-widget"` beim Laden automatisch initialisiert - eigenes
+Init-JavaScript im Template ist nicht nötig.
+
+Falls du Assets und Session-Token getrennt steuern willst, gibt es auch
+`Utils::assets()` (nur die Tags) und `Utils::ensureApiSession()` (nur der Token) einzeln.
 
 ---
 
-## Variante 1: Pipe-Schreibweise
+## Variante 0: Ohne YForm (direkt per PHP)
+
+Für ein einfaches Upload-Formular ohne YForm reicht `Utils::field()` - kein
+Pipe-String, keine data-Attribute von Hand, keine manuelle Signatur:
+
+```php
+<?php
+use FriendsOfRedaxo\Uppy\Utils;
+
+echo Utils::init();
+
+if (rex_post('submit', 'string')) {
+    $files = array_filter(explode(',', rex_post('uploads', 'string', '')));
+    foreach ($files as $filename) {
+        // z.B. in der eigenen Tabelle speichern, an eine E-Mail hängen, ...
+    }
+}
+?>
+<form method="post">
+    <?= Utils::field('uploads', [
+        'category_id'   => 1,        // Mediapool-Kategorie
+        'max_files'     => 5,
+        'max_filesize'  => 10,       // MB
+        'allowed_types' => 'image/*,application/pdf',
+    ]) ?>
+    <button type="submit" name="submit" value="1">Absenden</button>
+</form>
+```
+
+`Utils::field($name, $options, $value)` kennt dieselben Optionen wie das YForm-Feld
+(`category_id`, `upload_folder`, `max_files`, `max_filesize`, `allowed_types`,
+`enable_webcam`, `enable_image_editor`, `allow_mediapool`, `show_file_access`,
+`file_access_mode`), baut die Sicherheits-Signatur automatisch und fällt für alles,
+was nicht angegeben wird, auf die globalen Uppy-Einstellungen zurück.
+
+---
+
+## Variante 1: Pipe-Schreibweise (YForm)
 (Für Module oder "Nur-Text" Formulare)
 
 In der YForm-Definition verwendest du den Typ `uppy_uploader`.
@@ -69,7 +97,7 @@ action|uppy2email|uploads|attachments
 
 ---
 
-## Variante 2: Klassisches PHP
+## Variante 2: Klassisches PHP (YForm)
 (Wenn du das Formular objektorientiert mit `rex_yform` baust)
 
 Füge das Feld über `setValueField` hinzu.
@@ -175,7 +203,8 @@ echo $yform->getForm();
 Das Addon nutzt Signaturen, um sicherzustellen, dass Frontend-Nutzer keine Restriktionen (wie erlaubte Dateitypen oder maximale Dateigrößen) umgehen können.
 
 *   **Bei YForm:** Das Feld `uppy_uploader` kümmert sich **automatisch** um die Erstellung und Prüfung der Signatur. Du musst nichts weiter tun.
-*   **Bei eigener API-Nutzung:** Wenn du Uppy komplett manuell (ohne YForm-Feld) nutzt, musst du die Signatur selbst erstellen und mitsenden. Nutze dazu `FriendsOfRedaxo\Uppy\Signature::create(...)`.
+*   **Bei `Utils::field()` (Variante 0):** Ebenfalls automatisch - `Field::render()` signiert die übergebenen Optionen selbst.
+*   **Bei komplett eigenem HTML/JS (kein `Utils::field()`):** Du musst die Signatur selbst erstellen und mitsenden. Nutze dazu `FriendsOfRedaxo\Uppy\Signature::create(...)` - die Werte müssen exakt den `data-*`-Attributen entsprechen, die `UppyUploadHandler::processUploadedFile()` prüft (`category_id`, `allowed_types`, `max_filesize`, `upload_dir`).
 
 ---
 

@@ -23,6 +23,7 @@ uppy_enable_mediapool_replace_notice = Fügt auf der Medien-Detailseite ein Uppy
 uppy_mediapool_replace_title = Datei im Mediapool ersetzen
 uppy_mediapool_replace_notice = Wähle genau eine Datei mit passender Dateiendung. Der Dateiname im Mediapool bleibt erhalten.
 uppy_mediapool_replace_current_file = Aktuelle Datei
+uppy_mediapool_replace_button = Neue Datei hochladen
 uppy_enable_resize = Bilder beim Upload verkleinern
 uppy_enable_resize_notice = Bilder werden clientseitig vor dem Upload optimiert
 uppy_resize_width = Maximale Breite (px)

@@ -209,6 +209,13 @@ body.rex-theme-dark {
     width: 100%;
 }
 
+/* Kompakt-Modus: nur ein Trigger-Button statt der großen Inline-Dropzone
+   (das Dashboard selbst rendert dann als Modal, siehe uppy-backend.js) */
+.uppy-wrapper-compact {
+    width: auto;
+    margin-bottom: 0;
+}
+
 /* Dashboard vollständig anzeigen */
 .uppy-Dashboard {
     width: 100% !important;
