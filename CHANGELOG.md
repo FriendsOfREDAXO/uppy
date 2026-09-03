@@ -1,5 +1,10 @@
 # Changelog
 
+## Version 2.10.1 (2026-09-03)
+
+### 🐛 Bugfixes
+- **`TypeError` beim Speichern eines YForm-Datensatzes mit leerem Uppy-Feld**: `rex_yform_value_uppy_uploader::getValue()` liefert für ein noch leeres Feld (z. B. beim Anlegen eines neuen Datensatzes) `null` zurück. `Field::render()` erwartet aber striktes `string $value`, wodurch PHP schon beim Funktionsaufruf mit `TypeError: Argument #3 ($value) must be of type string, null given` abbrach, bevor der Default-Wert `''` greifen konnte. `value.uppy.tpl.php` castet den Feldwert jetzt vor der Übergabe explizit auf `string`.
+
 ## Version 2.10.0 (2026-09-02)
 
 ### 🐛 Bugfixes

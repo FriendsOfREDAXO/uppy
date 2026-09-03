@@ -13,7 +13,7 @@ if (!rex::isBackend()) {
 
 // Konfiguration aus YForm-Feld
 $fieldName = $this->getName();
-$fieldValue = $this->getValue();
+$fieldValue = (string) $this->getValue();
 $fieldId = 'yform-uppy-' . $fieldName;
 
 // max_files/max_filesize/... bleiben leer statt 0, wenn im YForm-Feld nichts eingetragen ist -
