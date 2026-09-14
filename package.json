@@ -1,6 +1,6 @@
 {
   "name": "redaxo-uppy",
-  "version": "2.10.0",
+  "version": "2.10.2",
   "description": "Uppy integration for REDAXO CMS",
   "private": true,
   "type": "module",
@@ -10,7 +10,7 @@
     "build:css": "cp node_modules/@uppy/core/dist/style.min.css assets/css/uppy-core.min.css && cp node_modules/@uppy/dashboard/dist/style.min.css assets/css/uppy-dashboard.min.css && cp node_modules/@uppy/webcam/dist/style.min.css assets/css/uppy-webcam.min.css && cp node_modules/@uppy/image-editor/dist/style.min.css assets/css/uppy-image-editor.min.css"
   },
   "dependencies": {
-    "@uppy/core": "^6.0.0",
+    "@uppy/core": "^6.0.1",
     "@uppy/dashboard": "^6.0.0",
     "@uppy/image-editor": "^5.0.0",
     "@uppy/locales": "^5.2.0",

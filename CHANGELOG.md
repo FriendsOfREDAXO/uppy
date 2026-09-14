@@ -1,5 +1,11 @@
 # Changelog
 
+## Version 2.10.2 (2026-09-14)
+
+### 📦 Abhängigkeiten
+- `@uppy/core` `6.0.0` → `6.0.1`. Reiner Patch-Release: markiert `AbortController`/`AbortSignal`-Re-Exports und die `hasProperty`-Hilfsfunktion als deprecated (zugunsten der nativen Globals bzw. `Object.hasOwn`), keine Breaking Changes. Beides wird vom AddOn nicht verwendet. Restliche Uppy-Pakete (`@uppy/dashboard`, `@uppy/image-editor`, `@uppy/locales`, `@uppy/webcam`, `@uppy/xhr-upload`) und `esbuild` waren bereits aktuell.
+- Bundles (`assets/dist/uppy-backend-bundle.js`, `assets/dist/uppy-custom-widget-bundle.js`) neu gebaut. CSS unverändert (keine Style-Änderungen in `@uppy/core` 6.0.1).
+
 ## Version 2.10.1 (2026-09-03)
 
 ### 🐛 Bugfixes
