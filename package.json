@@ -10,12 +10,12 @@
     "build:css": "cp node_modules/@uppy/core/dist/style.min.css assets/css/uppy-core.min.css && cp node_modules/@uppy/dashboard/dist/style.min.css assets/css/uppy-dashboard.min.css && cp node_modules/@uppy/webcam/dist/style.min.css assets/css/uppy-webcam.min.css && cp node_modules/@uppy/image-editor/dist/style.min.css assets/css/uppy-image-editor.min.css"
   },
   "dependencies": {
-    "@uppy/core": "^6.0.2",
-    "@uppy/dashboard": "^6.0.0",
+    "@uppy/core": "^6.2.0",
+    "@uppy/dashboard": "^6.0.1",
     "@uppy/image-editor": "^5.0.0",
-    "@uppy/locales": "^5.2.1",
-    "@uppy/webcam": "^6.0.0",
-    "@uppy/xhr-upload": "^6.0.0"
+    "@uppy/locales": "^5.3.0",
+    "@uppy/webcam": "^6.0.1",
+    "@uppy/xhr-upload": "^6.0.1"
   },
   "devDependencies": {
     "esbuild": "^0.28.2"
