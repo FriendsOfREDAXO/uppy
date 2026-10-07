@@ -1,6 +1,6 @@
 {
   "name": "redaxo-uppy",
-  "version": "2.10.2",
+  "version": "2.10.3",
   "description": "Uppy integration for REDAXO CMS",
   "private": true,
   "type": "module",
