@@ -1,5 +1,11 @@
 # Changelog
 
+## Version 2.10.3 (2026-10-08)
+
+### 📦 Abhängigkeiten
+- `@uppy/core` `6.0.1` → `6.2.0`, `@uppy/dashboard`, `@uppy/webcam` und `@uppy/xhr-upload` `6.0.0` → `6.0.1`, `@uppy/locales` `5.2.0` → `5.3.0` (#49, #50). Die Minor-Releases von `@uppy/core` bringen strengere TypeScript-Typen, neue Fehler-Hilfsfunktionen und experimentelle Dateiverwaltungs-Funktionen für `@uppy/s3`. `fetcher` fasst Header-Namen, die sich nur in der Groß-/Kleinschreibung unterscheiden, jetzt zusammen. `Webcam.start()` gibt jetzt ein Promise zurück. Keine dieser Änderungen betrifft die vom AddOn genutzten APIs. `@uppy/locales` bringt Aserbaidschanisch (`az_AZ`).
+- Bundles (`assets/dist/`) und die Uppy-Styles (`assets/css/uppy-core.min.css`, `uppy-dashboard.min.css`, `uppy-webcam.min.css`) neu gebaut. Der Build ist mit `npm ci && npm run build` reproduzierbar.
+
 ## Version 2.10.2 (2026-09-14)
 
 ### 📦 Abhängigkeiten
