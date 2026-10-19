@@ -832,6 +832,9 @@ class UppyUploadHandler extends rex_api_function
      */
     protected function saveMediaMetadata(string $filename, array $metadata): void
     {
+        // Seit REDAXO 5.21.5 merkt sich der Instance-Pool auch „nicht gefunden“: rex_media_service::addMedia()
+        // fragt beim Suchen eines freien Namens rex_media::get() ab und hinterlässt dabei null im Pool (Issue #51).
+        rex_media::clearInstance($filename);
         $media = rex_media::get($filename);
         if (!$media) {
             return;
