@@ -21,11 +21,10 @@ use rex_media;
 use rex_media_cache;
 use rex_media_service;
 use rex_path;
-use rex_plugin;
 use rex_response;
 use rex_sql;
 use rex_sql_exception;
-use rex_ycom_auth;
+use rex_string;
 
 use function in_array;
 use function is_array;
@@ -37,7 +36,12 @@ use const LOCK_EX;
 use const LOCK_UN;
 use const PATHINFO_EXTENSION;
 use const PATHINFO_FILENAME;
+use const GLOB_ONLYDIR;
 use const SORT_NUMERIC;
+use const UPLOAD_ERR_FORM_SIZE;
+use const UPLOAD_ERR_INI_SIZE;
+use const UPLOAD_ERR_NO_FILE;
+use const UPLOAD_ERR_OK;
 
 /**
  * API-Handler für Uppy-Uploads.
@@ -68,6 +72,12 @@ class UppyUploadHandler extends rex_api_function
         if (!is_dir($this->metadataDir)) {
             rex_dir::create($this->metadataDir);
         }
+
+        // Zwischenspeicher für Chunks/Metadaten zusätzlich gegen Web-Zugriff sperren
+        // (redaxo/data ist bereits durch die REDAXO-.htaccess geschützt; bei nginx siehe README)
+        if (!is_file($baseDir . '/.htaccess')) {
+            rex_file::put($baseDir . '/.htaccess', "<IfModule mod_authz_core.c>\n    Require all denied\n</IfModule>\n<IfModule !mod_authz_core.c>\n    Order deny,allow\n    Deny from all\n</IfModule>\n");
+        }
     }
 
     /**
@@ -83,16 +93,31 @@ class UppyUploadHandler extends rex_api_function
         exit;
     }
 
+    /**
+     * Ergebnis der Rechteprüfung und wirksame Upload-Konfiguration des aktuellen Aufrufs.
+     *
+     * @var array{category_id: int, allowed_types: string, max_bytes: int, upload_dir: string, enforce_types: bool}
+     */
+    protected array $uploadConfig = [
+        'category_id' => 0,
+        'allowed_types' => '',
+        'max_bytes' => 0,
+        'upload_dir' => '',
+        'enforce_types' => true,
+    ];
+
+    protected bool $isBackendRequest = false;
+
     public function execute()
     {
         try {
-            // Authentifizierung prüfen
-            if (!$this->isAuthorized()) {
-                throw new rex_api_exception('Unauthorized access');
-            }
+            // Authentifizierung prüfen (Backend-User oder gültige, an die Session gebundene Signatur)
+            $auth = Security::authorize();
+            $this->isBackendRequest = $auth['backend'];
+            $this->uploadConfig = Security::resolveUploadConfig($auth);
 
             $func = rex_request('func', 'string', '');
-            $categoryId = rex_request('category_id', 'int', 0);
+            $categoryId = $this->uploadConfig['category_id'];
 
             switch ($func) {
                 case 'prepare':
@@ -116,84 +141,73 @@ class UppyUploadHandler extends rex_api_function
 
                     // no break
                 default:
-                    throw new rex_api_exception('Invalid function: ' . $func);
+                    throw new rex_api_exception('Invalid function');
             }
         } catch (rex_api_exception $e) {
             // API Exceptions sind "erwartete" Fehler (z.B. Validierung) -> 400 Bad Request
             rex_logger::factory()->log('warning', 'Uppy API Exception: ' . $e->getMessage());
-            $this->sendResponse(['error' => $e->getMessage()], rex_response::HTTP_BAD_REQUEST);
+            $status = 'Unauthorized access' === $e->getMessage() ? rex_response::HTTP_FORBIDDEN : rex_response::HTTP_BAD_REQUEST;
+            $this->sendResponse(['error' => $e->getMessage()], $status);
         } catch (Exception $e) {
-            // Unerwartete Fehler -> 500 Internal Server Error
+            // Unerwartete Fehler -> 500 Internal Server Error (ohne interne Details)
             rex_logger::logException($e);
-            $this->sendResponse(['error' => $e->getMessage()], rex_response::HTTP_INTERNAL_ERROR);
+            $this->sendResponse(['error' => 'Upload failed'], rex_response::HTTP_INTERNAL_ERROR);
         }
     }
 
     /**
      * Prüft die Authentifizierung.
+     *
+     * @deprecated seit 2.11.0, die Prüfung liegt zentral in Security::authorize()
      */
     protected function isAuthorized(): bool
     {
-        // 1. Backend-User (immer erlauben, höchstes Recht)
-        $user = rex_backend_login::createUser();
-        if ($user) {
+        try {
+            Security::authorize();
             return true;
+        } catch (rex_api_exception) {
+            return false;
         }
+    }
 
-        // Vorbereitung für Checks
-        $apiToken = rex_config::get('uppy', 'api_token');
-        $requestToken = rex_request('api_token', 'string', null);
-        $sessionToken = rex_session('uppy_token', 'string', '');
-        $tokenValid = ($apiToken && (
-            ($requestToken && hash_equals($apiToken, $requestToken))
-            || ($sessionToken && hash_equals($apiToken, $sessionToken))
-        ));
-
-        // 2. Extension Point (Custom Auth) - Hat Vorrang vor "Not-Aus"!
-        // Wenn ein Entwickler den EP nutzt und einen Wert != null zurückgibt, hat er die Kontrolle.
-        $epResult = rex_extension::registerPoint(new rex_extension_point('UPPY_AUTH_CHECK', null, [
-            'token_valid' => $tokenValid,
-            'request_token' => $requestToken,
-            'session_token' => $sessionToken
-        ]));
-
-        if (null !== $epResult) {
-            return (bool) $epResult;
+    /**
+     * Räumt verwaiste Chunk-Ordner, Metadaten und Temp-Dateien auf (älter als 24 Stunden).
+     * Läuft höchstens alle 15 Minuten.
+     */
+    protected function cleanupStaleUploads(): void
+    {
+        $marker = rex_path::addonData('uppy', 'upload/.last_cleanup');
+        if (is_file($marker) && filemtime($marker) > time() - 900) {
+            return;
         }
+        @touch($marker);
 
-        // 3. Not-Aus: Wurden alle Checks vom Admin deaktiviert? (ACHTUNG: Unsicher!)
-        if (rex_config::get('uppy', 'auth_disable_checks', 0)) {
-            return true;
-        }
-
-        // 4. YCom Strict Check (falls aktiviert)
-        // Wenn aktiviert, MUSS ein User eingeloggt sein. Sonst sofort raus.
-        if (rex_config::get('uppy', 'ycom_auth_enabled', 0)) {
-            $ycomUser = rex_ycom_auth::getUser();
-            if (!$ycomUser) {
-                rex_logger::factory()->log('info', 'Uppy: Upload blocked. YCom auth required but no user logged in.');
-                return false;
-            }
-            // Wenn eingeloggt, gilt er als autorisiert (auch ohne Token)
-            return true;
-        }
-
-        // 5. API-Token Check (Standard-Schutz)
-        if ($tokenValid) {
-            return true;
-        }
-
-        // 6. Fallback: Alter YCom-Logik (Kompatibilität)
-        // Wenn kein Token gesetzt war, aber ein YCom User da ist -> erlauben.
-        // (Nur relevant wenn Strict-Mode AUS ist, sonst wären wir oben schon raus oder drin)
-        if (rex_plugin::get('ycom', 'auth')->isAvailable()) {
-            if (rex_ycom_auth::getUser()) {
-                // Info: Das ist der Legacy-Pfad. Künftig sollte man Strict Mode nutzen.
-                return true;
+        $limit = time() - 86400;
+        foreach (glob($this->chunksDir . '/*', GLOB_ONLYDIR) ?: [] as $dir) {
+            if (filemtime($dir) < $limit) {
+                $this->cleanupChunks($dir);
             }
         }
+        foreach (glob($this->metadataDir . '/*.json') ?: [] as $file) {
+            if (filemtime($file) < $limit) {
+                @unlink($file);
+            }
+        }
+        foreach (glob(rex_path::addonData('uppy', 'upload/') . '*') ?: [] as $file) {
+            if (is_file($file) && filemtime($file) < $limit) {
+                @unlink($file);
+            }
+        }
+    }
 
-        return false;
+    /**
+     * Maximale Größe einer einzelnen Chunk-Anfrage in Bytes (Chunk-Größe aus den Einstellungen + Puffer).
+     */
+    protected function getMaxChunkBytes(): int
+    {
+        $chunkSizeMb = max(1, (int) rex_config::get('uppy', 'chunk_size', 5));
+
+        return $chunkSizeMb * 1024 * 1024 + 64 * 1024;
     }
 
     /**
@@ -209,6 +223,12 @@ class UppyUploadHandler extends rex_api_function
         if (empty($fileId)) {
             throw new rex_api_exception('Missing fileId');
         }
+        Security::assertValidFileId($fileId);
+        if (!is_array($metadata)) {
+            $metadata = [];
+        }
+
+        $this->cleanupStaleUploads();
 
         // Debug-Logging
         if (rex::isDebugMode() && rex_config::get('uppy', 'enable_debug_logging', false)) {
@@ -217,7 +237,7 @@ class UppyUploadHandler extends rex_api_function
             rex_logger::factory()->log('debug', 'UPPY PREPARE: metadata parsed=' . print_r($metadata, true));
         }
 
-        $metaFile = $this->metadataDir . '/' . $fileId . '.json';
+        $metaFile = $this->metadataDir . '/' . Security::storageId($fileId) . '.json';
         $metaData = [
             'metadata' => $metadata,
             'timestamp' => time(),
@@ -279,11 +299,8 @@ class UppyUploadHandler extends rex_api_function
         // Zusätzlich: Metadaten aus POST-Parametern sammeln (Fallback/Überschreibung)
         // Dies ermöglicht es, dass das Dashboard-Modal Werte überschreiben kann
 
-        // Kategorie aus POST-Parameter (hat Vorrang über URL-Parameter)
-        $postCategoryId = rex_request('category_id', 'int', null);
-        if (null !== $postCategoryId) {
-            $categoryId = $postCategoryId;
-        }
+        // Kategorie kommt ausschließlich aus Security::resolveUploadConfig()
+        // (Signatur bzw. bei Backend-Usern ohne Signatur aus dem Request inkl. Rechteprüfung).
 
         // Log zur Fehlersuche
         if (rex::isDebugMode() && rex_config::get('uppy', 'enable_debug_logging', false)) {
@@ -335,9 +352,32 @@ class UppyUploadHandler extends rex_api_function
         if (empty($fileId)) {
             throw new rex_api_exception('Missing fileId');
         }
+        Security::assertValidFileId($fileId);
 
-        // Chunk-Verzeichnis für diese Datei
-        $fileChunkDir = $this->chunksDir . '/' . $fileId;
+        $uploadError = is_array($file) ? (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE) : UPLOAD_ERR_NO_FILE;
+        if (UPLOAD_ERR_INI_SIZE === $uploadError || UPLOAD_ERR_FORM_SIZE === $uploadError) {
+            throw new rex_api_exception('Chunk too large for the server upload limit (upload_max_filesize)');
+        }
+        if (UPLOAD_ERR_OK !== $uploadError || !is_uploaded_file((string) $file['tmp_name'])) {
+            throw new rex_api_exception('Invalid chunk upload');
+        }
+
+        // Anzahl und Größe der Chunks begrenzen
+        $maxBytes = $this->uploadConfig['max_bytes'];
+        $maxChunkBytes = $this->getMaxChunkBytes();
+        $maxChunks = max(1, min(10000, (int) ceil($maxBytes / max(1, $maxChunkBytes - 64 * 1024)) + 1));
+        if ($totalChunks < 1 || $totalChunks > $maxChunks || $chunkIndex < 0 || $chunkIndex >= $totalChunks) {
+            throw new rex_api_exception('Invalid chunk parameters');
+        }
+        $chunkBytes = (int) filesize((string) $file['tmp_name']);
+        if ($chunkBytes > $maxChunkBytes) {
+            throw new rex_api_exception('Chunk too large');
+        }
+
+        $this->cleanupStaleUploads();
+
+        // Chunk-Verzeichnis für diese Datei (Name an die Session gebunden)
+        $fileChunkDir = $this->chunksDir . '/' . Security::storageId($fileId);
         if (!is_dir($fileChunkDir)) {
             rex_dir::create($fileChunkDir);
         }
@@ -352,6 +392,21 @@ class UppyUploadHandler extends rex_api_function
         }
 
         try {
+            // Gesamtgröße aller bisherigen Chunks (ohne den aktuellen Index) prüfen
+            clearstatcache();
+            $existingBytes = 0;
+            foreach (scandir($fileChunkDir) as $f) {
+                if ('.' !== $f && '..' !== $f && '.lock' !== $f && (string) $chunkIndex !== $f && is_file($fileChunkDir . '/' . $f)) {
+                    $existingBytes += (int) filesize($fileChunkDir . '/' . $f);
+                }
+            }
+            if ($existingBytes + $chunkBytes > $maxBytes) {
+                flock($lock, LOCK_UN);
+                fclose($lock);
+                $this->cleanupChunks($fileChunkDir);
+                throw new rex_api_exception('File too large (Max: ' . rex_formatter::bytes($maxBytes) . ')');
+            }
+
             // Chunk speichern
             $chunkPath = $fileChunkDir . '/' . $chunkIndex;
             if (!move_uploaded_file($file['tmp_name'], $chunkPath)) {
@@ -381,8 +436,8 @@ class UppyUploadHandler extends rex_api_function
             if (isset($lock) && is_resource($lock)) {
                 flock($lock, LOCK_UN);
                 fclose($lock);
-                @unlink($lockFile);
             }
+            @unlink($lockFile);
             throw $e;
         }
     }
@@ -394,26 +449,40 @@ class UppyUploadHandler extends rex_api_function
     protected function handleFinalizeUpload(int $categoryId): array
     {
         $fileId = rex_request('fileId', 'string', '');
-        $fileName = rex_request('fileName', 'string', '');
+        $fileName = Security::cleanClientFilename(rex_request('fileName', 'string', ''));
         $totalChunks = rex_request('totalChunks', 'int', 0);
 
-        if (empty($fileId) || empty($fileName)) {
+        if (empty($fileId) || '' === $fileName) {
             throw new rex_api_exception('Missing fileId or fileName');
         }
+        Security::assertValidFileId($fileId);
+        if ($totalChunks < 1 || $totalChunks > 10000) {
+            throw new rex_api_exception('Invalid chunk parameters');
+        }
+        $storageId = Security::storageId($fileId);
 
         // Debug-Logging
         if (rex::isDebugMode() && rex_config::get('uppy', 'enable_debug_logging', false)) {
             rex_logger::factory()->log('debug', 'UPPY FINALIZE: fileId=' . $fileId . ', fileName=' . $fileName);
         }
 
-        $fileChunkDir = $this->chunksDir . '/' . $fileId;
+        $fileChunkDir = $this->chunksDir . '/' . $storageId;
 
         if (!is_dir($fileChunkDir)) {
             throw new rex_api_exception('Chunk directory not found');
         }
 
+        // Dateiname vor dem Zusammenfügen prüfen (Sperrliste)
+        try {
+            Security::assertFilenameAllowed($fileName, '' !== $this->uploadConfig['upload_dir']);
+        } catch (rex_api_exception $e) {
+            $this->cleanupChunks($fileChunkDir);
+            $this->deleteMetadata($fileId);
+            throw $e;
+        }
+
         // Chunks zusammenführen
-        $tmpFile = rex_path::addonData('uppy', 'upload/') . $fileId;
+        $tmpFile = rex_path::addonData('uppy', 'upload/') . $storageId;
         $out = fopen($tmpFile, 'w');
 
         if (!$out) {
@@ -462,6 +531,13 @@ class UppyUploadHandler extends rex_api_function
         }
 
         fclose($out);
+        clearstatcache();
+
+        if ((int) filesize($tmpFile) > $this->uploadConfig['max_bytes']) {
+            $this->cleanupChunks($fileChunkDir);
+            rex_file::delete($tmpFile);
+            throw new rex_api_exception('File too large (Max: ' . rex_formatter::bytes($this->uploadConfig['max_bytes']) . ')');
+        }
 
         // Metadaten laden
         $metadata = $this->loadMetadata($fileId);
@@ -496,12 +572,14 @@ class UppyUploadHandler extends rex_api_function
         ];
 
         $replaceFileId = rex_request('replace_file_id', 'int', 0);
-        $filename = $this->processUploadedFile($file, $categoryId, $metadata);
-
-        // Aufräumen
-        $this->cleanupChunks($fileChunkDir);
-        $this->deleteMetadata($fileId);
-        rex_file::delete($tmpFile);
+        try {
+            $filename = $this->processUploadedFile($file, $categoryId, $metadata);
+        } finally {
+            // Aufräumen (auch bei abgelehnten Dateien)
+            $this->cleanupChunks($fileChunkDir);
+            $this->deleteMetadata($fileId);
+            rex_file::delete($tmpFile);
+        }
 
         return [
             'success' => true,
@@ -518,7 +596,7 @@ class UppyUploadHandler extends rex_api_function
     protected function cleanupChunks(string $directory): void
     {
         if (is_dir($directory)) {
-            $files = glob($directory . '/*');
+            $files = array_merge(glob($directory . '/*') ?: [], glob($directory . '/.lock') ?: []);
             foreach ($files as $file) {
                 if (is_file($file)) {
                     @unlink($file);
@@ -533,72 +611,33 @@ class UppyUploadHandler extends rex_api_function
      */
     protected function processUploadedFile(array $file, int $categoryId, array $metadata): string
     {
-        // 1. Signatur-Prüfung (Manipulationsschutz)
-        $signature = rex_request('uppy_signature', 'string', '');
+        // Konfiguration stammt ausschließlich aus Security::resolveUploadConfig()
+        // (Signatur bzw. Backend-Kontext) – freie Request-Parameter werden nicht ausgewertet.
+        $uploadDir = $this->uploadConfig['upload_dir'];
+        $isCustomFolder = '' !== $uploadDir;
 
-        if ($signature) {
-            // Parameter sammeln, die signiert sein müssen
-            $params = [
-                'category_id' => $categoryId,
-                'allowed_types' => rex_request('uppy_allowed_types', 'string', ''),
-                'max_filesize' => rex_request('uppy_max_filesize', 'string', ''),
-                'upload_dir' => rex_request('upload_dir', 'string', ''),
-            ];
-
-            // Signatur prüfen
-            if (!Signature::verify($params, $signature)) {
-                rex_logger::factory()->log('error', 'UPPY_SECURITY: Invalid signature for upload. Params: ' . json_encode($params), [], __FILE__, __LINE__);
-                throw new rex_api_exception('Security violation: Invalid signature');
-            }
-
-            // 2. Erweiterte Validierung basierend auf signierten Parametern
-
-            // Dateigröße prüfen
-            if (!empty($params['max_filesize'])) {
-                $maxSize = (int) $params['max_filesize'] * 1024 * 1024; // MB-Wert aus Signatur in Bytes umrechnen
-                if ($file['size'] > $maxSize) {
-                    throw new rex_api_exception('File too large (Max: ' . rex_formatter::bytes($maxSize) . ')');
-                }
-            }
-
-            // Dateityp prüfen
-            if (!empty($params['allowed_types'])) {
-                $allowedTypes = explode(',', $params['allowed_types']);
-                $fileType = $file['type'];
-                $fileExt = '.' . pathinfo($file['name'], PATHINFO_EXTENSION);
-
-                $isValid = false;
-                foreach ($allowedTypes as $type) {
-                    $type = trim($type);
-                    // MIME-Type Match (z.B. image/* oder image/jpeg)
-                    if (str_ends_with($type, '/*')) {
-                        $baseType = substr($type, 0, -2);
-                        if (str_starts_with($fileType, $baseType)) {
-                            $isValid = true;
-                            break;
-                        }
-                    } elseif ($type === $fileType) {
-                        $isValid = true;
-                        break;
-                    }
-                    // Extension Match (z.B. .jpg)
-                    elseif (str_starts_with($type, '.') && 0 === strcasecmp($type, $fileExt)) {
-                        $isValid = true;
-                        break;
-                    }
-                }
-
-                if (!$isValid) {
-                    throw new rex_api_exception('File type not allowed');
-                }
-            }
+        $file['name'] = Security::cleanClientFilename((string) ($file['name'] ?? ''));
+        if (UPLOAD_ERR_OK !== (int) ($file['error'] ?? UPLOAD_ERR_OK) || !is_file((string) $file['tmp_name'])) {
+            throw new rex_api_exception('Upload failed');
         }
 
-        // 3. Standard-Validierung (Global)
-        $maxSize = rex_config::get('uppy', 'max_filesize', 200) * 1024 * 1024;
-        if ($file['size'] > $maxSize) {
-            throw new rex_api_exception('File too large');
+        // 1. Sperrliste (alle Upload-Wege)
+        Security::assertFilenameAllowed($file['name'], $isCustomFolder);
+
+        // 2. Dateigröße (signierter Wert bzw. globale Einstellung)
+        $file['size'] = (int) filesize((string) $file['tmp_name']);
+        if ($file['size'] > $this->uploadConfig['max_bytes']) {
+            throw new rex_api_exception('File too large (Max: ' . rex_formatter::bytes($this->uploadConfig['max_bytes']) . ')');
         }
+
+        // 3. Echter MIME-Type (finfo) gegen erlaubte Typen, aktive Inhalte (SVG) prüfen
+        $file['type'] = Security::assertContentAllowed(
+            (string) $file['tmp_name'],
+            $file['name'],
+            $this->uploadConfig['allowed_types'],
+            $this->uploadConfig['enforce_types'],
+            $isCustomFolder,
+        );
 
         // Temp-Datei braucht eine korrekte Dateiendung: REDAXO-Core
         // (rex_mediapool::isAllowedMimeType, rex_media_service::addMedia) bestimmt den
@@ -622,9 +661,8 @@ class UppyUploadHandler extends rex_api_function
                 return $this->replaceExistingMediaFile($replaceFileId, $file, $metadata);
             }
 
-            // NEU: Upload in einen bestimmten Ordner (nicht Mediapool)
-            $uploadDir = rex_request('upload_dir', 'string', '');
-            if ($uploadDir) {
+            // Upload in einen bestimmten Ordner (nicht Mediapool) – nur über signierte Konfiguration
+            if ($isCustomFolder) {
                 return $this->handleCustomFolderUpload($file, $uploadDir);
             }
 
@@ -653,6 +691,9 @@ class UppyUploadHandler extends rex_api_function
             }
 
             $savedFilename = $return['filename'];
+
+            // Datei in der Session merken (Metadaten-Bearbeitung und E-Mail-Anhänge im Frontend)
+            Security::rememberUploadedFile($savedFilename);
 
             // Metadaten speichern
             if (!empty($metadata)) {
@@ -726,13 +767,16 @@ class UppyUploadHandler extends rex_api_function
     {
         $targetDir = $this->resolveCustomUploadDirectory($uploadDir);
 
-        if (!is_dir($targetDir)) {
-            if (!rex_dir::create($targetDir)) {
-                throw new rex_api_exception('Could not create target directory: ' . $uploadDir);
-            }
+        // Dateiname wie im Mediapool normalisieren (Kleinbuchstaben, nur a-z, 0-9, Punkt, Binde- und Unterstrich)
+        $info = pathinfo((string) $file['name']);
+        $baseName = rex_string::normalize((string) ($info['filename'] ?? ''), '_', '-.');
+        $extension = rex_string::normalize((string) ($info['extension'] ?? ''), '_', '');
+        $baseName = ltrim($baseName, '.-');
+        if ('' === $baseName) {
+            $baseName = 'file';
         }
-
-        $filename = $file['name'];
+        $filename = $baseName . '.' . $extension;
+        Security::assertFilenameAllowed($filename, true);
 
         // Kollisionsprüfung: Vorhandene Dateien nicht überschreiben
         $filename = $this->getNonConflictingFilename($targetDir, $filename);
@@ -749,61 +793,30 @@ class UppyUploadHandler extends rex_api_function
         }
 
         if (!$success) {
-            throw new rex_api_exception('Failed to save file to custom directory: ' . $uploadDir);
+            throw new rex_api_exception('Failed to save file to custom directory');
+        }
+        @chmod($targetPath, 0644);
+
+        // In der Session merken (z.B. für die YForm-Aktion uppy2email)
+        $realTarget = realpath($targetPath);
+        if (false !== $realTarget) {
+            Security::rememberUploadedFile($realTarget);
         }
 
         return $filename;
     }
 
     /**
-     * Loest das Custom-Upload-Verzeichnis auf und erzwingt dabei:
-     * - innerhalb der Installation
-     * - ausserhalb des Webroots
+     * Löst das Custom-Upload-Verzeichnis auf und erzwingt dabei:
+     * - Lage unterhalb von rex_path::base() oder eines in den Einstellungen freigegebenen Ordners
+     * - keine REDAXO-Systemordner (redaxo/, assets/, media/, vendor/ …)
+     * - Schutz-.htaccess und index.html beim Anlegen
+     *
+     * @throws rex_api_exception
      */
     protected function resolveCustomUploadDirectory(string $uploadDir): string
     {
-        $uploadDir = trim(str_replace("\0", '', str_replace('\\', '/', $uploadDir)));
-
-        if ('' === $uploadDir) {
-            throw new rex_api_exception('Empty upload_dir is not allowed for custom folder upload');
-        }
-
-        $webRoot = rtrim(rex_path::base(), DIRECTORY_SEPARATOR);
-
-        $targetDir = $webRoot . '/' . ltrim($uploadDir, '/');
-        $targetDir = preg_replace('#/+#', '/', $targetDir);
-        if (!is_string($targetDir) || '' === $targetDir) {
-            throw new rex_api_exception('Invalid upload directory');
-        }
-
-        $targetDir = rtrim($targetDir, '/');
-        $parentDir = dirname($targetDir);
-
-        $realParent = realpath($parentDir);
-
-        if (false === $realParent) {
-            throw new rex_api_exception('Invalid upload directory path');
-        }
-
-        if (is_dir($targetDir)) {
-            $realTarget = realpath($targetDir);
-            if (false === $realTarget) {
-                throw new rex_api_exception('Could not resolve target directory');
-            }
-
-            return $realTarget;
-        }
-
-        if (!rex_dir::create($targetDir)) {
-            throw new rex_api_exception('Could not create target directory: ' . $uploadDir);
-        }
-
-        $realTarget = realpath($targetDir);
-        if (false === $realTarget) {
-            throw new rex_api_exception('Could not resolve created target directory');
-        }
-
-        return $realTarget;
+        return Security::resolveCustomDirectory($uploadDir, true);
     }
 
     /**
@@ -832,6 +845,9 @@ class UppyUploadHandler extends rex_api_function
      */
     protected function saveMediaMetadata(string $filename, array $metadata): void
     {
+        // Seit REDAXO 5.21.5 merkt sich der Instance-Pool auch „nicht gefunden“: rex_media_service::addMedia()
+        // fragt beim Suchen eines freien Namens rex_media::get() ab und hinterlässt dabei null im Pool (Issue #51).
+        rex_media::clearInstance($filename);
         $media = rex_media::get($filename);
         if (!$media) {
             return;
@@ -1033,7 +1049,11 @@ class UppyUploadHandler extends rex_api_function
             return [];
         }
 
-        $metaFile = $this->metadataDir . '/' . $fileId . '.json';
+        if (1 !== preg_match(Security::FILE_ID_PATTERN, $fileId)) {
+            return [];
+        }
+
+        $metaFile = $this->metadataDir . '/' . Security::storageId($fileId) . '.json';
         if (rex_file::get($metaFile)) {
             $data = json_decode(rex_file::get($metaFile), true);
             return $data['metadata'] ?? [];
@@ -1051,7 +1071,11 @@ class UppyUploadHandler extends rex_api_function
             return;
         }
 
-        $metaFile = $this->metadataDir . '/' . $fileId . '.json';
+        if (1 !== preg_match(Security::FILE_ID_PATTERN, $fileId)) {
+            return;
+        }
+
+        $metaFile = $this->metadataDir . '/' . Security::storageId($fileId) . '.json';
         rex_file::delete($metaFile);
     }
 

@@ -1,5 +1,5 @@
 package: uppy
-version: '2.10.3'
+version: '2.11.0'
 author: 'Friends Of REDAXO'
 supportpage: https://github.com/FriendsOfREDAXO/uppy
 requires:
@@ -57,6 +57,7 @@ default_config:
     enable_mediapool_replace: true
     metadata_fields: 'title,med_alt,med_copyright'
     api_token: ''
+    upload_base_dirs: ''
     enable_resize: true
     resize_width: 2000
     resize_height: 2000

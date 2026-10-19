@@ -6,6 +6,18 @@ import ImageEditor from '@uppy/image-editor';
 import German from '@uppy/locales/lib/de_DE';
 import { ChunkUploader } from './chunk-uploader';
 
+/**
+ * Maskiert Text für die Ausgabe in HTML (Inhalt und Attribute).
+ */
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
 // Patch missing translations in German locale
 if (German && German.strings) {
     German.strings.help = 'Hilfe';
@@ -141,7 +153,6 @@ export class UppyCustomWidget {
         }
         
         return {
-            apiToken: this.input.dataset.apiToken || '',
             maxFiles: maxFiles,
             maxFileSize: (parseInt(this.input.dataset.maxFilesize) || parseInt(globalConfig.max_file_size) || 200) * 1024 * 1024,
             allowedTypes: this.input.dataset.allowedTypes 
@@ -188,7 +199,7 @@ export class UppyCustomWidget {
         if (config.uploadDir && config.enableFileLinks) {
             return this.buildFileAccessUrl(filename, 'inline');
         }
-        return `/media/${filename}`;
+        return `/media/${encodeURIComponent(filename)}`;
     }
 
     openMediaLightbox(url, type, filename) {
@@ -450,7 +461,7 @@ export class UppyCustomWidget {
                             </svg>
                         </div>
                         <div class="uppy-file-info">
-                            <span class="uppy-filename" title="${filename}">${filename}</span>
+                            <span class="uppy-filename" title="${escapeHtml(filename)}">${escapeHtml(filename)}</span>
                             <span class="uppy-upload-status">Wird hochgeladen...</span>
                         </div>
                     </div>
@@ -478,7 +489,7 @@ export class UppyCustomWidget {
 
             let previewHtml = `<div class="uppy-file-icon">${this.getIcon('file')}</div>`;
             if (isImage && previewUrl) {
-                previewHtml = `<img src="${previewUrl}" class="uppy-thumbnail" alt="${filename}" onerror="this.style.display='none'">`;
+                previewHtml = `<img src="${escapeHtml(previewUrl)}" class="uppy-thumbnail" alt="${escapeHtml(filename)}" onerror="this.style.display='none'">`;
             } else if (isVideo) {
                 previewHtml = `<div class="uppy-file-icon uppy-video-icon"><i class="fa fa-play-circle"></i></div>`;
             }
@@ -486,8 +497,8 @@ export class UppyCustomWidget {
             const showLinks = config.enableFileLinks && !!config.uploadDir && !!config.fileAccessEndpoint;
             const linkButtons = showLinks
                 ? `
-                    ${config.fileAccessMode === 'both' && isPreviewable ? `<button type="button" class="uppy-btn" data-action="view" title="${config.fileLinkViewLabel}"><i class="fa fa-eye"></i></button>` : ''}
-                    <a class="uppy-btn" href="${this.buildFileAccessUrl(filename, 'download')}" title="${config.fileLinkDownloadLabel}"><i class="fa fa-download"></i></a>
+                    ${config.fileAccessMode === 'both' && isPreviewable ? `<button type="button" class="uppy-btn" data-action="view" title="${escapeHtml(config.fileLinkViewLabel)}"><i class="fa fa-eye"></i></button>` : ''}
+                    <a class="uppy-btn" href="${escapeHtml(this.buildFileAccessUrl(filename, 'download'))}" title="${escapeHtml(config.fileLinkDownloadLabel)}"><i class="fa fa-download"></i></a>
                 `
                 : '';
                 
@@ -495,7 +506,7 @@ export class UppyCustomWidget {
                 <div class="uppy-file-preview">
                     ${previewHtml}
                     <div class="uppy-file-info">
-                        <span class="uppy-filename" title="${filename}">${filename}</span>
+                        <span class="uppy-filename" title="${escapeHtml(filename)}">${escapeHtml(filename)}</span>
                     </div>
                 </div>
                 <div class="uppy-actions">
@@ -917,13 +928,26 @@ export class UppyCustomWidget {
         });
     }
 
+    /**
+     * Hängt die signierte Feld-Konfiguration an eine API-URL an
+     * (im Frontend Pflicht, im Backend optional).
+     */
+    withSignature(url) {
+        const signature = this.input.dataset.uppySignature || '';
+        if (!signature) {
+            return url;
+        }
+        const separator = url.indexOf('?') > -1 ? '&' : '?';
+        return url + separator + 'uppy_signature=' + encodeURIComponent(signature);
+    }
+
     async fetchMetaFields() {
         const apiEndpoint = this.input.dataset.apiEndpoint || '/index.php?rex-api-call=uppy_uploader';
         // Metadata handler uses uppy_metadata API
         const metaEndpoint = apiEndpoint.replace('uppy_uploader', 'uppy_metadata');
         
         try {
-            const response = await fetch(`${metaEndpoint}&action=get_fields`, {
+            const response = await fetch(this.withSignature(`${metaEndpoint}&action=get_fields`), {
                 credentials: 'same-origin'
             });
             const data = await response.json();
@@ -939,7 +963,7 @@ export class UppyCustomWidget {
         const metaEndpoint = apiEndpoint.replace('uppy_uploader', 'uppy_metadata');
         
         try {
-            const response = await fetch(`${metaEndpoint}&action=load_metadata&filename=${encodeURIComponent(filename)}`, {
+            const response = await fetch(this.withSignature(`${metaEndpoint}&action=load_metadata&filename=${encodeURIComponent(filename)}`), {
                 credentials: 'same-origin'
             });
             const data = await response.json();
@@ -959,7 +983,7 @@ export class UppyCustomWidget {
         formData.append('metadata', JSON.stringify(metadata));
         
         try {
-            const response = await fetch(`${metaEndpoint}&action=save_metadata`, {
+            const response = await fetch(this.withSignature(`${metaEndpoint}&action=save_metadata`), {
                 method: 'POST',
                 body: formData,
                 credentials: 'same-origin'
@@ -994,7 +1018,7 @@ export class UppyCustomWidget {
         const header = document.createElement('div');
         header.className = 'uppy-widget-modal-header';
         header.innerHTML = `
-            <h3 class="uppy-widget-modal-title">Metadaten: ${filename}</h3>
+            <h3 class="uppy-widget-modal-title">Metadaten: ${escapeHtml(filename)}</h3>
             <button type="button" class="uppy-widget-modal-close">&times;</button>
         `;
         
@@ -1009,7 +1033,7 @@ export class UppyCustomWidget {
         titleGroup.className = 'uppy-widget-form-group';
         titleGroup.innerHTML = `
             <label class="uppy-widget-label">Titel</label>
-            <input type="text" name="title" class="uppy-widget-input" value="${metadata.title || ''}">
+            <input type="text" name="title" class="uppy-widget-input" value="${escapeHtml(metadata.title || '')}">
         `;
         form.appendChild(titleGroup);
         
@@ -1021,7 +1045,7 @@ export class UppyCustomWidget {
             const group = document.createElement('div');
             group.className = 'uppy-widget-form-group';
             
-            const label = `<label class="uppy-widget-label">${field.name}</label>`;
+            const label = `<label class="uppy-widget-label">${escapeHtml(field.name)}</label>`;
             group.innerHTML = label;
             
             if (field.is_multilang && field.languages && field.languages.length > 0) {
@@ -1057,9 +1081,9 @@ export class UppyCustomWidget {
                 
                 let firstInputHtml = '';
                 if (field.type === 'textarea') {
-                    firstInputHtml = `<textarea name="${firstInputName}" class="uppy-widget-textarea" data-clang-id="${firstLang.clang_id}" rows="3" placeholder="${firstLang.clang_name}...">${firstVal}</textarea>`;
+                    firstInputHtml = `<textarea name="${escapeHtml(firstInputName)}" class="uppy-widget-textarea" data-clang-id="${escapeHtml(firstLang.clang_id)}" rows="3" placeholder="${escapeHtml(firstLang.clang_name)}...">${escapeHtml(firstVal)}</textarea>`;
                 } else {
-                    firstInputHtml = `<input type="text" name="${firstInputName}" class="uppy-widget-input" data-clang-id="${firstLang.clang_id}" value="${firstVal}" placeholder="${firstLang.clang_name}...">`;
+                    firstInputHtml = `<input type="text" name="${escapeHtml(firstInputName)}" class="uppy-widget-input" data-clang-id="${escapeHtml(firstLang.clang_id)}" value="${escapeHtml(firstVal)}" placeholder="${escapeHtml(firstLang.clang_name)}...">`;
                 }
                 group.innerHTML += firstInputHtml;
 
@@ -1083,9 +1107,9 @@ export class UppyCustomWidget {
                         
                         let inputHtml = '';
                         if (field.type === 'textarea') {
-                            inputHtml = `<textarea name="${inputName}" class="uppy-widget-textarea" data-clang-id="${lang.clang_id}" rows="2" placeholder="${lang.clang_name}...">${val}</textarea>`;
+                            inputHtml = `<textarea name="${escapeHtml(inputName)}" class="uppy-widget-textarea" data-clang-id="${escapeHtml(lang.clang_id)}" rows="2" placeholder="${escapeHtml(lang.clang_name)}...">${escapeHtml(val)}</textarea>`;
                         } else {
-                            inputHtml = `<input type="text" name="${inputName}" class="uppy-widget-input" data-clang-id="${lang.clang_id}" value="${val}" placeholder="${lang.clang_name}...">`;
+                            inputHtml = `<input type="text" name="${escapeHtml(inputName)}" class="uppy-widget-input" data-clang-id="${escapeHtml(lang.clang_id)}" value="${escapeHtml(val)}" placeholder="${escapeHtml(lang.clang_name)}...">`;
                         }
                         
                         const wrapper = document.createElement('div');
@@ -1109,13 +1133,13 @@ export class UppyCustomWidget {
                 
                 if (field.type === 'select') {
                     const options = (field.options || []).map(opt => 
-                        `<option value="${opt.value}" ${opt.value == value ? 'selected' : ''}>${opt.label}</option>`
+                        `<option value="${escapeHtml(opt.value)}" ${opt.value == value ? 'selected' : ''}>${escapeHtml(opt.label)}</option>`
                     ).join('');
-                    inputHtml = `<select name="${field.id}" class="uppy-widget-select">${options}</select>`;
+                    inputHtml = `<select name="${escapeHtml(field.id)}" class="uppy-widget-select">${options}</select>`;
                 } else if (field.type === 'textarea') {
-                    inputHtml = `<textarea name="${field.id}" class="uppy-widget-textarea" rows="3">${value}</textarea>`;
+                    inputHtml = `<textarea name="${escapeHtml(field.id)}" class="uppy-widget-textarea" rows="3">${escapeHtml(value)}</textarea>`;
                 } else {
-                    inputHtml = `<input type="text" name="${field.id}" class="uppy-widget-input" value="${value}">`;
+                    inputHtml = `<input type="text" name="${escapeHtml(field.id)}" class="uppy-widget-input" value="${escapeHtml(value)}">`;
                 }
                 group.innerHTML += inputHtml;
             }

@@ -15,7 +15,7 @@ if (rex_post('config-submit', 'boolean')) {
         ['enable_mediapool_replace', 'bool'],
         ['ycom_auth_enabled', 'bool'],
         ['ycom_media_auth_defaults_enabled', 'bool'],
-        ['auth_disable_checks', 'bool'],
+        ['upload_base_dirs', 'string'],
         ['enable_resize', 'bool'],
         ['resize_width', 'int'],
         ['resize_height', 'int'],
@@ -34,13 +34,9 @@ if (rex_post('config-submit', 'boolean')) {
     echo rex_view::success($addon->i18n('uppy_save_success'));
 }
 
-// Generelle Warnung wenn Auth-Checks deaktiviert sind (Not-Aus aktiv)
-if (rex_config::get('uppy', 'auth_disable_checks', 0)) {
-    echo rex_view::warning(
-        '<i class="rex-icon fa-exclamation-triangle"></i> ' .
-        '<strong>ACHTUNG: ' . $addon->i18n('uppy_auth_disable_checks') . ' ist derzeit aktiv!</strong><br>' .
-        $addon->i18n('uppy_auth_disable_checks_warning')
-    );
+// Seit 2.11.0 entfernt: "Sicherheits-Checks deaktivieren" – alten Wert aufräumen
+if (rex_config::has('uppy', 'auth_disable_checks')) {
+    rex_config::remove('uppy', 'auth_disable_checks');
 }
 
 
@@ -305,24 +301,11 @@ if (rex_addon::get('ycom')->isAvailable()) {
     }
 }
 
-// EXPERTEN: Auth Checks deaktivieren
-$authChecksDisabled = rex_config::get('uppy', 'auth_disable_checks', 0);
-$containerStyle = $authChecksDisabled
-    ? 'border: 2px solid #d9534f; padding: 15px; background-color: #fff1f0; border-radius: 3px;' 
-    : 'border: 2px solid #3c763d; padding: 15px; background-color: #dff0d8; border-radius: 3px;';
-
-$statusText = $authChecksDisabled
-    ? '<span style="color: #d9534f; font-weight: bold;"><i class="rex-icon fa-exclamation-triangle"></i> ' . $addon->i18n('uppy_auth_disable_checks_warning') . '</span>'
-    : '<span style="color: #3c763d; font-weight: bold;"><i class="rex-icon fa-check-circle"></i> Authentifizierungs-Prüfungen sind aktiv (Sicher/Empfohlen)</span>';
-
+// Freigegebene Basisordner für Custom-Upload-Ordner außerhalb der Installation
 $n = [];
-$n['label'] = '<label for="uppy-auth-disable">' . $addon->i18n('uppy_auth_disable_checks') . '</label>';
-$n['field'] = '<div style="' . $containerStyle . '">';
-$n['field'] .= '<input type="checkbox" id="uppy-auth-disable" name="config[auth_disable_checks]" value="1" ' . ($authChecksDisabled ? 'checked' : '') . ' />';
-$n['field'] .= '<span style="margin-left: 10px;">' . $statusText . '</span>';
-$n['field'] .= '<div class="text-muted" style="margin-top: 5px;">' . $addon->i18n('uppy_security_info') . '</div>';
-$n['field'] .= '</div>';
-$n['note'] = $addon->i18n('uppy_auth_disable_checks_notice');
+$n['label'] = '<label for="uppy-upload-base-dirs">' . $addon->i18n('uppy_upload_base_dirs') . '</label>';
+$n['field'] = '<textarea class="form-control" id="uppy-upload-base-dirs" name="config[upload_base_dirs]" rows="3" placeholder="/var/www/data/uploads">' . rex_escape((string) rex_config::get('uppy', 'upload_base_dirs', '')) . '</textarea>';
+$n['note'] = $addon->i18n('uppy_upload_base_dirs_notice', rex_escape(rex_path::base()));
 $formElements[] = $n;
 
 // Custom Widget Modus

@@ -6,6 +6,19 @@ import fs from 'fs';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Uppy-CSS (aus node_modules kopiert): Verweise auf Source Maps entfernen.
+// Seit @uppy/* 6.3 verweisen die .min.css auf eine externe style.min.css.map, die wir nicht ausliefern
+// (sonst 404-Anfragen im Browser, auch aus den Bundles).
+const stripSourceMap = css => css.replace(/\/\*#\s*sourceMappingURL=[^*]*\*\/\s*/g, '');
+for (const file of [
+    'assets/css/uppy-core.min.css',
+    'assets/css/uppy-dashboard.min.css',
+    'assets/css/uppy-webcam.min.css',
+    'assets/css/uppy-image-editor.min.css',
+]) {
+    fs.writeFileSync(file, stripSourceMap(fs.readFileSync(file, 'utf8')));
+}
+
 // Backend Bundle (JavaScript)
 await esbuild.build({
     entryPoints: ['assets/src/uppy-backend.js'],

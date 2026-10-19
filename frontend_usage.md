@@ -204,7 +204,9 @@ Das Addon nutzt Signaturen, um sicherzustellen, dass Frontend-Nutzer keine Restr
 
 *   **Bei YForm:** Das Feld `uppy_uploader` kümmert sich **automatisch** um die Erstellung und Prüfung der Signatur. Du musst nichts weiter tun.
 *   **Bei `Utils::field()` (Variante 0):** Ebenfalls automatisch - `Field::render()` signiert die übergebenen Optionen selbst.
-*   **Bei komplett eigenem HTML/JS (kein `Utils::field()`):** Du musst die Signatur selbst erstellen und mitsenden. Nutze dazu `FriendsOfRedaxo\Uppy\Signature::create(...)` - die Werte müssen exakt den `data-*`-Attributen entsprechen, die `UppyUploadHandler::processUploadedFile()` prüft (`category_id`, `allowed_types`, `max_filesize`, `upload_dir`).
+*   **Bei komplett eigenem HTML/JS (kein `Utils::field()`):** Du musst die Signatur selbst erstellen und mitsenden. Nutze dazu `FriendsOfRedaxo\Uppy\Signature::create(...)` mit `category_id`, `allowed_types`, `max_filesize` und ggf. `upload_dir` und gib sie als `data-uppy-signature` aus.
+
+**Seit 2.11.0:** Ohne Backend-Login ist die Signatur **Pflicht**. Der Server liest Kategorie, Dateitypen, Maximalgröße und Upload-Ordner ausschließlich aus der Signatur. Sie gilt 24 Stunden und nur in der Browser-Session, in der das Feld ausgegeben wurde – Seiten mit Upload-Feld deshalb nicht cachen (siehe unten). Der API-Token wird nie in der URL übertragen.
 
 ---
 
@@ -213,7 +215,7 @@ Das Addon nutzt Signaturen, um sicherzustellen, dass Frontend-Nutzer keine Restr
 Falls es im Frontend zu Problemen beim Upload kommt (z.B. "403 Forbidden" oder "Upload fehlgeschlagen"), prüfe folgende Punkte:
 
 ### 1. Caching & Proxies (WICHTIG!)
-Der Aufruf von `Utils::ensureApiSession()` muss bei jedem Seitenaufruf dynamisch ausgeführt werden.
+Der Aufruf von `Utils::ensureApiSession()` und die Ausgabe des Feldes (die Signatur ist an die Session gebunden) müssen bei jedem Seitenaufruf dynamisch ausgeführt werden.
 
 *   **REDAXO Cache:** Platziere den Code im Template/Header.
 *   **Reverse Proxies / CDNs (Cloudflare, BunnyCDN, Varnish):**

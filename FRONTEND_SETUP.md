@@ -57,9 +57,13 @@ Dann schauen Sie in:
 ### 3. Häufige Fehlerquellen
 
 #### Fehler: "Unauthorized access"
+- Feld ohne Signatur ausgegeben (seit 2.11.0 ist die Signatur ohne Backend-Login Pflicht) – `Utils::field()` oder das YForm-Feld verwenden
 - API-Token ist nicht gesetzt oder falsch
 - Session wurde nicht gestartet
 - Token stimmt nicht mit dem im Backend konfigurierten überein
+
+#### Fehler: "Security violation: Invalid signature"
+- Die Seite kam aus einem Cache (Signatur gehört zu einer anderen Session) oder ist älter als 24 Stunden – Seite neu laden, Upload-Seiten vom Cache ausnehmen
 
 Lösung:
 ```php

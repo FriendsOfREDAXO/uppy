@@ -1,5 +1,41 @@
 # Changelog
 
+## Version 2.11.0 (2026-10-19)
+
+Sicherheits-Release. Allen Installationen wird das Update dringend empfohlen. Die Minor-Version steigt, weil sich das Verhalten für Integratoren ändert (siehe „Geänderte Verhalten“) – Formulare, die über das YForm-Feld, `Utils::field()` oder `Signature::create()` ausgegeben werden, laufen ohne Anpassung weiter.
+
+### 🔒 Sicherheit
+- **Uploads ohne Backend-Login nur noch mit gültiger Signatur**: Jede Upload- und Metadaten-Anfrage ohne Backend-Login braucht jetzt die signierte Feld-Konfiguration. Kategorie, erlaubte Dateitypen, Maximalgröße und Upload-Ordner werden ausschließlich aus der Signatur gelesen, nicht mehr aus Request-Parametern. Die Signatur enthält ein Ablaufdatum (24 Stunden) und ist an die Browser-Session gebunden. Ein Upload-Ordner verlangt auch bei Backend-Usern eine Signatur.
+- **Sperrliste für Dateinamen auf allen Upload-Wegen**: Ausführbare und serverrelevante Endungen werden abgelehnt, und zwar in jedem Teil des Dateinamens und unabhängig von der Schreibweise. HTML/XML werden immer abgelehnt, SVG nur ohne aktive Inhalte angenommen, in Upload-Ordnern zusätzlich kein SVG und kein JavaScript. Der Dateityp wird aus dem Dateiinhalt bestimmt (nicht aus der Browser-Angabe) und gegen die erlaubten Typen geprüft.
+- **Upload-Ordner abgesichert**: Upload-Ordner müssen unterhalb der Installation oder eines freigegebenen Ordners liegen; REDAXO-Systemordner und versteckte Ordner sind gesperrt. Neu angelegte Upload-Ordner erhalten eine `.htaccess` gegen Skriptausführung und eine leere `index.html`. Dateinamen werden dort wie im Mediapool normalisiert.
+- **Datei-Anzeige im Backend (`uppy_file_access`)**: Ordner und Dateiname werden mit denselben Regeln geprüft; nur Bilder, Videos, Audio und PDF werden noch inline angezeigt, alles andere als Download.
+- **E-Mail-Anhänge (`uppy2email`)**: Dateinamen aus dem Formular werden auf den reinen Namen reduziert, der Upload-Ordner wird geprüft, und im Frontend werden nur Dateien angehängt, die in derselben Session hochgeladen wurden.
+- **API-Token nicht mehr in URLs**: Die JavaScript-Bundles senden keinen Token mehr. Für Server-zu-Server-Aufrufe wird der Token nur noch als Header `X-Uppy-Token` oder POST-Feld `api_token` angenommen. Der Token allein erlaubt keinen Upload mehr.
+- **Einstellung „Sicherheits-Checks deaktivieren“ entfernt**: Sie hob alle Prüfungen für anonyme Besucher auf. Der Wert wird beim Update bzw. beim Öffnen der Einstellungen gelöscht. Der Extension Point `UPPY_AUTH_CHECK` bleibt, ersetzt aber nicht die Signatur, die Sperrliste und die Ordner-Prüfungen.
+- **Metadaten im Frontend**: Ohne Backend-Login lassen sich nur noch Metadaten von Dateien lesen und ändern, die in derselben Session hochgeladen wurden. Backend-User brauchen das Recht auf die Medienkategorie.
+- **Chunk-Upload**: Upload-IDs werden streng geprüft und intern an die Session gebunden, Anzahl und Größe der Teile sind begrenzt, abgelehnte und verwaiste Teile werden aufgeräumt (nach 24 Stunden). Der Zwischenspeicher erhält zusätzlich eine `.htaccess`.
+- **Ausgabe im Browser maskiert**: Dateinamen, Titel, Metadaten, Feldnamen und Sprachbezeichnungen werden im Custom-Widget und im Backend-Dashboard als Text ausgegeben.
+- **Fehlermeldungen**: Interne Fehlerdetails werden nicht mehr an den Browser gesendet; anonyme Anfragen führen nicht mehr zu einem 500-Fehler, weil die Session vor der Prüfung gestartet wird.
+- Die Rechteprüfung von Upload- und Metadaten-Endpunkt liegt jetzt zentral in der neuen Klasse `FriendsOfRedaxo\Uppy\Security`.
+
+### ⚠️ Geänderte Verhalten (für Integratoren)
+- Eigene Frontend-Einbindungen **ohne** `data-uppy-signature` funktionieren ohne Backend-Login nicht mehr. Feld mit `Utils::field()`, dem YForm-Feld oder `Signature::create()` ausgeben.
+- Seiten mit Upload-Feld dürfen nicht aus einem gemeinsamen Seiten-Cache kommen (Signatur gehört zur Session, 24 Stunden gültig). Ältere Signaturen aus Version 2.10 werden nicht mehr angenommen – betroffene Seiten einmal neu laden.
+- `upload_folder` darf nicht mehr in `media/`, `assets/`, `redaxo/` (außer eigenen Unterordnern von `redaxo/data/`) oder `vendor/` zeigen. Ordner außerhalb der Installation (z.B. `../data/uploads`) müssen unter **Uppy → Einstellungen → Freigegebene Ordner für Upload-Ordner** eingetragen werden.
+- Dateinamen in Upload-Ordnern werden normalisiert (Kleinbuchstaben, `a-z`, `0-9`, `-`, `_`, `.`).
+- Ein mitgesendeter Token in der URL (`api_token=…`) wird ignoriert.
+- `Signature::create()` liefert ein neues Format (`u2.…`); `Signature::verify()` funktioniert weiter, neu ist `Signature::decode()`.
+- `UppyUploadHandler::isAuthorized()` und `UppyMetadataHandler::isAuthorized()` sind deprecated und rufen `Security::authorize()` auf.
+- Bei nginx greifen die `.htaccess`-Dateien nicht – Hinweise zur Server-Konfiguration stehen in der README.
+
+### 🐛 Bugfixes
+- **Metadaten ab REDAXO 5.21.5 wieder gespeichert** (#51): Seit REDAXO 5.21.5 merkt sich der Medien-Instanz-Cache auch „nicht gefunden“; Titel und MetaInfo-Felder wurden dadurch nach dem Upload nicht mehr gespeichert. Behoben.
+- **Source-Map-Verweise aus den Uppy-Styles entfernt**: Die mitgelieferten Uppy-CSS-Dateien verwiesen auf nicht ausgelieferte Source-Maps, was 404-Anfragen im Browser erzeugte.
+- Klarere Fehlermeldung, wenn ein Chunk größer ist als `upload_max_filesize` von PHP.
+
+### 📦 Abhängigkeiten
+- `@uppy/core` `6.2.0` → `6.3.0`, `@uppy/dashboard` und `@uppy/webcam` `6.0.1` → `6.0.2`, `@uppy/image-editor` `5.0.0` → `5.0.1`, `@uppy/locales` `5.3.0` → `5.3.1` (#52). Bundles neu gebaut.
+
 ## Version 2.10.3 (2026-10-08)
 
 ### 📦 Abhängigkeiten

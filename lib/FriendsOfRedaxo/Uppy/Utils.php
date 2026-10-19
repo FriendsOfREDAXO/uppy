@@ -16,9 +16,9 @@ class Utils
     /**
      * Setzt den Uppy-API-Token in die aktuelle Browser-Session.
      * Dies ist notwendig, damit Uppy im Frontend (ohne Backend/YCom-Login)
-     * Dateien hochladen darf. Ohne konfigurierten Token passiert nichts -
-     * die serverseitige Rechteprüfung in UppyUploadHandler::isAuthorized()
-     * bleibt davon unberührt.
+     * Dateien hochladen darf. Der Token allein reicht seit 2.11.0 nicht:
+     * Zusätzlich braucht jede Anfrage die signierte Feld-Konfiguration
+     * (siehe Security::authorize()). Der Token wird nie ins HTML geschrieben.
      *
      * Am besten ganz oben im Template oder im PHP-Code des Moduls aufrufen.
      */

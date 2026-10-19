@@ -12,7 +12,6 @@ export class ChunkUploader {
             chunkSize: 5 * 1024 * 1024, // 5MB default
             categoryId: 0,
             uploadDir: '',
-            apiToken: '',
             requestParams: null
         }, opts);
         

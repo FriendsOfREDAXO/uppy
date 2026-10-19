@@ -72,8 +72,9 @@ class Field
 
         $id = (string) ($options['id'] ?? ('uppy-field-' . preg_replace('/[^a-zA-Z0-9_-]/', '-', $name)));
 
-        // Signatur gegen Manipulation der obigen Werte im Frontend (siehe Signature::verify()
-        // in UppyUploadHandler::processUploadedFile) - Werte muessen exakt den data-Attributen entsprechen.
+        // Signierte Feld-Konfiguration: Der Server liest Kategorie, Typen, Groesse und Upload-Ordner
+        // ausschliesslich aus dieser Signatur (an die Session gebunden, 24 Stunden gueltig),
+        // siehe Security::resolveUploadConfig().
         $signature = Signature::create([
             'category_id' => $categoryId,
             'allowed_types' => $allowedTypes,
