@@ -70,27 +70,33 @@ Verarbeitet Datei-Uploads in drei Modi:
 
 | Parameter | Typ | Beschreibung | Erforderlich |
 |-----------|-----|--------------|--------------|
-| `file` | File | Die hochzuladende Datei | Ja |
-| `category_id` | Integer | Mediapool-Kategorie ID | Nein (Standard: 0) |
+| `func` | String | `prepare`, `upload`, `chunk` oder `finalize` | Ja |
+| `file` | File | Die hochzuladende Datei bzw. der Chunk | Ja (upload/chunk) |
+| `uppy_signature` | String | Signierte Feld-Konfiguration (auch als Header `X-Uppy-Signature`) | **Ja ohne Backend-Login**, für Upload-Ordner immer |
+| `category_id` | Integer | Mediapool-Kategorie – wird nur bei Backend-Usern **ohne** Signatur ausgewertet | Nein |
 | `title` | String | Datei-Titel | Nein |
-| `metadata` | JSON String | MetaInfo-Felder als JSON | Nein |
-| `uppy_signature` | String | Signatur für sichere Uploads | Nein |
-| `uppy_chunk_index` | Integer | Chunk-Index (bei Chunk-Upload) | Nein |
-| `uppy_chunk_total` | Integer | Anzahl Chunks gesamt | Nein |
-| `uppy_chunk_id` | String | Eindeutige Chunk-Session-ID | Nein |
+| `metadata` | JSON String | MetaInfo-Felder als JSON (bei `prepare`) | Nein |
+| `fileId` | String | Upload-ID, nur `A-Z a-z 0-9 _ -`, max. 64 Zeichen | Ja (prepare/chunk/finalize) |
+| `chunkIndex` / `totalChunks` | Integer | Chunk-Nummer (0-basiert) und Anzahl | Ja (chunk/finalize) |
+| `fileName` | String | Original-Dateiname (bei `finalize`) | Ja (finalize) |
+| `replace_file_id` | Integer | Mediapool-Datei ersetzen (nur Backend) | Nein |
+
+Seit 2.11.0 werden `upload_dir`, `uppy_allowed_types` und `uppy_max_filesize` aus dem Request **nicht mehr ausgewertet** – die Werte kommen ausschließlich aus der Signatur. Der API-Token (für Server-zu-Server-Aufrufe) wird nur noch als Header `X-Uppy-Token` oder POST-Feld `api_token` angenommen, nicht mehr in der URL.
 
 #### Chunk-Upload Parameter
 
-Bei aktiviertem Chunk-Upload werden zusätzliche Parameter gesendet:
+Bei aktiviertem Chunk-Upload sendet das Widget nacheinander `prepare`, mehrere `chunk`-Anfragen und `finalize`:
 
 ```javascript
 {
-    uppy_chunk_index: 0,        // Aktueller Chunk (0-basiert)
-    uppy_chunk_total: 5,        // Gesamtanzahl Chunks
-    uppy_chunk_id: "abc123",    // Eindeutige Session-ID
-    file: [Blob]                // Chunk-Daten
+    fileId: "uppy_1760000000000_abc123def", // Upload-ID
+    chunkIndex: 0,                          // Aktueller Chunk (0-basiert)
+    totalChunks: 5,                         // Gesamtanzahl Chunks
+    file: [Blob]                            // Chunk-Daten
 }
 ```
+
+Grenzen: ein Chunk darf höchstens die eingestellte Chunk-Größe (+64 KB) haben, alle Chunks zusammen höchstens die erlaubte Maximalgröße; die Anzahl der Chunks ist entsprechend begrenzt.
 
 #### Response-Format
 
@@ -127,12 +133,13 @@ Bei aktiviertem Chunk-Upload werden zusätzliche Parameter gesendet:
 
 #### Validierung
 
-Der Endpunkt validiert:
-- Dateigröße (via `max_filesize`)
-- Dateityp (via `allowed_types`)
-- Signatur (wenn vorhanden)
-- Mediapool-Kategorierechte
-- MetaInfo-Pflichtfelder
+Der Endpunkt validiert (zentral in `FriendsOfRedaxo\Uppy\Security`):
+- Berechtigung: Backend-Login **oder** gültige, an die Session gebundene Signatur plus API-Token/YCom/`UPPY_AUTH_CHECK`
+- Dateigröße (signiertes `max_filesize`, höchstens die globale Einstellung)
+- Dateiname gegen die Sperrliste (alle Punkt-Segmente, z.B. `bild.php.jpg`) und die Sperrliste des Mediapools
+- Echten Dateityp per `finfo` gegen `allowed_types`; SVG nur ohne Skripte
+- Upload-Ordner: nur unterhalb der Installation bzw. freigegebener Ordner, keine Systemordner
+- Mediapool-Kategorierechte (Backend-User)
 
 ---
 
@@ -236,19 +243,17 @@ protected function assembleChunks(string $chunkId, string $filename): string
 
 **Rückgabe:** Pfad zur zusammengesetzten Datei
 
-##### `validateSignature(): bool`
+##### Sicherheitsprüfungen (`Security`)
 
-Validiert signierte Upload-Anfragen.
+Seit 2.11.0 liegt die gesamte Rechte- und Dateiprüfung in `FriendsOfRedaxo\Uppy\Security` und wird von Upload- und Metadaten-Endpunkt gemeinsam genutzt:
 
-```php
-protected function validateSignature(array $params, string $signature): bool
-```
+- `Security::authorize(): array` – Backend-User oder gültige Signatur + Token/YCom/EP, sonst `rex_api_exception`
+- `Security::resolveUploadConfig(array $auth): array` – wirksame Kategorie, Typen, Maximalgröße, Upload-Ordner
+- `Security::assertFilenameAllowed(string $filename, bool $customFolder): void`
+- `Security::assertContentAllowed(string $path, string $filename, string $allowedTypes, bool $enforceTypes, bool $customFolder): string`
+- `Security::resolveCustomDirectory(string $uploadDir, bool $create = true): string`
 
-**Parameter:**
-- `$params` - Array mit zu validierenden Parametern
-- `$signature` - Übermittelte Signatur
-
-**Rückgabe:** `true` wenn Signatur gültig, sonst `false`
+`UppyUploadHandler::isAuthorized()` und `UppyMetadataHandler::isAuthorized()` bleiben für abgeleitete Klassen erhalten (deprecated) und rufen `Security::authorize()` auf.
 
 #### Verwendungsbeispiel
 
@@ -303,18 +308,19 @@ fetch('/redaxo/index.php?rex-api-call=uppy_metadata')
 
 #### Methoden
 
-##### `create(array $params): string`
+##### `create(array $params, ?int $ttl = null): string`
 
-Erstellt eine HMAC-SHA256 Signatur für gegebene Parameter.
+Erstellt eine signierte Feld-Konfiguration (HMAC-SHA256). Sie enthält die Werte selbst, ein Ablaufdatum (Standard 24 Stunden, `Signature::DEFAULT_TTL`) und eine Bindung an die aktuelle Browser-Session (startet die Session bei Bedarf).
 
 ```php
-public static function create(array $params): string
+public static function create(array $params, ?int $ttl = null): string
 ```
 
 **Parameter:**
-- `$params` - Assoziatives Array mit Parametern (z.B. `category_id`, `allowed_types`, `max_filesize`)
+- `$params` - Assoziatives Array (`category_id`, `allowed_types`, `max_filesize`, `upload_dir`)
+- `$ttl` - Gültigkeit in Sekunden (optional)
 
-**Rückgabe:** Base64-kodierte Signatur
+**Rückgabe:** Signatur im Format `u2.<daten>.<hmac>` (Format seit 2.11.0; ältere Signaturen werden nicht mehr angenommen)
 
 **Beispiel:**
 ```php
@@ -327,8 +333,12 @@ $params = [
 ];
 
 $signature = Signature::create($params);
-// Rückgabe: "a7f8d9c2e3b4..."
+// Rückgabe: "u2.eyJwIjp7..."
 ```
+
+##### `decode(string $signature, bool $checkSession = true): ?array`
+
+Prüft HMAC, Ablaufdatum und (optional) die Session-Bindung und gibt die signierten Werte zurück, sonst `null`.
 
 ##### `verify(array $params, string $signature): bool`
 
@@ -575,10 +585,13 @@ Geschieht automatisch im `UppyUploadHandler`. Bei ungültiger Signatur:
 
 ### Sicherheitshinweise
 
-- **Geheimer Schlüssel**: Wird aus `rex_config::get('uppy', 'signature_secret')` gelesen
+- **Geheimer Schlüssel**: Wird aus `rex_config::get('uppy', 'secret')` gelesen
 - Falls nicht gesetzt, wird automatisch ein zufälliger Schlüssel generiert
 - **Parameter-Reihenfolge**: Spielt keine Rolle, Array wird intern sortiert
-- **Manipulation**: Jede Änderung an signierten Parametern macht die Signatur ungültig
+- **Manipulation**: Jede Änderung an signierten Werten macht die Signatur ungültig
+- **Pflicht ohne Backend-Login** (seit 2.11.0): Anfragen ohne gültige Signatur werden abgelehnt
+- **Session-Bindung und Ablauf**: Die Signatur gilt nur in der Session, in der sie erzeugt wurde, und 24 Stunden lang. Seiten mit Upload-Feld nicht aus einem gemeinsamen Seiten-Cache ausliefern
+- **Werte nur aus der Signatur**: Kategorie, Typen, Größe und Upload-Ordner werden nicht mehr aus Request-Parametern gelesen
 
 ---
 
@@ -653,25 +666,26 @@ rex_config::set('uppy', 'chunk_size', 5); // MB
 
 1. **Datei wird in Chunks aufgeteilt** (client-seitig)
 2. **Chunks werden sequenziell hochgeladen**
-3. **Server speichert Chunks temporär** in `rex_path::cache('uppy_chunks/')`
+3. **Server speichert Chunks temporär** in `rex_path::addonData('uppy', 'upload/chunks/')`
 4. **Bei letztem Chunk**: Chunks werden zusammengefügt
 5. **Komplette Datei** wird in Mediapool eingefügt
 
 ### Chunk-Speicherort
 
 ```
-redaxo/cache/uppy_chunks/
-    abc123_beispiel.jpg.part.0
-    abc123_beispiel.jpg.part.1
-    abc123_beispiel.jpg.part.2
+redaxo/data/addons/uppy/upload/chunks/
+    <sha256 aus Session und fileId>/0
+    <sha256 aus Session und fileId>/1
     ...
 ```
+
+Der Ordner ist durch die REDAXO-`.htaccess` und eine eigene `.htaccess` gegen Web-Zugriff gesperrt (bei nginx `redaxo/data` sperren). Die Ordnernamen sind an die Session gebunden, sodass fremde Sessions nicht in laufende Uploads schreiben können.
 
 ### Cleanup
 
 Chunks werden automatisch gelöscht:
-- Nach erfolgreicher Assembly
-- Nach 24 Stunden (via REDAXO Cache-Cleanup)
+- Nach erfolgreicher Assembly und auch bei abgelehnten Dateien
+- Nach 24 Stunden (Prüfung höchstens alle 15 Minuten bei neuen Uploads)
 
 ---
 
@@ -785,8 +799,9 @@ Das Addon stellt folgende Extension Points bereit, um in den Upload-Prozess einz
 
 ### `UPPY_AUTH_CHECK`
 
-Wird aufgerufen, bevor ein Upload verarbeitet wird. Erlaubt die Implementierung eigener Authentifizierungs-Logik (z.B. Prüfung eigener Session-Variablen, IP-Whitelists, etc.).
-Wird nur ausgeführt, wenn **keine** der Standard-Methoden (Backend-Login, YCom, API-Token) bereits Zugriff gewährt hat.
+Wird bei Anfragen ohne Backend-Login aufgerufen und erlaubt eigene Authentifizierungs-Logik (z.B. Prüfung eigener Session-Variablen, IP-Whitelists, etc.). Gibt der EP einen Wert ungleich `null` zurück, entscheidet dieser statt API-Token/YCom.
+
+**Seit 2.11.0:** Der EP ersetzt **nicht** die Signaturprüfung, die Sperrliste und die Ordner-Prüfungen – auch mit `true` braucht die Anfrage eine gültige, an die Session gebundene Signatur.
 
 **Parameter:**
 - `subject` (bool): `false` (Standard). Muss `true` zurückgeben, um Zugriff zu gewähren.
@@ -857,18 +872,16 @@ max_execution_time = 300
 ```
 
 **Problem:** Chunk-Upload funktioniert nicht  
-**Lösung:** Cache-Ordner prüfen:
-```php
-rex_dir::create(rex_path::cache('uppy_chunks'));
-```
+**Lösung:** Chunk-Größe (Einstellungen) muss kleiner als `upload_max_filesize` sein; Schreibrechte für `redaxo/data/addons/uppy/upload/` prüfen.
 
 ### Signatur-Fehler
 
-**Problem:** "Invalid signature"  
+**Problem:** "Unauthorized access" (403) oder "Invalid signature" (400)  
 **Lösung:** 
-- Prüfen ob alle Parameter korrekt übergeben werden
-- Sicherstellen dass `signature_secret` konsistent ist
-- Cache leeren (`rex_delete_cache()`)
+- Feld mit `Utils::field()`, dem YForm-Feld oder `Signature::create()` ausgeben – ohne Signatur gibt es ohne Backend-Login keinen Upload
+- Seite mit dem Upload-Feld nicht cachen (Signatur ist an die Session gebunden und 24 Stunden gültig)
+- Session-Cookie muss beim Upload mitgesendet werden (gleiche Domain)
+- Sicherstellen dass `secret` in der Uppy-Konfiguration konsistent ist
 
 ### Metadaten werden nicht gespeichert
 

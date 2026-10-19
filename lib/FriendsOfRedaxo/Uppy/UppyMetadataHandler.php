@@ -7,20 +7,15 @@ use rex;
 use rex_addon;
 use rex_api_exception;
 use rex_api_function;
-use rex_backend_login;
 use rex_clang;
 use rex_config;
-use rex_extension;
-use rex_extension_point;
 use rex_i18n;
 use rex_logger;
 use rex_media;
 use rex_media_cache;
-use rex_plugin;
 use rex_response;
 use rex_sql;
 use rex_sql_exception;
-use rex_ycom_auth;
 
 use function count;
 use function in_array;
@@ -53,13 +48,18 @@ class UppyMetadataHandler extends rex_api_function
         exit;
     }
 
+    /**
+     * Rechte-Kontext des aktuellen Aufrufs (siehe Security::authorize()).
+     *
+     * @var array{backend: bool, user: ?\rex_user, signed: bool, config: ?array<string, mixed>}|null
+     */
+    protected ?array $auth = null;
+
     public function execute()
     {
         try {
-            // Authentifizierung prüfen
-            if (!$this->isAuthorized()) {
-                throw new rex_api_exception('Unauthorized access');
-            }
+            // Authentifizierung prüfen: Backend-User oder gültige, an die Session gebundene Signatur
+            $this->auth = Security::authorize();
 
             $action = rex_request('action', 'string', '');
 
@@ -81,78 +81,52 @@ class UppyMetadataHandler extends rex_api_function
                     break;
 
                 default:
-                    throw new rex_api_exception('Invalid action: ' . $action);
+                    throw new rex_api_exception('Invalid action');
             }
         } catch (rex_api_exception $e) {
             rex_logger::factory()->log('warning', 'Uppy Metadata API Exception: ' . $e->getMessage());
-            $this->sendResponse(['error' => $e->getMessage()], rex_response::HTTP_BAD_REQUEST);
+            $status = 'Unauthorized access' === $e->getMessage() ? rex_response::HTTP_FORBIDDEN : rex_response::HTTP_BAD_REQUEST;
+            $this->sendResponse(['error' => $e->getMessage()], $status);
         } catch (Exception $e) {
             rex_logger::logException($e);
-            $this->sendResponse(['error' => $e->getMessage()], rex_response::HTTP_INTERNAL_ERROR);
+            $this->sendResponse(['error' => 'Request failed'], rex_response::HTTP_INTERNAL_ERROR);
         }
     }
 
     /**
      * Prüft die Authentifizierung.
-     * Gleiche Logik wie UppyUploadHandler::isAuthorized()
+     *
+     * @deprecated seit 2.11.0, die Prüfung liegt zentral in Security::authorize()
      */
     protected function isAuthorized(): bool
     {
-        // Session starten, falls noch nicht aktiv
-        if (session_status() !== PHP_SESSION_ACTIVE) {
-            \rex_login::startSession();
-        }
-
-        // 1. Backend-User
-        $user = rex_backend_login::createUser();
-        if ($user) {
+        try {
+            Security::authorize();
             return true;
+        } catch (rex_api_exception) {
+            return false;
         }
+    }
 
-        // Vorbereitung für Checks
-        $apiToken = rex_config::get('uppy', 'api_token');
-        $requestToken = rex_request('api_token', 'string', null);
-        $sessionToken = rex_session('uppy_token', 'string', '');
-        $tokenValid = ($apiToken && (
-            ($requestToken && hash_equals($apiToken, $requestToken))
-            || ($sessionToken && hash_equals($apiToken, $sessionToken))
-        ));
-
-        // 2. Extension Point (Custom Auth)
-        $epResult = rex_extension::registerPoint(new rex_extension_point('UPPY_AUTH_CHECK', null, [
-            'token_valid' => $tokenValid,
-            'request_token' => $requestToken,
-            'session_token' => $sessionToken
-        ]));
-
-        if (null !== $epResult) {
-            return (bool) $epResult;
-        }
-
-        // 3. Not-Aus
-        if (rex_config::get('uppy', 'auth_disable_checks', 0)) {
-            return true;
-        }
-
-        // 4. YCom Strict Check
-        if (rex_config::get('uppy', 'ycom_auth_enabled', 0)) {
-            $ycomUser = rex_ycom_auth::getUser();
-            return (bool) $ycomUser;
-        }
-
-        // 5. API-Token Check (Request oder Session)
-        if ($tokenValid) {
-            return true;
-        }
-
-        // 6. Fallback YCom
-        if (rex_plugin::get('ycom', 'auth')->isAvailable()) {
-            if (rex_ycom_auth::getUser()) {
-                return true;
+    /**
+     * Darf der aktuelle Aufrufer die Metadaten dieser Datei lesen/ändern?
+     * Backend: Rechte für die Medienkategorie. Frontend: nur in dieser Session hochgeladene Dateien.
+     *
+     * @throws rex_api_exception
+     */
+    protected function assertMediaAccess(rex_media $media): void
+    {
+        if (null !== $this->auth && $this->auth['backend']) {
+            $user = $this->auth['user'];
+            if ($user && !$user->getComplexPerm('media')->hasCategoryPerm($media->getCategoryId())) {
+                throw new rex_api_exception('No permission for this media file');
             }
+            return;
         }
 
-        return false;
+        if (!Security::wasUploadedInSession($media->getFileName())) {
+            throw new rex_api_exception('No permission for this media file');
+        }
     }
 
     /**
@@ -374,8 +348,9 @@ class UppyMetadataHandler extends rex_api_function
         $media = rex_media::get($filename);
 
         if (!$media) {
-            throw new rex_api_exception('Media not found: ' . $filename);
+            throw new rex_api_exception('Media not found');
         }
+        $this->assertMediaAccess($media);
 
         $metadata = [
             'title' => $media->getTitle(),
@@ -424,8 +399,9 @@ class UppyMetadataHandler extends rex_api_function
         $media = rex_media::get($filename);
 
         if (!$media) {
-            throw new rex_api_exception('Media not found: ' . $filename);
+            throw new rex_api_exception('Media not found');
         }
+        $this->assertMediaAccess($media);
 
         // SQL Update vorbereiten
         $sql = rex_sql::factory();

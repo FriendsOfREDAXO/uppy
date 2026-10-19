@@ -49,7 +49,7 @@ function initializeUppyWidget(inputElement) {
     
     // Konfiguration aus data-Attributen
     const config = {
-        apiToken: inputElement.dataset.apiToken || '',
+        signature: inputElement.dataset.uppySignature || '',
         maxFiles: parseInt(inputElement.dataset.maxFiles) || 10,
         maxFileSize: parseInt(inputElement.dataset.maxFilesize) || (200 * 1024 * 1024),
         allowedTypes: inputElement.dataset.allowedTypes ? inputElement.dataset.allowedTypes.split(',') : [],
@@ -63,7 +63,7 @@ function initializeUppyWidget(inputElement) {
     };
     
     // Metadaten-Felder laden
-    loadMetadataFields(config.apiToken).then(function(metaFields) {
+    loadMetadataFields(config.signature).then(function(metaFields) {
         const uppy = new Uppy({
             id: 'uppy-' + Math.random().toString(36).substr(2, 9),
             autoProceed: false,
@@ -97,7 +97,8 @@ function initializeUppyWidget(inputElement) {
 
 function initializeUppyPlugins(uppy, config, inputElement) {
     uppy.use(XHRUpload, {
-        endpoint: window.location.origin + '/index.php?rex-api-call=uppy_uploader&func=upload&api_token=' + encodeURIComponent(config.apiToken) + '&category_id=' + config.categoryId,
+        // Kein API-Token in der URL: Der Server prüft die signierte Feld-Konfiguration (Session-gebunden)
+        endpoint: window.location.origin + '/index.php?rex-api-call=uppy_uploader&func=upload&uppy_signature=' + encodeURIComponent(config.signature),
         formData: true,
         fieldName: 'file',
         allowedMetaFields: true, // WICHTIG: Alle Metadaten mitsenden
@@ -176,8 +177,10 @@ function setupEventHandlers(uppy, config, inputElement) {
     });
 }
 
-function loadMetadataFields(apiToken) {
-    return fetch(window.location.origin + '/index.php?rex-api-call=uppy_metadata&action=get_fields&api_token=' + apiToken)
+function loadMetadataFields(signature) {
+    return fetch(window.location.origin + '/index.php?rex-api-call=uppy_metadata&action=get_fields&uppy_signature=' + encodeURIComponent(signature || ''), {
+        credentials: 'same-origin'
+    })
         .then(function(response) {
             if (!response.ok) {
                 throw new Error('HTTP ' + response.status);

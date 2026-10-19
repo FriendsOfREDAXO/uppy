@@ -138,7 +138,6 @@ function initializeUppyWidget(inputElement) {
 
     // Konfiguration aus data-Attributen oder Defaults
     const config = {
-        apiToken: inputElement.dataset.apiToken || '', // Im Backend optional (User ist bereits authentifiziert)
         maxFiles: parseInt(inputElement.dataset.maxFiles) || 10,
         maxFileSize: (parseInt(inputElement.dataset.maxFilesize) || 200) * 1024 * 1024, // MB in Bytes umrechnen
         allowedTypes: inputElement.dataset.allowedTypes ? inputElement.dataset.allowedTypes.split(',').map(t => t.trim()) : [],
@@ -160,7 +159,7 @@ function initializeUppyWidget(inputElement) {
     // Metadaten-Felder laden (nur wenn nicht in Ordner hochgeladen wird)
     const metadataPromise = config.uploadDir 
         ? Promise.resolve([]) 
-        : loadMetadataFields(config.apiToken);
+        : loadMetadataFields();
 
     metadataPromise.then(function(metaFields) {
 
@@ -363,8 +362,6 @@ function initializeUppyPlugins(uppy, config, inputElement, metaFields, valueInpu
     }
     
     // Upload Plugin: Chunked oder Standard
-    const tokenParam = config.apiToken ? encodeURIComponent(config.apiToken) : '';
-    
     // Signatur-Parameter vorbereiten
     let signatureParams = '';
     const signature = inputElement.dataset.uppySignature;
@@ -398,7 +395,6 @@ function initializeUppyPlugins(uppy, config, inputElement, metaFields, valueInpu
             chunkSize: config.chunk_size,
             categoryId: () => parseInt(inputElement.dataset.categoryId) || 0,
             uploadDir: () => inputElement.dataset.uploadDir || '',
-            apiToken: tokenParam,
             requestParams: uploadParamsProvider
         });
         chunkUploader.install();
@@ -412,7 +408,7 @@ function initializeUppyPlugins(uppy, config, inputElement, metaFields, valueInpu
             endpoint: (file) => {
                 const categoryId = parseInt(inputElement.dataset.categoryId) || 0;
                 const uploadDir = inputElement.dataset.uploadDir || '';
-                return window.location.origin + '/redaxo/index.php?rex-api-call=uppy_uploader&func=upload&api_token=' + tokenParam + 
+                return window.location.origin + '/redaxo/index.php?rex-api-call=uppy_uploader&func=upload' +
                        '&category_id=' + categoryId + 
                        '&upload_dir=' + encodeURIComponent(uploadDir) + 
                        signatureParams +
@@ -626,6 +622,18 @@ function setupEventHandlers(uppy, config, inputElement, metaFields, valueInput) 
 }
 
 /**
+ * Maskiert Text für die Ausgabe in HTML (Inhalt und Attribute).
+ */
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+/**
  * Zeigt Liste der hochgeladenen Dateien mit Übernehmen-Buttons
  */
 function showUploadedFilesList(files, openerField, inputElement) {
@@ -651,17 +659,17 @@ function showUploadedFilesList(files, openerField, inputElement) {
         const title = file.meta.savedTitle || '';
         
         html += '<li class="list-group-item">';
-        html += '<span class="uppy-file-name">' + filename + '</span>';
+        html += '<span class="uppy-file-name">' + escapeHtml(filename) + '</span>';
         
         if (openerField.indexOf('REX_MEDIA_') === 0 || openerField.indexOf('REX_MEDIALIST_') === 0) {
             // Eindeutige ID für Button
             const btnId = 'uppy-select-' + filename.replace(/[^a-z0-9]/gi, '-');
             
             html += '<button type="button" class="btn btn-xs btn-select btn-highlight pull-right" ';
-            html += 'id="' + btnId + '" ';
-            html += 'data-filename="' + filename + '" ';
-            html += 'data-title="' + title.replace(/"/g, '&quot;') + '" ';
-            html += 'data-opener-field="' + openerField + '">';
+            html += 'id="' + escapeHtml(btnId) + '" ';
+            html += 'data-filename="' + escapeHtml(filename) + '" ';
+            html += 'data-title="' + escapeHtml(title) + '" ';
+            html += 'data-opener-field="' + escapeHtml(openerField) + '">';
             html += 'Übernehmen</button>';
         }
         
@@ -674,7 +682,7 @@ function showUploadedFilesList(files, openerField, inputElement) {
     if (openerField.indexOf('REX_MEDIALIST_') === 0 && files.length > 1) {
         html += '<div style="margin-top: 10px; text-align: center;">';
         html += '<button type="button" class="btn btn-success" id="uppy-select-all-btn" ';
-        html += 'data-opener-field="' + openerField + '">';
+        html += 'data-opener-field="' + escapeHtml(openerField) + '">';
         html += '<i class="fa fa-check-double"></i> Alle übernehmen (' + files.length + ' Dateien)</button>';
         html += '</div>';
     }
@@ -784,14 +792,11 @@ function setupEventHandlersOriginal(uppy, config, inputElement) {
 /**
  * Lädt Metadaten-Felder vom Server
  */
-function loadMetadataFields(apiToken) {
-    
-    // Im Backend ist Token optional, da User bereits authentifiziert ist
-    const url = apiToken 
-        ? window.location.origin + '/redaxo/index.php?rex-api-call=uppy_metadata&action=get_fields&api_token=' + apiToken
-        : window.location.origin + '/redaxo/index.php?rex-api-call=uppy_metadata&action=get_fields';
-    
-    return fetch(url)
+function loadMetadataFields() {
+    // Backend: Der eingeloggte User ist über die Session authentifiziert, kein Token nötig
+    const url = window.location.origin + '/redaxo/index.php?rex-api-call=uppy_metadata&action=get_fields';
+
+    return fetch(url, { credentials: 'same-origin' })
         .then(function(response) {
             if (!response.ok) {
                 throw new Error('HTTP ' + response.status);
@@ -1068,7 +1073,7 @@ function showMetadataModal(uppy, file, metaFields) {
                         <button type="button" class="close" data-dismiss="modal">
                             <span>&times;</span>
                         </button>
-                        <h4 class="modal-title">Metadaten bearbeiten: ${file.name}</h4>
+                        <h4 class="modal-title">Metadaten bearbeiten: ${escapeHtml(file.name)}</h4>
                     </div>
                     <div class="modal-body">
                         <form class="uppy-metadata-form">
@@ -1088,13 +1093,13 @@ function showMetadataModal(uppy, file, metaFields) {
                                     const formattedValue = formatDateValue(value, fieldType);
                                     return `
                                         <div class="form-group">
-                                            <label for="meta-${field.id}">${field.name}</label>
+                                            <label for="meta-${escapeHtml(field.id)}">${escapeHtml(field.name)}</label>
                                             <input 
-                                                type="${inputType}" 
+                                                type="${escapeHtml(inputType)}" 
                                                 class="form-control" 
-                                                id="meta-${field.id}" 
-                                                name="${field.id}"
-                                                value="${formattedValue}"
+                                                id="meta-${escapeHtml(field.id)}" 
+                                                name="${escapeHtml(field.id)}"
+                                                value="${escapeHtml(formattedValue)}"
                                             >
                                         </div>
                                     `;
@@ -1102,13 +1107,13 @@ function showMetadataModal(uppy, file, metaFields) {
                                     // Select-Feld (z.B. für Kategorie)
                                     const options = field.options.map(opt => {
                                         const selected = opt.value == value ? 'selected' : '';
-                                        return `<option value="${opt.value}" ${selected}>${opt.label}</option>`;
+                                        return `<option value="${escapeHtml(opt.value)}" ${selected}>${escapeHtml(opt.label)}</option>`;
                                     }).join('');
                                     
                                     return `
                                         <div class="form-group">
-                                            <label class="control-label">${field.name}</label>
-                                            <select name="${field.id}" class="form-control selectpicker" data-live-search="true">
+                                            <label class="control-label">${escapeHtml(field.name)}</label>
+                                            <select name="${escapeHtml(field.id)}" class="form-control selectpicker" data-live-search="true">
                                                 ${options}
                                             </select>
                                         </div>
@@ -1137,19 +1142,19 @@ function showMetadataModal(uppy, file, metaFields) {
                                         firstLanguageInput = `
                                             <textarea 
                                                 class="form-control uppy-lang-input" 
-                                                data-clang-id="${firstLang.clang_id}"
+                                                data-clang-id="${escapeHtml(firstLang.clang_id)}"
                                                 rows="3"
-                                                placeholder="${firstLang.clang_name}..."
-                                            >${firstValue}</textarea>
+                                                placeholder="${escapeHtml(firstLang.clang_name)}..."
+                                            >${escapeHtml(firstValue)}</textarea>
                                         `;
                                     } else {
                                         firstLanguageInput = `
                                             <input 
                                                 type="text" 
                                                 class="form-control uppy-lang-input" 
-                                                data-clang-id="${firstLang.clang_id}"
-                                                value="${firstValue}"
-                                                placeholder="${firstLang.clang_name}..."
+                                                data-clang-id="${escapeHtml(firstLang.clang_id)}"
+                                                value="${escapeHtml(firstValue)}"
+                                                placeholder="${escapeHtml(firstLang.clang_name)}..."
                                             >
                                         `;
                                     }
@@ -1162,25 +1167,25 @@ function showMetadataModal(uppy, file, metaFields) {
                                             if (inputTag === 'textarea') {
                                                 return `
                                                     <div class="form-group form-group-sm" style="margin-top: 10px;">
-                                                        <label style="font-weight: normal;"><i class="fa fa-flag"></i> ${lang.clang_name} (${lang.clang_code})</label>
+                                                        <label style="font-weight: normal;"><i class="fa fa-flag"></i> ${escapeHtml(lang.clang_name)} (${escapeHtml(lang.clang_code)})</label>
                                                         <textarea 
                                                             class="form-control uppy-lang-input" 
-                                                            data-clang-id="${lang.clang_id}"
+                                                            data-clang-id="${escapeHtml(lang.clang_id)}"
                                                             rows="2"
-                                                            placeholder="${lang.clang_name}..."
-                                                        >${langValue}</textarea>
+                                                            placeholder="${escapeHtml(lang.clang_name)}..."
+                                                        >${escapeHtml(langValue)}</textarea>
                                                     </div>
                                                 `;
                                             } else {
                                                 return `
                                                     <div class="form-group form-group-sm" style="margin-top: 10px;">
-                                                        <label style="font-weight: normal;"><i class="fa fa-flag"></i> ${lang.clang_name} (${lang.clang_code})</label>
+                                                        <label style="font-weight: normal;"><i class="fa fa-flag"></i> ${escapeHtml(lang.clang_name)} (${escapeHtml(lang.clang_code)})</label>
                                                         <input 
                                                             type="text" 
                                                             class="form-control uppy-lang-input" 
-                                                            data-clang-id="${lang.clang_id}"
-                                                            value="${langValue}"
-                                                            placeholder="${lang.clang_name}..."
+                                                            data-clang-id="${escapeHtml(lang.clang_id)}"
+                                                            value="${escapeHtml(langValue)}"
+                                                            placeholder="${escapeHtml(lang.clang_name)}..."
                                                         >
                                                     </div>
                                                 `;
@@ -1191,20 +1196,20 @@ function showMetadataModal(uppy, file, metaFields) {
                                             <button type="button" 
                                                     class="btn btn-default btn-sm" 
                                                     data-toggle="collapse" 
-                                                    data-target="#${collapseId}"
+                                                    data-target="#${escapeHtml(collapseId)}"
                                                     style="margin-top: 5px; margin-bottom: 10px;">
                                                 <i class="fa fa-globe"></i> Weitere Sprachen (${field.languages.length - 1})
                                             </button>
-                                            <div class="collapse" id="${collapseId}">
+                                            <div class="collapse" id="${escapeHtml(collapseId)}">
                                                 ${additionalInputs}
                                             </div>
                                         `;
                                     }
                                     
                                     return `
-                                        <div class="form-group uppy-multilang-field" data-field-id="${field.id}">
-                                            <label class="control-label">${field.name}</label>
-                                            <input type="hidden" name="${field.id}" class="uppy-lang-hidden" value="${value}">
+                                        <div class="form-group uppy-multilang-field" data-field-id="${escapeHtml(field.id)}">
+                                            <label class="control-label">${escapeHtml(field.name)}</label>
+                                            <input type="hidden" name="${escapeHtml(field.id)}" class="uppy-lang-hidden" value="${escapeHtml(value)}">
                                             ${firstLanguageInput}
                                             ${additionalLanguages}
                                         </div>
@@ -1212,27 +1217,27 @@ function showMetadataModal(uppy, file, metaFields) {
                                 } else if (fieldType === 'textarea') {
                                     return `
                                         <div class="form-group">
-                                            <label for="meta-${field.id}">${field.name}</label>
+                                            <label for="meta-${escapeHtml(field.id)}">${escapeHtml(field.name)}</label>
                                             <textarea 
                                                 class="form-control" 
-                                                id="meta-${field.id}" 
-                                                name="${field.id}"
+                                                id="meta-${escapeHtml(field.id)}" 
+                                                name="${escapeHtml(field.id)}"
                                                 rows="3"
-                                                placeholder="${field.placeholder || ''}"
-                                            >${value}</textarea>
+                                                placeholder="${escapeHtml(field.placeholder || '')}"
+                                            >${escapeHtml(value)}</textarea>
                                         </div>
                                     `;
                                 } else {
                                     return `
                                         <div class="form-group">
-                                            <label for="meta-${field.id}">${field.name}</label>
+                                            <label for="meta-${escapeHtml(field.id)}">${escapeHtml(field.name)}</label>
                                             <input 
                                                 type="text" 
                                                 class="form-control" 
-                                                id="meta-${field.id}" 
-                                                name="${field.id}"
-                                                placeholder="${field.placeholder || ''}"
-                                                value="${value}"
+                                                id="meta-${escapeHtml(field.id)}" 
+                                                name="${escapeHtml(field.id)}"
+                                                placeholder="${escapeHtml(field.placeholder || '')}"
+                                                value="${escapeHtml(value)}"
                                             >
                                         </div>
                                     `;

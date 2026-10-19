@@ -109,7 +109,7 @@ Field: uppy_uploader
 Name: gallery
 Label: Bildergalerie
 category_id: 5
-upload_folder: media/galleries/
+upload_folder: files/galleries/
 max_files: 10
 enable_image_editor: 1
 allow_mediapool: 1
@@ -126,10 +126,22 @@ Wenn Dateien nicht in den Mediapool, sondern in einen eigenen Ordner (z.B. `publ
 
 Die Auslieferung erfolgt ueber einen internen Backend-API-Endpunkt (`rex-api-call=uppy_file_access`) mit Session-Pruefung und Pfadvalidierung.
 
-**Wichtig zur Pfadangabe:**
-- `upload_folder` wird immer relativ zum Webroot aufgeloest und darf bewusst auch `..` enthalten.
-- Beispiele: `redaxo/data`, `../data/uploads`, `../../meine_daten`.
-- Damit kannst du je nach Hosting-Setup frei bestimmen, ob innerhalb oder oberhalb des Webroots gespeichert wird.
+**Wichtig zur Pfadangabe (seit 2.11.0):**
+- `upload_folder` wird relativ zur REDAXO-Installation (`rex_path::base()`) aufgelöst und muss darunter liegen.
+- Gesperrt sind die REDAXO-Systemordner (`redaxo/`, `assets/`, `media/` – dafür gibt es den Mediapool –, `vendor/`, `node_modules/`) und versteckte Ordner (`.git` usw.). Erlaubt sind eigene Unterordner von `redaxo/data/` (z.B. `redaxo/data/uploads`), die über das Web nicht erreichbar sind; `redaxo/data/core` und `redaxo/data/addons` bleiben gesperrt.
+- Ordner außerhalb der Installation (z.B. `../data/uploads` neben dem Webroot) gehen nur noch, wenn der übergeordnete Ordner unter **Uppy → Einstellungen → Freigegebene Ordner für Upload-Ordner** als absoluter Pfad eingetragen ist. Sonst wird der Upload abgelehnt.
+- Der Upload-Ordner wird nur noch über die signierte Feld-Konfiguration übernommen (YForm-Feld, `Utils::field()`, `Signature::create()`), nie aus freien Request-Parametern.
+- Legt Uppy einen Ordner neu an, schreibt es eine `.htaccess` (keine Skriptausführung) und eine leere `index.html` hinein. Dateinamen werden wie im Mediapool normalisiert (Kleinbuchstaben, `a-z`, `0-9`, `-`, `_`, `.`).
+
+**nginx:** `.htaccess` wird von nginx ignoriert. Upload-Ordner im Webroot daher in der Server-Konfiguration gegen Skriptausführung sperren, z.B.:
+
+```nginx
+location ^~ /files/galleries/ {
+    location ~* \.(php\d?|phtml|phar|pl|py|cgi|sh|asp|aspx|jsp|shtml|html?|svg|js)$ { deny all; }
+}
+# Wie bei jeder REDAXO-Installation: redaxo/ (inkl. redaxo/data mit den Upload-Zwischendateien) sperren
+location ~ ^/redaxo/(data|cache|src|bin)/ { deny all; }
+```
 
 Die hochgeladenen Dateien werden als komma-separierte Liste der Dateinamen gespeichert. In der Listenansicht werden Vorschaubilder (bei Bildern) oder Icons (bei anderen Dateitypen) mit einem kompakten Design angezeigt.
 
@@ -195,15 +207,17 @@ Für die Verwendung im Frontend (z.B. in eigenen Formularen) steht das **Custom 
 
 #### Authentifizierung
 
-Der Upload-Handler unterstützt **drei Authentifizierungsmethoden** (in dieser Reihenfolge geprüft):
+**Seit 2.11.0 gilt:** Jede Upload- und Metadaten-Anfrage ohne Backend-Login braucht eine gültige **Feld-Signatur** (`data-uppy-signature`). Die Signatur entsteht beim Ausgeben des Feldes (YForm-Feld, `Utils::field()` oder `Signature::create()`), gilt 24 Stunden und nur in der Browser-Session, in der das Feld ausgegeben wurde. Kategorie, erlaubte Dateitypen, Maximalgröße und Upload-Ordner liest der Server ausschließlich aus dieser Signatur. Zusätzlich muss eine der folgenden Bedingungen erfüllt sein (in dieser Reihenfolge geprüft):
 
 **1. Backend-User (automatisch)**
-- Wenn ein REDAXO Backend-User eingeloggt ist, funktioniert der Upload automatisch
-- Keine zusätzliche Konfiguration nötig
+- Wenn ein REDAXO Backend-User eingeloggt ist, funktioniert der Upload automatisch (Signatur optional, für Upload-Ordner Pflicht)
+- Geprüft wird das Recht auf die gewählte Medienkategorie
 
 **2. API-Token (Session-basiert)**
 - Für öffentliche Frontend-Formulare ohne User-Login
 - Token wird serverseitig in der PHP-Session gespeichert (nie im Browser sichtbar!)
+- Für Server-zu-Server-Aufrufe kann der Token als Header `X-Uppy-Token` oder als POST-Feld `api_token` gesendet werden – **nicht mehr als URL-Parameter**. Auch dann ist eine gültige Signatur nötig.
+- Der Token allein erlaubt keinen Upload.
 
 Am einfachsten über den Helper (empfohlen):
 ```php
@@ -220,8 +234,23 @@ rex_set_session('uppy_token', rex_config::get('uppy', 'api_token'));
 - Wenn YCom installiert ist und ein User eingeloggt ist
 - Funktioniert automatisch ohne weitere Konfiguration
 
+Über den Extension Point `UPPY_AUTH_CHECK` lässt sich die Entscheidung bei 2. und 3. selbst treffen. Signatur, Sperrliste und Ordner-Prüfungen gelten trotzdem.
+
 > **Sicherheitshinweis:** Der Session-Token wird nie im Browser-DOM oder in Cookies übertragen. 
 > Er bleibt serverseitig in der PHP-Session und wird bei jedem Upload validiert.
+
+> **Entfernt in 2.11.0:** Die Einstellung „Sicherheits-Checks deaktivieren“ gibt es nicht mehr. Öffentliche Upload-Formulare funktionieren über `Utils::init()`/`Utils::field()` (bzw. das YForm-Feld), weil dort Token und Signatur automatisch gesetzt werden.
+
+> **Seiten-Cache:** Weil die Signatur an die Session gebunden ist, dürfen Seiten mit Upload-Feld nicht aus einem gemeinsamen Seiten-Cache ausgeliefert werden.
+
+#### Serverseitige Prüfungen (alle Upload-Wege)
+
+- **Sperrliste:** Dateinamen mit ausführbaren oder serverrelevanten Endungen (u.a. `php`, `phtml`, `phar`, `pl`, `py`, `cgi`, `sh`, `asp(x)`, `jsp`, `shtml`, `htaccess`, `htpasswd`, `ini`, `exe`, `dll`) werden abgelehnt – in jedem Teil des Namens, unabhängig von Groß-/Kleinschreibung. HTML/XHTML/XML und SVGZ sind immer gesperrt, SVG nur ohne Skripte oder Event-Handler erlaubt; in Upload-Ordnern sind zusätzlich SVG und JavaScript gesperrt. Dazu kommt die Sperrliste des Mediapools.
+- **Echter Dateityp:** Der MIME-Type wird per `finfo` aus dem Dateiinhalt ermittelt (nicht aus der Browser-Angabe) und gegen die erlaubten Typen geprüft; in Upload-Ordnern muss er außerdem zur Endung passen (gleiche Zuordnung wie im Mediapool).
+- **Chunk-Upload:** Upload-IDs nur aus `A-Z a-z 0-9 _ -` (max. 64 Zeichen), Anzahl und Größe der Teile begrenzt, verwaiste Teile werden nach 24 Stunden gelöscht.
+- **Metadaten im Frontend:** Ohne Backend-Login lassen sich nur die Metadaten von Dateien lesen und ändern, die in derselben Session hochgeladen wurden.
+- **E-Mail-Anhänge (`uppy2email`):** Im Frontend werden nur Dateien angehängt, die in derselben Session hochgeladen wurden.
+
 
 #### Integration
 
@@ -311,7 +340,7 @@ Wenn das Plugin **`ycom/media_auth`** aktiv ist, kann auf der Upload-Seite ein o
 
 Standardmäßig werden Einschränkungen wie `data-max-filesize` oder `data-allowed-types` nur client-seitig im Browser geprüft. Ein versierter Nutzer könnte diese Werte über die Entwicklertools manipulieren.
 
-Um dies zu verhindern, lassen sich die Parameter serverseitig signieren. Dabei wird ein Hash über die erlaubten Werte generiert. Der Server prüft beim Upload, ob die Signatur zu den gesendeten Parametern passt.
+Um dies zu verhindern, werden die Parameter serverseitig signiert. Seit 2.11.0 enthält die Signatur die Werte selbst, ein Ablaufdatum (24 Stunden) und eine Bindung an die Browser-Session. Der Server nimmt die Werte ausschließlich aus der Signatur – mitgeschickte Parameter werden ignoriert. Ohne Backend-Login ist die Signatur Pflicht.
 
 > **Wichtig:** Bei Verwendung über **YForm (`uppy_uploader`)** oder im **REDAXO-Backend** kümmert sich das AddOn **automatisch** um die Erstellung und Prüfung der Signaturen. Du musst hier nichts weiter tun. Die manuelle Erstellung (siehe unten) ist nur für eigene Frontend-Implementierungen erforderlich.
 
@@ -325,7 +354,7 @@ Um dies zu verhindern, lassen sich die Parameter serverseitig signieren. Dabei w
 *   `allowed_types`
 *   `max_filesize`
 
-Wenn die Signatur fehlt oder ungültig ist, lehnt der Server den Upload mit einem Fehler (400 Bad Request) ab.
+Wenn die Signatur fehlt, lehnt der Server den Upload mit 403 ab, bei ungültiger, abgelaufener oder fremder Signatur mit 400. Die Signatur muss in derselben Anfrage/Session erzeugt werden, in der das Feld ausgegeben wird – nicht zwischenspeichern.
 
 ### Funktionsweise
 1. Die Parameter werden in PHP definiert.
@@ -345,7 +374,7 @@ $params = [
     'category_id' => 1,
     'allowed_types' => 'image/jpeg,image/png',
     'max_filesize' => 500, // in MB
-    'upload_dir' => 'media/protected/' // Optional: Zielordner schützen
+    'upload_dir' => 'redaxo/data/protected' // Optional: Upload-Ordner statt Mediapool
 ];
 
 // Signatur erstellen
@@ -404,7 +433,7 @@ Das Uppy AddOn erkennt automatisch folgende MetaInfo-Feldtypen und rendert diese
 > **Hinweis:** Date/DateTime/Time Felder werden als Unix-Timestamp gespeichert, genau wie die Standard REDAXO MetaInfo-Felder. Die Konvertierung erfolgt automatisch.
 
 ### Chunk Upload
-Der Chunk-Upload teilt große Dateien in kleine Blöcke (Standard: 5MB) und sendet diese sequenziell an den Server. Dies verhindert Timeouts und Memory-Limits bei großen Uploads.
+Der Chunk-Upload teilt große Dateien in kleine Blöcke (Standard: 5MB) und sendet diese sequenziell an den Server. Dies verhindert Timeouts und Memory-Limits bei großen Uploads. Die Chunk-Größe muss unter `upload_max_filesize` von PHP liegen. Die Teile liegen in `redaxo/data/addons/uppy/upload/` (durch die REDAXO-`.htaccess` und eine eigene `.htaccess` gesperrt; bei nginx `redaxo/data` sperren, siehe oben).
 
 ### SVG Support
 SVG-Dateien werden automatisch vom client-seitigen Resizing ausgeschlossen, um eine Rasterisierung (Umwandlung in PNG) zu verhindern. Sie bleiben als Vektorgrafiken erhalten.
