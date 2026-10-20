@@ -166,6 +166,12 @@ function initializeUppyWidget(inputElement) {
     config.fix_exif_orientation = uppyConfig.fix_exif_orientation !== false;
     config.enable_chunks = uppyConfig.enable_chunks !== false;
     config.chunk_size = (uppyConfig.chunk_size || 5) * 1024 * 1024; // MB in Bytes
+    // Chunk-Größe nie über das PHP-Upload-Limit des Servers heben, sonst verwirft
+    // PHP den Chunk (upload_max_filesize) und der Upload bricht mit 400 ab.
+    const serverChunkBytes = parseInt(uppyConfig.max_chunk_bytes, 10) || 0;
+    if (serverChunkBytes > 0) {
+        config.chunk_size = Math.min(config.chunk_size, serverChunkBytes);
+    }
     
     // Metadaten-Felder laden (nur wenn nicht in Ordner hochgeladen wird)
     const metadataPromise = config.uploadDir 

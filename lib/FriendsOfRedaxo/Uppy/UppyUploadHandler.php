@@ -201,13 +201,61 @@ class UppyUploadHandler extends rex_api_function
     }
 
     /**
-     * Maximale Größe einer einzelnen Chunk-Anfrage in Bytes (Chunk-Größe aus den Einstellungen + Puffer).
+     * Maximale Größe einer einzelnen Chunk-Anfrage in Bytes (effektive Chunk-Größe + Puffer).
      */
     protected function getMaxChunkBytes(): int
     {
-        $chunkSizeMb = max(1, (int) rex_config::get('uppy', 'chunk_size', 5));
+        return self::clientChunkBytes() + 128 * 1024;
+    }
 
-        return $chunkSizeMb * 1024 * 1024 + 64 * 1024;
+    /**
+     * Effektive Chunk-Größe in Bytes: der kleinere Wert aus der Einstellung
+     * (uppy/chunk_size in MB) und dem PHP-Upload-Limit, abzüglich eines Puffers
+     * für den Multipart-Overhead. Client (boot.php -> JS) und Server leiten die
+     * Chunk-Größe aus genau dieser Methode ab, sonst sendet der Client Chunks,
+     * die PHP verwirft (upload_max_filesize) oder die Anzahl-Prüfung ablehnt.
+     */
+    public static function clientChunkBytes(): int
+    {
+        $configBytes = max(1, (int) rex_config::get('uppy', 'chunk_size', 5)) * 1024 * 1024;
+        $limit = self::phpUploadLimitBytes();
+        if ($limit > 0) {
+            return min($configBytes, max(256 * 1024, $limit - 128 * 1024));
+        }
+
+        return $configBytes;
+    }
+
+    /**
+     * Kleinstes relevantes PHP-Upload-Limit (upload_max_filesize / post_max_size) in Bytes.
+     * 0 = unbekannt / unbegrenzt.
+     */
+    public static function phpUploadLimitBytes(): int
+    {
+        $values = array_filter([
+            self::iniBytes((string) ini_get('upload_max_filesize')),
+            self::iniBytes((string) ini_get('post_max_size')),
+        ], static fn (int $v): bool => $v > 0);
+
+        return $values ? min($values) : 0;
+    }
+
+    /**
+     * Wandelt einen ini-Größenwert (z.B. "2M", "8M", "1G") in Bytes um.
+     */
+    private static function iniBytes(string $value): int
+    {
+        $value = trim($value);
+        if ('' === $value) {
+            return 0;
+        }
+        $number = (int) $value;
+        return match (strtolower($value[strlen($value) - 1])) {
+            'g' => $number * 1024 * 1024 * 1024,
+            'm' => $number * 1024 * 1024,
+            'k' => $number * 1024,
+            default => $number,
+        };
     }
 
     /**
@@ -365,7 +413,7 @@ class UppyUploadHandler extends rex_api_function
         // Anzahl und Größe der Chunks begrenzen
         $maxBytes = $this->uploadConfig['max_bytes'];
         $maxChunkBytes = $this->getMaxChunkBytes();
-        $maxChunks = max(1, min(10000, (int) ceil($maxBytes / max(1, $maxChunkBytes - 64 * 1024)) + 1));
+        $maxChunks = max(1, min(10000, (int) ceil($maxBytes / max(1, self::clientChunkBytes())) + 2));
         if ($totalChunks < 1 || $totalChunks > $maxChunks || $chunkIndex < 0 || $chunkIndex >= $totalChunks) {
             throw new rex_api_exception('Invalid chunk parameters');
         }

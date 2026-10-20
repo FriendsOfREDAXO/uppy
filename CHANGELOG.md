@@ -4,6 +4,7 @@
 
 ### 🐛 Bugfixes
 - **Backend-Upload in Unterordner-Installationen (404 „Prepare failed“)**: Die Backend-Bundles hatten den Backend-Pfad fest als `/redaxo/index.php` verdrahtet. Lag REDAXO nicht im Domain-Root unter `/redaxo/` (Unterordner-Installation oder umbenanntes Backend), gingen Prepare-, Upload-, Chunk- und Metadaten-Anfragen auf eine nicht existierende URL (404). Die URL kommt jetzt serverseitig aus `rex_url::backendController()` (`window.rex.uppy_config.api_url`). Bundle neu gebaut.
+- **Chunk-Upload scheiterte mit 400 „Chunk too large for the server upload limit“**, wenn die konfigurierte Chunk-Größe (Standard 5 MB) größer war als PHPs `upload_max_filesize`/`post_max_size`. Die effektive Chunk-Größe wird jetzt aus genau einer Quelle (`UppyUploadHandler::clientChunkBytes()`) abgeleitet und sowohl an den Client (`window.rex.uppy_config.max_chunk_bytes`) als auch an die serverseitige Anzahl-/Größen-Prüfung gegeben, gedeckelt auf das PHP-Upload-Limit abzüglich Puffer. Bundle neu gebaut.
 
 ## Version 2.11.0 (2026-10-19)
 

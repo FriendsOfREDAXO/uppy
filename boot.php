@@ -172,6 +172,7 @@ if (rex::isBackend() && rex::getUser()) {
             'enable_chunks' => rex_config::get('uppy', 'enable_chunks', true),
             'chunk_size' => rex_config::get('uppy', 'chunk_size', 5),
             'api_url' => rex_url::backendController(),
+            'max_chunk_bytes' => \FriendsOfRedaxo\Uppy\UppyUploadHandler::clientChunkBytes(),
         ]);
         
         // Backend Dashboard Bundle
