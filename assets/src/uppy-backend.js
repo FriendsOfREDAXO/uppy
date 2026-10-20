@@ -18,6 +18,17 @@ if (German && German.strings) {
 
 window.UPPY_BUNDLE_LOADED = true;
 
+/**
+ * Absolute URL des REDAXO-Backend-Controllers (index.php).
+ * Kommt serverseitig aus rex_url::backendController() (window.rex.uppy_config.api_url)
+ * und respektiert damit Unterordner-Installationen und ein umbenanntes Backend.
+ * Fallback auf '/redaxo/index.php' nur, falls die Property fehlt.
+ */
+function uppyBackendUrl() {
+    const base = (window.rex && window.rex.uppy_config && window.rex.uppy_config.api_url) || '/redaxo/index.php';
+    return /^https?:\/\//i.test(base) ? base : window.location.origin + base;
+}
+
 // Selbstgebautes Upload-Icon (Pfeil in Tray) für den Kompakt-Trigger-Button,
 // im selben Stil (24er Grid, stroke-basiert) wie die Icons in uppy-custom-widget.js.
 const UPPY_UPLOAD_ICON = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>';
@@ -391,7 +402,7 @@ function initializeUppyPlugins(uppy, config, inputElement, metaFields, valueInpu
     if (config.enable_chunks) {
         // Custom Chunk Uploader für große Dateien
         const chunkUploader = new ChunkUploader(uppy, {
-            endpoint: window.location.origin + '/redaxo/index.php?rex-api-call=uppy_uploader' + signatureParams,
+            endpoint: uppyBackendUrl() + '?rex-api-call=uppy_uploader' + signatureParams,
             chunkSize: config.chunk_size,
             categoryId: () => parseInt(inputElement.dataset.categoryId) || 0,
             uploadDir: () => inputElement.dataset.uploadDir || '',
@@ -408,7 +419,7 @@ function initializeUppyPlugins(uppy, config, inputElement, metaFields, valueInpu
             endpoint: (file) => {
                 const categoryId = parseInt(inputElement.dataset.categoryId) || 0;
                 const uploadDir = inputElement.dataset.uploadDir || '';
-                return window.location.origin + '/redaxo/index.php?rex-api-call=uppy_uploader&func=upload' +
+                return uppyBackendUrl() + '?rex-api-call=uppy_uploader&func=upload' +
                        '&category_id=' + categoryId + 
                        '&upload_dir=' + encodeURIComponent(uploadDir) + 
                        signatureParams +
@@ -515,7 +526,7 @@ function prepareUpload(file, uppy, config, inputElement, signatureParams) {
     formData.append('fileId', fileId);
     formData.append('metadata', JSON.stringify(metadata));
     
-    const apiEndpoint = window.location.origin + '/redaxo/index.php?rex-api-call=uppy_uploader' + (signatureParams || '');
+    const apiEndpoint = uppyBackendUrl() + '?rex-api-call=uppy_uploader' + (signatureParams || '');
     const prepareUrl = appendQueryParams(apiEndpoint, Object.assign({ func: 'prepare' }, getAdditionalUploadParams(inputElement)));
 
     fetch(prepareUrl, {
@@ -794,7 +805,7 @@ function setupEventHandlersOriginal(uppy, config, inputElement) {
  */
 function loadMetadataFields() {
     // Backend: Der eingeloggte User ist über die Session authentifiziert, kein Token nötig
-    const url = window.location.origin + '/redaxo/index.php?rex-api-call=uppy_metadata&action=get_fields';
+    const url = uppyBackendUrl() + '?rex-api-call=uppy_metadata&action=get_fields';
 
     return fetch(url, { credentials: 'same-origin' })
         .then(function(response) {
@@ -1312,7 +1323,7 @@ function showMetadataModal(uppy, file, metaFields) {
         prepareFormData.append('fileId', fileId);
         prepareFormData.append('metadata', JSON.stringify(metadata));
         
-        fetch(window.location.origin + '/redaxo/index.php?rex-api-call=uppy_uploader&func=prepare', {
+        fetch(uppyBackendUrl() + '?rex-api-call=uppy_uploader&func=prepare', {
             method: 'POST',
             headers: {
                 'X-Requested-With': 'XMLHttpRequest'

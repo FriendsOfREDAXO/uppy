@@ -170,7 +170,8 @@ if (rex::isBackend() && rex::getUser()) {
             'enable_image_editor' => rex_config::get('uppy', 'enable_image_editor', false),
             'crop_ratios' => rex_config::get('uppy', 'crop_ratios', '1:1,16:9,4:3,3:2,free'),
             'enable_chunks' => rex_config::get('uppy', 'enable_chunks', true),
-            'chunk_size' => rex_config::get('uppy', 'chunk_size', 5)
+            'chunk_size' => rex_config::get('uppy', 'chunk_size', 5),
+            'api_url' => rex_url::backendController(),
         ]);
         
         // Backend Dashboard Bundle

@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### 🐛 Bugfixes
+- **Backend-Upload in Unterordner-Installationen (404 „Prepare failed“)**: Die Backend-Bundles hatten den Backend-Pfad fest als `/redaxo/index.php` verdrahtet. Lag REDAXO nicht im Domain-Root unter `/redaxo/` (Unterordner-Installation oder umbenanntes Backend), gingen Prepare-, Upload-, Chunk- und Metadaten-Anfragen auf eine nicht existierende URL (404). Die URL kommt jetzt serverseitig aus `rex_url::backendController()` (`window.rex.uppy_config.api_url`). Bundle neu gebaut.
+
 ## Version 2.11.0 (2026-10-19)
 
 Sicherheits-Release. Allen Installationen wird das Update dringend empfohlen. Die Minor-Version steigt, weil sich das Verhalten für Integratoren ändert (siehe „Geänderte Verhalten“) – Formulare, die über das YForm-Feld, `Utils::field()` oder `Signature::create()` ausgegeben werden, laufen ohne Anpassung weiter.
