@@ -159,7 +159,15 @@ if (rex::isBackend() && rex::getUser()) {
         $cssVersion = $addon->getVersion() . '.' . filemtime($addon->getPath('assets/dist/uppy-backend-bundle.css'));
         rex_view::addCssFile($addon->getAssetsUrl('dist/uppy-backend-bundle.css?v=' . $cssVersion));
         
-        // Konfiguration als JSON für JavaScript verfügbar machen
+        // Konfiguration als JSON für JavaScript verfügbar machen.
+        // api_url: wurzel-relativer Pfad zum Backend-Controller (index.php),
+        // inkl. Unterordner-Basis. rex_url::backendController() allein liefert
+        // nur den relativen "redaxo/index.php" ohne Basis-Pfad – im JS mit der
+        // Origin verknüpft ergäbe das eine falsche URL.
+        $uppyApiUrl = parse_url(
+            rtrim(rex::getServer(), '/') . '/' . ltrim(rex_url::backendController(), '/'),
+            PHP_URL_PATH,
+        ) ?: '/redaxo/index.php';
         rex_view::setJsProperty('uppy_config', [
             'enable_resize' => rex_config::get('uppy', 'enable_resize', true),
             'resize_width' => rex_config::get('uppy', 'resize_width', 2000),
@@ -170,7 +178,9 @@ if (rex::isBackend() && rex::getUser()) {
             'enable_image_editor' => rex_config::get('uppy', 'enable_image_editor', false),
             'crop_ratios' => rex_config::get('uppy', 'crop_ratios', '1:1,16:9,4:3,3:2,free'),
             'enable_chunks' => rex_config::get('uppy', 'enable_chunks', true),
-            'chunk_size' => rex_config::get('uppy', 'chunk_size', 5)
+            'chunk_size' => rex_config::get('uppy', 'chunk_size', 5),
+            'api_url' => $uppyApiUrl,
+            'max_chunk_bytes' => \FriendsOfRedaxo\Uppy\UppyUploadHandler::clientChunkBytes(),
         ]);
         
         // Backend Dashboard Bundle
