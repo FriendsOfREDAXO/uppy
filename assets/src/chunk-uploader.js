@@ -56,7 +56,8 @@ export class ChunkUploader {
             func: func
         };
 
-        const url = new URL(this.opts.endpoint, window.location.origin);
+        // gegen die Seite auflösen, nicht gegen die Origin: relative Endpunkte ("../index.php") bleiben so korrekt
+        const url = new URL(this.opts.endpoint, window.location.href);
         Object.keys(params).forEach((key) => {
             const value = params[key];
             if (value !== undefined && value !== null && String(value) !== '') {

@@ -792,18 +792,21 @@ export class UppyCustomWidget {
                               `&upload_dir=${encodeURIComponent(uploadDir)}`;
         }
 
-        // Upload-Methode wählen (Chunk oder XHR)
+        // Upload-Methode wählen (Chunk oder XHR). data-Attribute zuerst: im Frontend gibt es kein window.rex
         const globalConfig = window.rex?.uppy_config || {};
-        const enableChunks = globalConfig.enable_chunks === true;
+        const enableChunks = this.input.dataset.enableChunks !== undefined
+            ? this.input.dataset.enableChunks === 'true'
+            : globalConfig.enable_chunks === true;
 
         // Check if endpoint already has query params
         const hasQuery = apiEndpoint.indexOf('?') > -1;
         const separator = hasQuery ? '&' : '?';
 
         if (enableChunks) {
-            // Chunk-Size: Config ist in MB, wir brauchen Bytes
-            const chunkSizeMB = globalConfig.chunk_size || 5;
-            const chunkSizeBytes = chunkSizeMB * 1024 * 1024;
+            // Chunk-Größe in Bytes, serverseitig schon am PHP-Upload-Limit gedeckelt (UppyUploadHandler::clientChunkBytes())
+            const chunkSizeBytes = parseInt(this.input.dataset.chunkBytes, 10)
+                || parseInt(globalConfig.max_chunk_bytes, 10)
+                || (globalConfig.chunk_size || 5) * 1024 * 1024;
             
             const chunkUploader = new ChunkUploader(this.uppy, {
                 endpoint: apiEndpoint + signatureParams,

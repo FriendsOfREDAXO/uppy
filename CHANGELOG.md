@@ -1,5 +1,14 @@
 # Changelog
 
+## Version 2.11.1 (2026-10-28)
+
+### 🐛 Bugfixes
+- **Backend-Upload in Unterordner-Installationen (404 „Prepare failed“)**: Die Backend-Bundles hatten den Backend-Pfad fest als `/redaxo/index.php` verdrahtet. Lag REDAXO nicht im Domain-Root unter `/redaxo/` (Unterordner-Installation oder umbenanntes Backend), gingen Prepare-, Upload-, Chunk- und Metadaten-Anfragen auf eine nicht existierende URL (404). Die URL kommt jetzt serverseitig aus `Utils::controllerUrl()` (`window.rex.uppy_config.api_url`): wurzel-relativ und aus dem aufgerufenen Skript abgeleitet, damit unabhängig davon, ob die `server`-Einstellung zur Installation passt. Bundle neu gebaut.
+- **Chunk-Upload scheiterte mit 400 „Chunk too large for the server upload limit“**, wenn die konfigurierte Chunk-Größe (Standard 5 MB) größer war als PHPs `upload_max_filesize`/`post_max_size`. Die effektive Chunk-Größe wird jetzt aus genau einer Quelle (`UppyUploadHandler::clientChunkBytes()`) abgeleitet und sowohl an den Client (`window.rex.uppy_config.max_chunk_bytes`) als auch an die serverseitige Anzahl-/Größen-Prüfung gegeben, gedeckelt auf das PHP-Upload-Limit abzüglich Puffer. Bundle neu gebaut.
+- **Frontend-Upload ohne Chunks**: Das Upload-Feld las die Chunk-Einstellungen nur aus `window.rex.uppy_config`, das es im Frontend nicht gibt. Frontend-Uploads liefen deshalb immer in einem Stück und scheiterten bei großen Dateien am PHP-Limit. Die Einstellungen stehen jetzt am Feld (`data-enable-chunks`, `data-chunk-bytes`).
+- **Frontend-Endpunkte unter Rewrite-URLs**: API-Endpunkte sind wurzel-relativ, relative Pfade lösten unter URLs wie `/de/kontakt/` falsch auf. Der Chunk-Uploader löst Endpunkte gegen die Seite statt gegen die Origin auf.
+- **Cache-Buster im Frontend**: `Utils::assets()` hängte immer `?v=<Version>.0` an, weil der Dateipfad falsch war. Browser konnten nach Updates altes JavaScript behalten.
+
 ## Version 2.11.0 (2026-10-19)
 
 Sicherheits-Release. Allen Installationen wird das Update dringend empfohlen. Die Minor-Version steigt, weil sich das Verhalten für Integratoren ändert (siehe „Geänderte Verhalten“) – Formulare, die über das YForm-Feld, `Utils::field()` oder `Signature::create()` ausgegeben werden, laufen ohne Anpassung weiter.

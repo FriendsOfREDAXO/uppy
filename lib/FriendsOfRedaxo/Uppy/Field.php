@@ -4,7 +4,6 @@ namespace FriendsOfRedaxo\Uppy;
 
 use rex_config;
 use rex_i18n;
-use rex_url;
 
 use function rex_escape;
 
@@ -82,11 +81,10 @@ class Field
             'upload_dir' => $uploadFolder,
         ]);
 
-        // Immer die Frontend-index.php verwenden (wie FilePond), unabhaengig vom Kontext:
-        // im Backend wird /redaxo/../index.php genutzt, im Frontend direkt /index.php,
-        // aber beides funktioniert vom Browser aus zuverlaessig als absolute URL.
-        $apiEndpoint = rex_url::frontendController(['rex-api-call' => 'uppy_uploader']);
-        $fileAccessEndpoint = rex_url::backendController(['rex-api-call' => 'uppy_file_access']);
+        // Immer die Frontend-index.php verwenden (wie FilePond), unabhaengig vom Kontext.
+        // Wurzel-relativ, damit die URL auch unter Rewrite-Pfaden (/de/kontakt/) und in Unterordnern stimmt.
+        $apiEndpoint = Utils::controllerUrl(false, ['rex-api-call' => 'uppy_uploader']);
+        $fileAccessEndpoint = Utils::controllerUrl(true, ['rex-api-call' => 'uppy_file_access']);
 
         $attrs = [
             'type' => 'hidden',
@@ -95,6 +93,9 @@ class Field
             'value' => $value,
             'class' => 'uppy-upload-widget',
             'data-api-endpoint' => $apiEndpoint,
+            // Chunk-Einstellungen direkt am Feld: im Frontend gibt es kein window.rex.uppy_config
+            'data-enable-chunks' => rex_config::get('uppy', 'enable_chunks', true) ? 'true' : 'false',
+            'data-chunk-bytes' => (string) UppyUploadHandler::clientChunkBytes(),
             'data-category-id' => (string) $categoryId,
             'data-upload-dir' => $uploadFolder,
             'data-max-files' => (string) $maxFiles,
