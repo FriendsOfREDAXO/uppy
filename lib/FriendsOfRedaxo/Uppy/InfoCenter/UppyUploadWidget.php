@@ -61,14 +61,14 @@ class UppyUploadWidget extends AbstractWidget
         $catsSel->setSelected($defaultCategory);
 
         // Backend-Endpoint, damit Backend-Session-Cookies mitgesendet werden
-        $apiEndpoint = rex_url::backendController(['rex-api-call' => 'uppy_uploader'], false);
+        $apiEndpoint = \FriendsOfRedaxo\Uppy\Utils::controllerUrl(true, ['rex-api-call' => 'uppy_uploader']);
 
         // Settings auslesen
         $maxFiles = (int) rex_config::get('uppy', 'max_files', 30);
         $maxFilesize = (int) rex_config::get('uppy', 'max_filesize', 200);
         $allowedTypes = (string) rex_config::get('uppy', 'allowed_types', '*');
         $enableChunks = rex_config::get('uppy', 'enable_chunks', true) ? 'true' : 'false';
-        $chunkSize = (int) rex_config::get('uppy', 'chunk_size', 5);
+        $chunkBytes = \FriendsOfRedaxo\Uppy\UppyUploadHandler::clientChunkBytes();
 
         // Link zur kompletten Upload-Seite (mit YCom-Auth-Panel etc.)
         $uploadPageUrl = rex_url::backendPage('uppy/upload');
@@ -91,7 +91,7 @@ class UppyUploadWidget extends AbstractWidget
                            data-max-filesize="%7$d"
                            data-allowed-types="%8$s"
                            data-enable-chunks="%9$s"
-                           data-chunk-size="%10$d"
+                           data-chunk-bytes="%10$d"
                            data-enable-image-editor="true"
                            data-enable-webcam="true"
                            data-enable-sorting="false"
@@ -130,7 +130,7 @@ class UppyUploadWidget extends AbstractWidget
             $maxFilesize,
             rex_escape($allowedTypes),
             $enableChunks,
-            $chunkSize,
+            $chunkBytes,
             rex_escape($uploadPageUrl),
             json_encode($categorySelectId),
             json_encode($widgetId),

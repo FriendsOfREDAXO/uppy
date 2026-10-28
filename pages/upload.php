@@ -171,7 +171,7 @@ if ($useCustomWidget) {
     // WICHTIG: data-api-endpoint explizit auf den Backend-Endpoint setzen,
     // damit die Backend-Session (inkl. YCom-Media-Auth-Defaults) verwendet wird.
     // Default des Custom-Widgets wäre "/index.php?rex-api-call=uppy_uploader" (Frontend).
-    $apiEndpoint = rex_url::backendController(['rex-api-call' => 'uppy_uploader'], false);
+    $apiEndpoint = \FriendsOfRedaxo\Uppy\Utils::controllerUrl(true, ['rex-api-call' => 'uppy_uploader']);
 
     $n['field'] = '
     <input type="hidden" 
@@ -184,7 +184,7 @@ if ($useCustomWidget) {
            data-max-filesize="' . rex_config::get('uppy', 'max_filesize', 200) . '"
            data-allowed-types="' . rex_config::get('uppy', 'allowed_types', '*') . '"
            data-enable-chunks="' . (rex_config::get('uppy', 'enable_chunks', true) ? 'true' : 'false') . '"
-           data-chunk-size="' . rex_config::get('uppy', 'chunk_size', 5) . '"
+           data-chunk-bytes="' . \FriendsOfRedaxo\Uppy\UppyUploadHandler::clientChunkBytes() . '"
            data-enable-image-editor="true"
            data-enable-webcam="true"
            data-enable-sorting="false"

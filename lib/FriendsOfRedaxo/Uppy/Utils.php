@@ -4,8 +4,12 @@ namespace FriendsOfRedaxo\Uppy;
 
 use rex_addon;
 use rex_config;
+use rex;
 use rex_login;
+use rex_request;
 use rex_session;
+use rex_string;
+use rex_url;
 
 use function rex_escape;
 use function rex_set_session;
@@ -51,8 +55,8 @@ class Utils
         $cssFile = 'dist/uppy-frontend-bundle.css';
         $jsFile = 'dist/uppy-custom-widget-bundle.js';
 
-        $cssPath = $addon->getPath($cssFile);
-        $jsPath = $addon->getPath($jsFile);
+        $cssPath = $addon->getPath('assets/' . $cssFile);
+        $jsPath = $addon->getPath('assets/' . $jsFile);
 
         $cssVersion = $addon->getVersion() . '.' . (is_file($cssPath) ? filemtime($cssPath) : 0);
         $jsVersion = $addon->getVersion() . '.' . (is_file($jsPath) ? filemtime($jsPath) : 0);
@@ -72,6 +76,47 @@ class Utils
         self::ensureApiSession();
 
         return self::assets();
+    }
+
+    /**
+     * Wurzel-relativer Pfad zum Frontend- bzw. Backend-Controller, z. B. "/unterordner/redaxo/index.php".
+     *
+     * rex_url liefert Pfade relativ zum aufgerufenen Skript ("index.php", "../index.php", "./redaxo/index.php").
+     * Der Browser löst sie aber gegen die Seiten-URL auf, die im Frontend durch Rewrites beliebig tief sein kann
+     * (/de/kontakt/). Deshalb hier gegen SCRIPT_NAME auflösen: funktioniert in Unterordnern und mit umbenanntem
+     * Backend, ohne jQuery oder window.rex im Browser.
+     *
+     * @param array<string, scalar> $params
+     */
+    public static function controllerUrl(bool $backend = false, array $params = []): string
+    {
+        $relative = $backend ? rex_url::backendController([], false) : rex_url::frontendController([], false);
+
+        if (preg_match('#^(/|[a-z][a-z0-9+.-]*://)#i', $relative)) {
+            $path = $relative;
+        } else {
+            $script = str_replace('\\', '/', rex_request::server('SCRIPT_NAME', 'string', ''));
+            if ('' === $script) {
+                // ohne Webrequest (Konsole): Frontend-Basis aus der Server-Einstellung
+                $script = rtrim((string) parse_url(rex::getServer(), PHP_URL_PATH), '/') . '/index.php';
+            }
+            $segments = [];
+            foreach (explode('/', dirname($script) . '/' . $relative) as $segment) {
+                if ('' === $segment || '.' === $segment) {
+                    continue;
+                }
+                if ('..' === $segment) {
+                    array_pop($segments);
+                    continue;
+                }
+                $segments[] = $segment;
+            }
+            $path = '/' . implode('/', $segments);
+        }
+
+        $query = rex_string::buildQuery($params, '&');
+
+        return $path . ('' !== $query ? '?' . $query : '');
     }
 
     /**
